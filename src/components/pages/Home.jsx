@@ -28,7 +28,7 @@ const loadData = async () => {
       const location = await LocationService.getUserLocation();
       setUserLocation(location);
 // Log location result for debugging (only in development)
-      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development' && location.error) {
+if (import.meta.env.DEV && location.error) {
         console.info('Location service fallback activated:', {
           city: location.city,
           errorCode: location.error.code,
