@@ -29,13 +29,47 @@ class LocationService {
             });
           }
         },
-        (error) => {
-          console.error("Geolocation error:", error);
+(error) => {
+          // Extract meaningful error information from GeolocationPositionError
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          
+          let errorDescription = "Unknown geolocation error";
+          let fallbackCity = "Pakistan";
+          
+          // Handle specific error codes
+          switch(errorCode) {
+            case error.PERMISSION_DENIED:
+              errorDescription = "Location access denied by user";
+              fallbackCity = "Pakistan";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorDescription = "Location information unavailable";
+              fallbackCity = "Pakistan";
+              break;
+            case error.TIMEOUT:
+              errorDescription = "Location request timed out";
+              fallbackCity = "Pakistan";
+              break;
+            default:
+              errorDescription = errorMessage || "Geolocation service failed";
+          }
+          
+          console.error(`Geolocation error (Code: ${errorCode}): ${errorDescription}`, {
+            code: errorCode,
+            message: errorMessage,
+            fullError: error
+          });
+          
           resolve({ 
-            city: "Pakistan", 
+            city: fallbackCity, 
             country: "Pakistan", 
             weather: "moderate",
-            temperature: 25 
+            temperature: 25,
+            error: {
+              code: errorCode,
+              message: errorDescription
+            }
           });
         },
         {
