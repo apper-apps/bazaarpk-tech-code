@@ -20,7 +20,7 @@ class LocationService {
             const locationData = await LocationService.getLocationData(latitude, longitude);
             resolve(locationData);
           } catch (error) {
-            console.error("Error getting location data:", error);
+console.error("Error getting location data:", error);
             resolve({ 
               city: "Pakistan", 
               country: "Pakistan", 
@@ -30,7 +30,6 @@ class LocationService {
           }
         },
 (error) => {
-          // Extract meaningful error information from GeolocationPositionError
           const errorCode = error?.code || 0;
           const errorMessage = error?.message || "Unknown error";
           
@@ -54,11 +53,11 @@ class LocationService {
             default:
               errorDescription = errorMessage || "Geolocation service failed";
           }
-          
-          // Fixed: Proper error logging without object concatenation
+
           console.error(`Geolocation error (Code: ${errorCode}): ${errorDescription}`, {
             code: errorCode,
             message: errorMessage,
+            description: errorDescription,
             originalError: error,
             timestamp: new Date().toISOString()
           });

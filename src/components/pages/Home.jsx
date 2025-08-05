@@ -24,15 +24,17 @@ const loadData = async () => {
       setLoading(true);
       setError("");
 
-      // Get user location first with enhanced error handling
+// Get user location with comprehensive error handling
       const location = await LocationService.getUserLocation();
       setUserLocation(location);
-// Log location result for debugging (only in development)
-if (import.meta.env.DEV && location.error) {
+      
+      // Enhanced debugging for location service (development only)
+      if (import.meta.env.DEV && location?.error) {
         console.info('Location service fallback activated:', {
-          city: location.city,
-          errorCode: location.error.code,
-          errorMessage: location.error.message
+          city: location.city || 'Unknown',
+          errorCode: location.error?.code || 'N/A',
+          errorMessage: location.error?.message || 'No error message',
+          fallbackActive: true
         });
       }
       
@@ -64,12 +66,24 @@ if (import.meta.env.DEV && location.error) {
 } catch (err) {
       console.error("Error loading home data:", err);
       
-      // Enhanced error handling with better user messaging
-      const errorMessage = err?.message || "Failed to load page content. Please try again.";
+      // Enhanced error handling with categorized messaging
+      let errorMessage = "Failed to load page content. Please try again.";
+      let showToastError = true;
+      
+      // Handle specific error types
+      if (err?.message?.includes('location') || err?.message?.includes('geolocation')) {
+        errorMessage = "Products loaded successfully with default location settings.";
+        showToastError = false; // Don't show toast for location-related issues as fallback works
+      } else if (err?.name === 'NetworkError' || err?.message?.includes('fetch')) {
+        errorMessage = "Network connection issue. Please check your internet and try again.";
+      } else if (err?.message?.includes('timeout')) {
+        errorMessage = "Request timed out. Please try again.";
+      }
+      
       setError(errorMessage);
       
-      // Only show toast error for actual failures, not location permission issues
-      if (!err?.message?.includes('location') && !err?.message?.includes('geolocation')) {
+      // Show toast error only for actual failures that affect functionality
+      if (showToastError) {
         showToast.error("Failed to load products. Please check your connection and try again.");
       }
     } finally {
