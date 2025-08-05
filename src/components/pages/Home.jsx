@@ -7,26 +7,39 @@ import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
 import { ProductService } from "@/services/api/ProductService";
 import { CategoryService } from "@/services/api/CategoryService";
-
+import { LocationService } from "@/services/api/LocationService";
+import { useToast } from "@/hooks/useToast";
 const Home = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [deals, setDeals] = useState([]);
+const [deals, setDeals] = useState([]);
+  const [trendingProducts, setTrendingProducts] = useState([]);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationMessage, setLocationMessage] = useState("🔥 Trending Now");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const loadData = async () => {
+  const showToast = useToast();
+const loadData = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const [productsData, categoriesData] = await Promise.all([
+      // Get user location first
+      const location = await LocationService.getUserLocation();
+      setUserLocation(location);
+      
+      const locationMsg = LocationService.getLocationMessage(location);
+      setLocationMessage(locationMsg);
+
+      const [productsData, categoriesData, trendingData] = await Promise.all([
         ProductService.getAll(),
-        CategoryService.getAll()
+        CategoryService.getAll(),
+        ProductService.getTrendingByLocation(location)
       ]);
 
       setProducts(productsData);
       setCategories(categoriesData);
+      setTrendingProducts(trendingData);
       
       // Filter deals (products with discount)
       const dealsData = productsData.filter(product => 
@@ -34,9 +47,15 @@ const Home = () => {
       );
       setDeals(dealsData);
 
+      // Show location-based success message
+      if (location.city !== "Pakistan") {
+        showToast.success(`Products tailored for ${location.city}! Showing ${location.weather} weather favorites.`);
+      }
+
     } catch (err) {
       console.error("Error loading home data:", err);
       setError("Failed to load page content. Please try again.");
+      showToast.error("Failed to load personalized products. Showing general trending items.");
     } finally {
       setLoading(false);
     }
@@ -98,10 +117,10 @@ const Home = () => {
         initialCount={12}
       />
 
-      {/* Trending Products */}
+{/* Location-Based Trending Products */}
       <ProductGrid 
-        products={products.filter(p => p.badges?.includes("BESTSELLER")).slice(0, 8)}
-        title="🔥 Trending Now"
+        products={trendingProducts.length > 0 ? trendingProducts : products.filter(p => p.badges?.includes("BESTSELLER")).slice(0, 8)}
+        title={locationMessage}
         showLoadMore={false}
         initialCount={8}
       />
