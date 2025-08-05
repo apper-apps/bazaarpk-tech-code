@@ -1,0 +1,123 @@
+import React, { useState, useEffect } from "react";
+import HeroBanner from "@/components/organisms/HeroBanner";
+import CategoryCarousel from "@/components/organisms/CategoryCarousel";
+import DealsSection from "@/components/organisms/DealsSection";
+import ProductGrid from "@/components/organisms/ProductGrid";
+import Loading from "@/components/ui/Loading";
+import Error from "@/components/ui/Error";
+import { ProductService } from "@/services/api/ProductService";
+import { CategoryService } from "@/services/api/CategoryService";
+
+const Home = () => {
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [deals, setDeals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [productsData, categoriesData] = await Promise.all([
+        ProductService.getAll(),
+        CategoryService.getAll()
+      ]);
+
+      setProducts(productsData);
+      setCategories(categoriesData);
+      
+      // Filter deals (products with discount)
+      const dealsData = productsData.filter(product => 
+        product.oldPrice && product.oldPrice > product.price
+      );
+      setDeals(dealsData);
+
+    } catch (err) {
+      console.error("Error loading home data:", err);
+      setError("Failed to load page content. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Hero Banner Skeleton */}
+        <div className="h-64 md:h-80 lg:h-96 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse rounded-2xl mx-4 mt-4 md:mx-6 lg:mx-8" />
+        
+        {/* Categories Skeleton */}
+        <div className="px-4 md:px-6 lg:px-8 mt-8 mb-8">
+          <div className="h-8 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded w-48 animate-pulse mb-6" />
+          <Loading type="categories" />
+        </div>
+        
+        {/* Products Skeleton */}
+        <div className="px-4 md:px-6 lg:px-8">
+          <div className="h-8 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded w-56 animate-pulse mb-8" />
+          <Loading type="products" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Error
+          title="Unable to load homepage"
+          message={error}
+          onRetry={loadData}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Hero Banner */}
+      <HeroBanner />
+
+      {/* Categories Section */}
+      <CategoryCarousel categories={categories} />
+
+      {/* Deals Section */}
+      {deals.length > 0 && <DealsSection deals={deals} />}
+
+      {/* Featured Products */}
+      <ProductGrid 
+        products={products}
+        title="Featured Products"
+        showLoadMore={true}
+        initialCount={12}
+      />
+
+      {/* Trending Products */}
+      <ProductGrid 
+        products={products.filter(p => p.badges?.includes("BESTSELLER")).slice(0, 8)}
+        title="🔥 Trending Now"
+        showLoadMore={false}
+        initialCount={8}
+      />
+
+      {/* Fresh Arrivals */}
+      <ProductGrid 
+        products={products.filter(p => p.badges?.includes("FRESH")).slice(0, 8)}
+        title="🌱 Fresh Arrivals"
+        showLoadMore={false}
+        initialCount={8}
+      />
+
+      {/* Footer Spacer */}
+      <div className="h-16" />
+    </div>
+  );
+};
+
+export default Home;

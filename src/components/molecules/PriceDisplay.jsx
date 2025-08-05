@@ -1,0 +1,61 @@
+import React from "react";
+import { cn } from "@/utils/cn";
+import { formatPrice, calculateDiscount } from "@/utils/currency";
+
+const PriceDisplay = ({ 
+  price, 
+  oldPrice, 
+  className,
+  size = "md",
+  showDiscount = true,
+  ...props 
+}) => {
+  const discount = oldPrice ? calculateDiscount(oldPrice, price) : 0;
+
+  const sizes = {
+    sm: {
+      current: "text-lg font-bold",
+      old: "text-sm",
+      discount: "text-xs"
+    },
+    md: {
+      current: "text-xl font-bold",
+      old: "text-base",
+      discount: "text-sm"
+    },
+    lg: {
+      current: "text-2xl font-bold",
+      old: "text-lg",
+      discount: "text-base"
+    },
+    xl: {
+      current: "text-3xl font-bold",
+      old: "text-xl",
+      discount: "text-lg"
+    }
+  };
+
+  return (
+    <div className={cn("flex items-center space-x-2", className)} {...props}>
+      <span className={cn("price-highlight", sizes[size].current)}>
+        {formatPrice(price)}
+      </span>
+      
+      {oldPrice && oldPrice > price && (
+        <>
+          <span className={cn("text-gray-500 line-through", sizes[size].old)}>
+            {formatPrice(oldPrice)}
+          </span>
+          
+          {showDiscount && discount > 0 && (
+            <span className={cn("text-accent-600 font-medium", sizes[size].discount)}>
+              {discount}% OFF
+            </span>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+export default PriceDisplay;

@@ -1,0 +1,773 @@
+[
+  {
+    "Id": 1,
+    "title": "Fresh Organic Tomatoes",
+    "price": 120,
+    "oldPrice": 150,
+    "description": "Premium quality organic tomatoes grown without pesticides. Fresh, juicy, and perfect for cooking or salads.",
+    "category": "vegetables",
+    "stock": 45,
+    "badges": ["ORGANIC", "FRESH", "HALAL"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "1 KG", "price": 120, "oldPrice": 150 },
+      { "name": "2 KG", "price": 220, "oldPrice": 280 },
+      { "name": "5 KG", "price": 500, "oldPrice": 650 }
+    ]
+  },
+  {
+    "Id": 2,
+    "title": "Premium Basmati Rice",
+    "price": 850,
+    "oldPrice": 950,
+    "description": "Aged premium basmati rice with long grains and aromatic fragrance. Perfect for biryanis and pulao.",
+    "category": "groceries",
+    "stock": 25,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "5 KG", "price": 850, "oldPrice": 950 },
+      { "name": "10 KG", "price": 1600, "oldPrice": 1850 },
+      { "name": "25 KG", "price": 3800, "oldPrice": 4200 }
+    ]
+  },
+  {
+    "Id": 3,
+    "title": "Pure Desi Ghee",
+    "price": 2500,
+    "oldPrice": 2800,
+    "description": "100% pure desi ghee made from buffalo milk. Rich in flavor and nutrition, perfect for cooking and traditional recipes.",
+    "category": "oil",
+    "stock": 18,
+    "badges": ["DESI", "PREMIUM", "HALAL"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "1 KG", "price": 2500, "oldPrice": 2800 },
+      { "name": "2 KG", "price": 4800, "oldPrice": 5400 },
+      { "name": "5 KG", "price": 11500, "oldPrice": 13000 }
+    ]
+  },
+  {
+    "Id": 4,
+    "title": "Fresh Halal Mutton",
+    "price": 2200,
+    "oldPrice": 2400,
+    "description": "Fresh halal mutton from grass-fed goats. Cut and cleaned according to Islamic guidelines. Perfect for karahi and biryani.",
+    "category": "meat",
+    "stock": 12,
+    "badges": ["HALAL", "FRESH", "PREMIUM"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "1 KG", "price": 2200, "oldPrice": 2400 },
+      { "name": "2 KG", "price": 4200, "oldPrice": 4600 },
+      { "name": "5 KG", "price": 10500, "oldPrice": 11500 }
+    ]
+  },
+  {
+    "Id": 5,
+    "title": "Apple iPhone 15 Pro",
+    "price": 485000,
+    "oldPrice": 520000,
+    "description": "Latest iPhone 15 Pro with A17 Pro chip, titanium design, and advanced camera system. Available in multiple colors.",
+    "category": "mobile",
+    "stock": 8,
+    "badges": ["PREMIUM", "LIMITED"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "128GB", "price": 485000, "oldPrice": 520000 },
+      { "name": "256GB", "price": 535000, "oldPrice": 580000 },
+      { "name": "512GB", "price": 635000, "oldPrice": 690000 }
+    ]
+  },
+  {
+    "Id": 6,
+    "title": "Samsung 65\" 4K Smart TV",
+    "price": 165000,
+    "oldPrice": 185000,
+    "description": "65-inch 4K UHD Smart TV with HDR, built-in WiFi, and streaming apps. Crystal clear picture quality with vibrant colors.",
+    "category": "electronics",
+    "stock": 6,
+    "badges": ["BESTSELLER", "DISCOUNT"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "55 Inch", "price": 145000, "oldPrice": 165000 },
+      { "name": "65 Inch", "price": 165000, "oldPrice": 185000 },
+      { "name": "75 Inch", "price": 285000, "oldPrice": 320000 }
+    ]
+  },
+  {
+    "Id": 7,
+    "title": "Khaadi Cotton Kurta",
+    "price": 4500,
+    "oldPrice": 5200,
+    "description": "Premium cotton kurta with traditional Pakistani embroidery. Comfortable fabric perfect for casual and formal wear.",
+    "category": "garments",
+    "stock": 22,
+    "badges": ["BESTSELLER", "DESI"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Small", "price": 4500, "oldPrice": 5200 },
+      { "name": "Medium", "price": 4500, "oldPrice": 5200 },
+      { "name": "Large", "price": 4500, "oldPrice": 5200 },
+      { "name": "XL", "price": 4500, "oldPrice": 5200 }
+    ]
+  },
+  {
+    "Id": 8,
+    "title": "Fresh Mixed Fruits Basket",
+    "price": 1850,
+    "oldPrice": 2100,
+    "description": "Seasonal fresh fruits basket containing apples, oranges, bananas, grapes, and seasonal fruits. Perfect for healthy snacking.",
+    "category": "fruits",
+    "stock": 35,
+    "badges": ["FRESH", "ORGANIC", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Small (3 KG)", "price": 1850, "oldPrice": 2100 },
+      { "name": "Medium (5 KG)", "price": 2800, "oldPrice": 3200 },
+      { "name": "Large (8 KG)", "price": 4200, "oldPrice": 4800 }
+    ]
+  },
+  {
+    "Id": 9,
+    "title": "Himalaya Baby Care Set",
+    "price": 2200,
+    "oldPrice": 2600,
+    "description": "Complete baby care set including baby shampoo, oil, powder, and lotion. Gentle and safe for sensitive baby skin.",
+    "category": "baby",
+    "stock": 28,
+    "badges": ["BESTSELLER", "ORGANIC"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Basic Set", "price": 2200, "oldPrice": 2600 },
+      { "name": "Premium Set", "price": 3500, "oldPrice": 4000 },
+      { "name": "Complete Set", "price": 4800, "oldPrice": 5500 }
+    ]
+  },
+  {
+    "Id": 10,
+    "title": "Nike Air Max Sneakers",
+    "price": 18500,
+    "oldPrice": 22000,
+    "description": "Original Nike Air Max sneakers with superior cushioning and style. Perfect for sports and casual wear.",
+    "category": "shoes",
+    "stock": 15,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Size 8", "price": 18500, "oldPrice": 22000 },
+      { "name": "Size 9", "price": 18500, "oldPrice": 22000 },
+      { "name": "Size 10", "price": 18500, "oldPrice": 22000 },
+      { "name": "Size 11", "price": 18500, "oldPrice": 22000 }
+    ]
+  },
+  {
+    "Id": 11,
+    "title": "Full Cream Milk Powder",
+    "price": 1250,
+    "oldPrice": 1450,
+    "description": "Premium quality full cream milk powder. Rich in calcium and proteins, perfect for tea, coffee, and cooking.",
+    "category": "milk",
+    "stock": 40,
+    "badges": ["FRESH", "PREMIUM"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "500g", "price": 1250, "oldPrice": 1450 },
+      { "name": "1 KG", "price": 2300, "oldPrice": 2650 },
+      { "name": "2.5 KG", "price": 5500, "oldPrice": 6200 }
+    ]
+  },
+  {
+    "Id": 12,
+    "title": "Pakistani Mangoes (Chaunsa)",
+    "price": 450,
+    "oldPrice": 550,
+    "description": "Sweet and juicy Chaunsa mangoes from Pakistan. Known for their exceptional taste and aroma. Available during season.",
+    "category": "fruits",
+    "stock": 55,
+    "badges": ["FRESH", "DESI", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "1 KG", "price": 450, "oldPrice": 550 },
+      { "name": "3 KG", "price": 1200, "oldPrice": 1500 },
+      { "name": "5 KG", "price": 1900, "oldPrice": 2400 }
+    ]
+  },
+  {
+    "Id": 13,
+    "title": "Dell XPS 13 Laptop",
+    "price": 285000,
+    "oldPrice": 320000,
+    "description": "Ultra-portable Dell XPS 13 laptop with Intel i7 processor, 16GB RAM, and 512GB SSD. Perfect for professionals.",
+    "category": "computer",
+    "stock": 5,
+    "badges": ["PREMIUM", "LIMITED"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "i5/8GB/256GB", "price": 225000, "oldPrice": 260000 },
+      { "name": "i7/16GB/512GB", "price": 285000, "oldPrice": 320000 },
+      { "name": "i7/32GB/1TB", "price": 385000, "oldPrice": 430000 }
+    ]
+  },
+  {
+    "Id": 14,
+    "title": "Organic Almonds",
+    "price": 2800,
+    "oldPrice": 3200,
+    "description": "Premium quality organic almonds imported from California. Rich in healthy fats, protein, and vitamins.",
+    "category": "nuts",
+    "stock": 30,
+    "badges": ["ORGANIC", "PREMIUM", "IMPORTED"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "500g", "price": 2800, "oldPrice": 3200 },
+      { "name": "1 KG", "price": 5400, "oldPrice": 6200 },
+      { "name": "2 KG", "price": 10200, "oldPrice": 11800 }
+    ]
+  },
+  {
+    "Id": 15,
+    "title": "Traditional Prayer Mat",
+    "price": 1850,
+    "oldPrice": 2200,
+    "description": "High-quality traditional prayer mat with beautiful Islamic patterns. Soft and comfortable for daily prayers.",
+    "category": "islamic",
+    "stock": 42,
+    "badges": ["HALAL", "DESI", "PREMIUM"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Standard", "price": 1850, "oldPrice": 2200 },
+      { "name": "Large", "price": 2400, "oldPrice": 2800 },
+      { "name": "Premium", "price": 3500, "oldPrice": 4000 }
+    ]
+  },
+  {
+    "Id": 16,
+    "title": "Cricket Bat (Willow)",
+    "price": 8500,
+    "oldPrice": 9800,
+    "description": "Professional grade English willow cricket bat. Perfect balance and performance for serious cricket players.",
+    "category": "sports",
+    "stock": 18,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Size 5", "price": 7500, "oldPrice": 8500 },
+      { "name": "Size 6", "price": 8500, "oldPrice": 9800 },
+      { "name": "Full Size", "price": 9500, "oldPrice": 11000 }
+    ]
+  },
+  {
+    "Id": 17,
+    "title": "Cooking Oil (Sunflower)",
+    "price": 650,
+    "oldPrice": 750,
+    "description": "Pure sunflower cooking oil with vitamin E. Cholesterol-free and perfect for all types of cooking and frying.",
+    "category": "oil",
+    "stock": 75,
+    "badges": ["FRESH", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "1 Liter", "price": 650, "oldPrice": 750 },
+      { "name": "2 Liter", "price": 1200, "oldPrice": 1400 },
+      { "name": "5 Liter", "price": 2800, "oldPrice": 3200 }
+    ]
+  },
+  {
+    "Id": 18,
+    "title": "Children's Building Blocks",
+    "price": 1850,
+    "oldPrice": 2200,
+    "description": "Educational building blocks set for children. Develops creativity, motor skills, and problem-solving abilities.",
+    "category": "toys",
+    "stock": 32,
+    "badges": ["BESTSELLER", "ORGANIC"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Small Set (50 pieces)", "price": 1850, "oldPrice": 2200 },
+      { "name": "Medium Set (100 pieces)", "price": 3200, "oldPrice": 3800 },
+      { "name": "Large Set (200 pieces)", "price": 5500, "oldPrice": 6500 }
+    ]
+  },
+  {
+    "Id": 19,
+    "title": "School Backpack",
+    "price": 2800,
+    "oldPrice": 3200,
+    "description": "Durable school backpack with multiple compartments. Comfortable straps and water-resistant material.",
+    "category": "school",
+    "stock": 45,
+    "badges": ["BESTSELLER", "PREMIUM"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Small (Primary)", "price": 2800, "oldPrice": 3200 },
+      { "name": "Medium (Middle)", "price": 3200, "oldPrice": 3800 },
+      { "name": "Large (High School)", "price": 3800, "oldPrice": 4400 }
+    ]
+  },
+  {
+    "Id": 20,
+    "title": "Natural Honey",
+    "price": 1200,
+    "oldPrice": 1400,
+    "description": "Pure natural honey from mountain flowers. Raw, unprocessed, and full of natural enzymes and nutrients.",
+    "category": "health",
+    "stock": 28,
+    "badges": ["ORGANIC", "FRESH", "PREMIUM"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "500g", "price": 1200, "oldPrice": 1400 },
+      { "name": "1 KG", "price": 2200, "oldPrice": 2600 },
+      { "name": "2 KG", "price": 4200, "oldPrice": 4800 }
+    ]
+  },
+  {
+    "Id": 21,
+    "title": "Face Wash (Garnier)",
+    "price": 450,
+    "oldPrice": 520,
+    "description": "Deep cleansing face wash with natural ingredients. Removes dirt and oil while keeping skin moisturized.",
+    "category": "cosmetics",
+    "stock": 65,
+    "badges": ["BESTSELLER", "ORGANIC"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "100ml", "price": 450, "oldPrice": 520 },
+      { "name": "200ml", "price": 780, "oldPrice": 920 },
+      { "name": "300ml", "price": 1150, "oldPrice": 1350 }
+    ]
+  },
+  {
+    "Id": 22,
+    "title": "Pizza Combo Deal",
+    "price": 1850,
+    "oldPrice": 2200,
+    "description": "Delicious large pizza with 2 cold drinks and garlic bread. Choice of chicken tikka, pepperoni, or vegetable toppings.",
+    "category": "pizza",
+    "stock": 0,
+    "badges": ["DISCOUNT", "LIMITED"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Chicken Tikka", "price": 1850, "oldPrice": 2200 },
+      { "name": "Pepperoni", "price": 1950, "oldPrice": 2300 },
+      { "name": "Vegetable", "price": 1650, "oldPrice": 1950 }
+    ]
+  },
+  {
+    "Id": 23,
+    "title": "Wheat Seeds (Agriculture)",
+    "price": 180,
+    "oldPrice": 220,
+    "description": "High-quality wheat seeds for farming. Disease-resistant variety with high yield potential. Perfect for Pakistan climate.",
+    "category": "agriculture",
+    "stock": 150,
+    "badges": ["FRESH", "PREMIUM"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "10 KG", "price": 180, "oldPrice": 220 },
+      { "name": "25 KG", "price": 420, "oldPrice": 500 },
+      { "name": "50 KG", "price": 800, "oldPrice": 950 }
+    ]
+  },
+  {
+    "Id": 24,
+    "title": "Hair Care Shampoo",
+    "price": 680,
+    "oldPrice": 780,
+    "description": "Nourishing hair care shampoo with natural oils. Strengthens hair, reduces dandruff, and adds shine.",
+    "category": "care",
+    "stock": 38,
+    "badges": ["ORGANIC", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "200ml", "price": 680, "oldPrice": 780 },
+      { "name": "400ml", "price": 1180, "oldPrice": 1350 },
+      { "name": "600ml", "price": 1680, "oldPrice": 1950 }
+    ]
+  },
+  {
+    "Id": 25,
+    "title": "Islamic History Book",
+    "price": 950,
+    "oldPrice": 1150,
+    "description": "Comprehensive book on Islamic history covering the golden age of Islam. Educational and enlightening read.",
+    "category": "books",
+    "stock": 22,
+    "badges": ["PREMIUM", "HALAL"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Urdu Edition", "price": 950, "oldPrice": 1150 },
+      { "name": "English Edition", "price": 1150, "oldPrice": 1350 },
+      { "name": "Hardcover", "price": 1450, "oldPrice": 1750 }
+    ]
+  },
+  {
+    "Id": 26,
+    "title": "Kitchen Utensils Set",
+    "price": 2800,
+    "oldPrice": 3200,
+    "description": "Complete kitchen utensils set including pots, pans, spoons, and knives. Stainless steel with non-stick coating.",
+    "category": "household items",
+    "stock": 16,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Basic Set (10 pieces)", "price": 2800, "oldPrice": 3200 },
+      { "name": "Premium Set (15 pieces)", "price": 4200, "oldPrice": 4800 },
+      { "name": "Complete Set (25 pieces)", "price": 6500, "oldPrice": 7500 }
+    ]
+  },
+  {
+    "Id": 27,
+    "title": "Biryani Masala Mix",
+    "price": 180,
+    "oldPrice": 220,
+    "description": "Authentic Pakistani biryani masala blend with traditional spices. Perfect for making restaurant-style biryani at home.",
+    "category": "foods",
+    "stock": 85,
+    "badges": ["DESI", "FRESH", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "100g", "price": 180, "oldPrice": 220 },
+      { "name": "250g", "price": 380, "oldPrice": 450 },
+      { "name": "500g", "price": 680, "oldPrice": 800 }
+    ]
+  },
+  {
+    "Id": 28,
+    "title": "Wireless Bluetooth Headphones",
+    "price": 8500,
+    "oldPrice": 9800,
+    "description": "High-quality wireless Bluetooth headphones with noise cancellation. Long battery life and superior sound quality.",
+    "category": "electronics",
+    "stock": 12,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Black", "price": 8500, "oldPrice": 9800 },
+      { "name": "White", "price": 8500, "oldPrice": 9800 },
+      { "name": "Blue", "price": 8800, "oldPrice": 10200 }
+    ]
+  },
+  {
+    "Id": 29,
+    "title": "Cashew Nuts Premium",
+    "price": 3200,
+    "oldPrice": 3800,
+    "description": "Premium quality cashew nuts. Rich in healthy fats and proteins. Perfect for snacking and cooking.",
+    "category": "nuts",
+    "stock": 24,
+    "badges": ["PREMIUM", "IMPORTED", "ORGANIC"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "500g", "price": 3200, "oldPrice": 3800 },
+      { "name": "1 KG", "price": 6200, "oldPrice": 7200 },
+      { "name": "2 KG", "price": 11800, "oldPrice": 13800 }
+    ]
+  },
+  {
+    "Id": 30,
+    "title": "Diet Green Tea",
+    "price": 850,
+    "oldPrice": 950,
+    "description": "Premium green tea blend for weight management. Rich in antioxidants and natural fat burners.",
+    "category": "diet",
+    "stock": 35,
+    "badges": ["ORGANIC", "PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "50 Tea Bags", "price": 850, "oldPrice": 950 },
+      { "name": "100 Tea Bags", "price": 1550, "oldPrice": 1750 },
+      { "name": "200 Tea Bags", "price": 2850, "oldPrice": 3200 }
+    ]
+  },
+  {
+    "Id": 31,
+    "title": "AC Installation Service",
+    "price": 8500,
+    "oldPrice": 10000,
+    "description": "Professional air conditioner installation service by certified technicians. Includes all necessary fittings.",
+    "category": "services",
+    "stock": 5,
+    "badges": ["PREMIUM", "LIMITED"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "1.5 Ton AC", "price": 8500, "oldPrice": 10000 },
+      { "name": "2 Ton AC", "price": 9500, "oldPrice": 11500 },
+      { "name": "2.5 Ton AC", "price": 11000, "oldPrice": 13000 }
+    ]
+  },
+  {
+    "Id": 32,
+    "title": "Dried Dates (Khajoor)",
+    "price": 1200,
+    "oldPrice": 1400,
+    "description": "Premium quality dried dates from Madinah. Sweet, nutritious, and perfect for breaking fast during Ramadan.",
+    "category": "dry fruit",
+    "stock": 48,
+    "badges": ["HALAL", "PREMIUM", "IMPORTED"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "500g", "price": 1200, "oldPrice": 1400 },
+      { "name": "1 KG", "price": 2200, "oldPrice": 2600 },
+      { "name": "2 KG", "price": 4200, "oldPrice": 4900 }
+    ]
+  },
+  {
+    "Id": 33,
+    "title": "Electric Heater",
+    "price": 6500,
+    "oldPrice": 7500,
+    "description": "Energy-efficient electric room heater with temperature control. Safe and reliable heating for winter months.",
+    "category": "electric",
+    "stock": 14,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "1500W", "price": 6500, "oldPrice": 7500 },
+      { "name": "2000W", "price": 8200, "oldPrice": 9500 },
+      { "name": "2500W", "price": 9800, "oldPrice": 11500 }
+    ]
+  },
+  {
+    "Id": 34,
+    "title": "Fresh Chicken (Halal)",
+    "price": 450,
+    "oldPrice": 520,
+    "description": "Fresh halal chicken, farm-raised and processed according to Islamic guidelines. Perfect for all Pakistani dishes.",
+    "category": "meat",
+    "stock": 25,
+    "badges": ["HALAL", "FRESH", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "1 KG (Whole)", "price": 450, "oldPrice": 520 },
+      { "name": "1 KG (Cut)", "price": 480, "oldPrice": 560 },
+      { "name": "2 KG (Whole)", "price": 850, "oldPrice": 980 }
+    ]
+  },
+  {
+    "Id": 35,
+    "title": "Fresh Spinach (Palak)",
+    "price": 80,
+    "oldPrice": 100,
+    "description": "Fresh organic spinach leaves, rich in iron and vitamins. Perfect for making traditional palak dishes.",
+    "category": "vegetables",
+    "stock": 65,
+    "badges": ["ORGANIC", "FRESH", "DESI"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "500g", "price": 80, "oldPrice": 100 },
+      { "name": "1 KG", "price": 150, "oldPrice": 180 },
+      { "name": "2 KG", "price": 280, "oldPrice": 340 }
+    ]
+  },
+  {
+    "Id": 36,
+    "title": "Samsung Galaxy S24",
+    "price": 285000,
+    "oldPrice": 320000,
+    "description": "Latest Samsung Galaxy S24 with advanced AI features, superior camera, and long-lasting battery life.",
+    "category": "mobile",
+    "stock": 7,
+    "badges": ["PREMIUM", "LIMITED", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "128GB", "price": 285000, "oldPrice": 320000 },
+      { "name": "256GB", "price": 325000, "oldPrice": 365000 },
+      { "name": "512GB", "price": 385000, "oldPrice": 435000 }
+    ]
+  },
+  {
+    "Id": 37,
+    "title": "Mathematics Textbook Grade 10",
+    "price": 650,
+    "oldPrice": 750,
+    "description": "Comprehensive mathematics textbook for grade 10 students. Covers all topics in the curriculum with practice exercises.",
+    "category": "books",
+    "stock": 45,
+    "badges": ["BESTSELLER", "PREMIUM"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "English Medium", "price": 650, "oldPrice": 750 },
+      { "name": "Urdu Medium", "price": 650, "oldPrice": 750 },
+      { "name": "With Solutions", "price": 850, "oldPrice": 950 }
+    ]
+  },
+  {
+    "Id": 38,
+    "title": "Football (FIFA Approved)",
+    "price": 2800,
+    "oldPrice": 3200,
+    "description": "FIFA approved football with premium leather construction. Perfect weight and bounce for professional play.",
+    "category": "sports",
+    "stock": 22,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Size 3", "price": 2200, "oldPrice": 2600 },
+      { "name": "Size 4", "price": 2500, "oldPrice": 2900 },
+      { "name": "Size 5", "price": 2800, "oldPrice": 3200 }
+    ]
+  },
+  {
+    "Id": 39,
+    "title": "Baby Diapers (Pampers)",
+    "price": 2200,
+    "oldPrice": 2600,
+    "description": "Soft and absorbent baby diapers with 12-hour protection. Gentle on baby's skin with leak-proof design.",
+    "category": "baby",
+    "stock": 38,
+    "badges": ["BESTSELLER", "PREMIUM"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Newborn (80 pcs)", "price": 2200, "oldPrice": 2600 },
+      { "name": "Small (76 pcs)", "price": 2200, "oldPrice": 2600 },
+      { "name": "Medium (68 pcs)", "price": 2200, "oldPrice": 2600 },
+      { "name": "Large (62 pcs)", "price": 2200, "oldPrice": 2600 }
+    ]
+  },
+  {
+    "Id": 40,
+    "title": "Multivitamins for Adults",
+    "price": 1850,
+    "oldPrice": 2200,
+    "description": "Complete multivitamin supplement for adults. Contains essential vitamins and minerals for daily health support.",
+    "category": "health",
+    "stock": 32,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "30 Tablets", "price": 1850, "oldPrice": 2200 },
+      { "name": "60 Tablets", "price": 3200, "oldPrice": 3800 },
+      { "name": "90 Tablets", "price": 4500, "oldPrice": 5200 }
+    ]
+  },
+  {
+    "Id": 41,
+    "title": "Vacuum Cleaner",
+    "price": 15500,
+    "oldPrice": 18000,
+    "description": "Powerful vacuum cleaner with HEPA filter. Suitable for carpets, hardwood floors, and upholstery cleaning.",
+    "category": "household items",
+    "stock": 9,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Bagless 1200W", "price": 15500, "oldPrice": 18000 },
+      { "name": "Bagless 1600W", "price": 18500, "oldPrice": 21500 },
+      { "name": "With Bag 1400W", "price": 16800, "oldPrice": 19500 }
+    ]
+  },
+  {
+    "Id": 42,
+    "title": "Traditional Pakistani Sweets",
+    "price": 1200,
+    "oldPrice": 1400,
+    "description": "Assorted traditional Pakistani sweets including gulab jamun, barfi, and rasgulla. Perfect for celebrations.",
+    "category": "foods",
+    "stock": 28,
+    "badges": ["DESI", "FRESH", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "500g Mixed", "price": 1200, "oldPrice": 1400 },
+      { "name": "1 KG Mixed", "price": 2200, "oldPrice": 2600 },
+      { "name": "1.5 KG Gift Box", "price": 3200, "oldPrice": 3800 }
+    ]
+  },
+  {
+    "Id": 43,
+    "title": "Women's Lipstick Set",
+    "price": 1850,
+    "oldPrice": 2200,
+    "description": "Premium lipstick set with 6 different shades. Long-lasting formula with moisturizing properties.",
+    "category": "cosmetics",
+    "stock": 42,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Matte Finish", "price": 1850, "oldPrice": 2200 },
+      { "name": "Glossy Finish", "price": 1950, "oldPrice": 2300 },
+      { "name": "Mix Collection", "price": 2150, "oldPrice": 2500 }
+    ]
+  },
+  {
+    "Id": 44,
+    "title": "Action Figure Toy Set",
+    "price": 2800,
+    "oldPrice": 3200,
+    "description": "Super hero action figure set with accessories. Safe plastic construction, perfect for kids aged 3 and above.",
+    "category": "toys",
+    "stock": 26,
+    "badges": ["BESTSELLER", "PREMIUM"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "3 Figures Set", "price": 2800, "oldPrice": 3200 },
+      { "name": "5 Figures Set", "price": 4200, "oldPrice": 4800 },
+      { "name": "Deluxe 8 Figures", "price": 6500, "oldPrice": 7500 }
+    ]
+  },
+  {
+    "Id": 45,
+    "title": "Cotton Bed Sheets Set",
+    "price": 3500,
+    "oldPrice": 4000,
+    "description": "100% cotton bed sheets set including 1 fitted sheet, 1 flat sheet, and 2 pillowcases. Soft and breathable.",
+    "category": "household items",
+    "stock": 18,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "Single Bed", "price": 2800, "oldPrice": 3200 },
+      { "name": "Double Bed", "price": 3500, "oldPrice": 4000 },
+      { "name": "King Size", "price": 4500, "oldPrice": 5200 }
+    ]
+  },
+  {
+    "Id": 46,
+    "title": "Laptop Bag Professional",
+    "price": 2200,
+    "oldPrice": 2600,
+    "description": "Professional laptop bag with padded compartments. Water-resistant material with multiple pockets for accessories.",
+    "category": "school",
+    "stock": 35,
+    "badges": ["PREMIUM", "BESTSELLER"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "13 Inch", "price": 2200, "oldPrice": 2600 },
+      { "name": "15 Inch", "price": 2500, "oldPrice": 2900 },
+      { "name": "17 Inch", "price": 2800, "oldPrice": 3200 }
+    ]
+  },
+  {
+    "Id": 47,
+    "title": "Corn Seeds for Farming",
+    "price": 320,
+    "oldPrice": 380,
+    "description": "High-yield corn seeds suitable for Pakistani soil and climate. Disease-resistant variety with excellent germination rate.",
+    "category": "agriculture",
+    "stock": 120,
+    "badges": ["FRESH", "PREMIUM"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "5 KG", "price": 320, "oldPrice": 380 },
+      { "name": "10 KG", "price": 600, "oldPrice": 720 },
+      { "name": "25 KG", "price": 1400, "oldPrice": 1680 }
+    ]
+  },
+  {
+    "Id": 48,
+    "title": "Anti-Aging Cream",
+    "price": 2500,
+    "oldPrice": 2900,
+    "description": "Advanced anti-aging cream with natural ingredients. Reduces wrinkles and fine lines while moisturizing skin.",
+    "category": "care",
+    "stock": 22,
+    "badges": ["PREMIUM", "ORGANIC"],
+    "images": ["/api/placeholder/400/400", "/api/placeholder/400/400"],
+    "variants": [
+      { "name": "50ml", "price": 2500, "oldPrice": 2900 },
+      { "name": "100ml", "price": 4200, "oldPrice": 4900 },
+      { "name": "150ml", "price": 5800, "oldPrice": 6800 }
+    ]
+  }
+]

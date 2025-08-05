@@ -1,0 +1,147 @@
+[
+  {
+    "Id": 1,
+    "name": "Vegetables",
+    "productCount": 3
+  },
+  {
+    "Id": 2,
+    "name": "Fruits",
+    "productCount": 2
+  },
+  {
+    "Id": 3,
+    "name": "Meat",
+    "productCount": 2
+  },
+  {
+    "Id": 4,
+    "name": "Milk",
+    "productCount": 1
+  },
+  {
+    "Id": 5,
+    "name": "Oil",
+    "productCount": 2
+  },
+  {
+    "Id": 6,
+    "name": "Groceries",
+    "productCount": 1
+  },
+  {
+    "Id": 7,
+    "name": "Pizza",
+    "productCount": 1
+  },
+  {
+    "Id": 8,
+    "name": "Foods",
+    "productCount": 2
+  },
+  {
+    "Id": 9,
+    "name": "Cosmetics",
+    "productCount": 2
+  },
+  {
+    "Id": 10,
+    "name": "Garments",
+    "productCount": 1
+  },
+  {
+    "Id": 11,
+    "name": "Shoes",
+    "productCount": 1
+  },
+  {
+    "Id": 12,
+    "name": "School",
+    "productCount": 2
+  },
+  {
+    "Id": 13,
+    "name": "Health",
+    "productCount": 2
+  },
+  {
+    "Id": 14,
+    "name": "Agriculture",
+    "productCount": 2
+  },
+  {
+    "Id": 15,
+    "name": "Care",
+    "productCount": 2
+  },
+  {
+    "Id": 16,
+    "name": "Baby",
+    "productCount": 2
+  },
+  {
+    "Id": 17,
+    "name": "Sports",
+    "productCount": 2
+  },
+  {
+    "Id": 18,
+    "name": "Electric",
+    "productCount": 1
+  },
+  {
+    "Id": 19,
+    "name": "Electronics",
+    "productCount": 2
+  },
+  {
+    "Id": 20,
+    "name": "Mobile",
+    "productCount": 2
+  },
+  {
+    "Id": 21,
+    "name": "Computer",
+    "productCount": 1
+  },
+  {
+    "Id": 22,
+    "name": "Diet",
+    "productCount": 1
+  },
+  {
+    "Id": 23,
+    "name": "Nuts",
+    "productCount": 2
+  },
+  {
+    "Id": 24,
+    "name": "Dry Fruit",
+    "productCount": 1
+  },
+  {
+    "Id": 25,
+    "name": "Services",
+    "productCount": 1
+  },
+  {
+    "Id": 26,
+    "name": "Toys",
+    "productCount": 2
+  },
+  {
+    "Id": 27,
+    "name": "Books",
+    "productCount": 2
+  },
+  {
+    "Id": 28,
+    "name": "Islamic",
+    "productCount": 1
+  },
+  {
+    "Id": 29,
+    "name": "Household Items",
+    "productCount": 3
+  }
+]
