@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
-import HeroBanner from "@/components/organisms/HeroBanner";
-import CategoryCarousel from "@/components/organisms/CategoryCarousel";
+import React, { useEffect, useState } from "react";
+import { useToast } from "@/hooks/useToast";
+import { LocationService } from "@/services/api/LocationService";
+import { CategoryService } from "@/services/api/CategoryService";
+import { ProductService } from "@/services/api/ProductService";
 import DealsSection from "@/components/organisms/DealsSection";
+import HeroBanner from "@/components/organisms/HeroBanner";
 import ProductGrid from "@/components/organisms/ProductGrid";
+import CategoryCarousel from "@/components/organisms/CategoryCarousel";
 import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
-import { ProductService } from "@/services/api/ProductService";
-import { CategoryService } from "@/services/api/CategoryService";
-import { LocationService } from "@/services/api/LocationService";
-import { useToast } from "@/hooks/useToast";
 const Home = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -24,13 +24,20 @@ const loadData = async () => {
       setLoading(true);
       setError("");
 
-      // Get user location first
+      // Get user location first with enhanced error handling
       const location = await LocationService.getUserLocation();
       setUserLocation(location);
+// Log location result for debugging (only in development)
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development' && location.error) {
+        console.info('Location service fallback activated:', {
+          city: location.city,
+          errorCode: location.error.code,
+          errorMessage: location.error.message
+        });
+      }
       
       const locationMsg = LocationService.getLocationMessage(location);
       setLocationMessage(locationMsg);
-
       const [productsData, categoriesData, trendingData] = await Promise.all([
         ProductService.getAll(),
         CategoryService.getAll(),
@@ -47,15 +54,24 @@ const loadData = async () => {
       );
       setDeals(dealsData);
 
-      // Show location-based success message
-      if (location.city !== "Pakistan") {
+// Show location-based success message (only if location was successfully obtained)
+      if (location?.city && location.city !== "Pakistan" && !location.error) {
         showToast.success(`Products tailored for ${location.city}! Showing ${location.weather} weather favorites.`);
+      } else if (location?.error && location.error.code === 1) {
+        // Quietly handle permission denied - no need to show error toast as fallback works
+        console.info('Using default location-based products due to permission settings');
       }
-
-    } catch (err) {
+} catch (err) {
       console.error("Error loading home data:", err);
-      setError("Failed to load page content. Please try again.");
-      showToast.error("Failed to load personalized products. Showing general trending items.");
+      
+      // Enhanced error handling with better user messaging
+      const errorMessage = err?.message || "Failed to load page content. Please try again.";
+      setError(errorMessage);
+      
+      // Only show toast error for actual failures, not location permission issues
+      if (!err?.message?.includes('location') && !err?.message?.includes('geolocation')) {
+        showToast.error("Failed to load products. Please check your connection and try again.");
+      }
     } finally {
       setLoading(false);
     }

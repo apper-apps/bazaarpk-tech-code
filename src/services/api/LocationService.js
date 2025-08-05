@@ -31,23 +31,23 @@ class LocationService {
         },
 (error) => {
           // Extract meaningful error information from GeolocationPositionError
-          const errorCode = error.code;
-          const errorMessage = error.message;
+          const errorCode = error?.code || 0;
+          const errorMessage = error?.message || "Unknown error";
           
           let errorDescription = "Unknown geolocation error";
           let fallbackCity = "Pakistan";
           
           // Handle specific error codes
           switch(errorCode) {
-            case error.PERMISSION_DENIED:
+            case 1: // PERMISSION_DENIED
               errorDescription = "Location access denied by user";
               fallbackCity = "Pakistan";
               break;
-            case error.POSITION_UNAVAILABLE:
+            case 2: // POSITION_UNAVAILABLE
               errorDescription = "Location information unavailable";
               fallbackCity = "Pakistan";
               break;
-            case error.TIMEOUT:
+            case 3: // TIMEOUT
               errorDescription = "Location request timed out";
               fallbackCity = "Pakistan";
               break;
@@ -55,10 +55,12 @@ class LocationService {
               errorDescription = errorMessage || "Geolocation service failed";
           }
           
+          // Fixed: Proper error logging without object concatenation
           console.error(`Geolocation error (Code: ${errorCode}): ${errorDescription}`, {
             code: errorCode,
             message: errorMessage,
-            fullError: error
+            originalError: error,
+            timestamp: new Date().toISOString()
           });
           
           resolve({ 
@@ -68,7 +70,8 @@ class LocationService {
             temperature: 25,
             error: {
               code: errorCode,
-              message: errorDescription
+              message: errorDescription,
+              handled: true
             }
           });
         },
