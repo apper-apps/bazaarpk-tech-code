@@ -3,17 +3,21 @@ import { useToast } from "@/hooks/useToast";
 import { LocationService } from "@/services/api/LocationService";
 import { CategoryService } from "@/services/api/CategoryService";
 import { ProductService } from "@/services/api/ProductService";
+import { RecipeBundleService } from "@/services/api/RecipeBundleService";
 import DealsSection from "@/components/organisms/DealsSection";
 import HeroBanner from "@/components/organisms/HeroBanner";
 import ProductGrid from "@/components/organisms/ProductGrid";
 import CategoryCarousel from "@/components/organisms/CategoryCarousel";
+import RecipeBundles from "@/components/organisms/RecipeBundles";
 import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
+
 const Home = () => {
 const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [deals, setDeals] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
+  const [recipeBundles, setRecipeBundles] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
   const [locationMessage, setLocationMessage] = useState("🔥 Trending Now");
   const [loading, setLoading] = useState(true);
@@ -40,22 +44,23 @@ setError("");
       
       const locationMsg = LocationService.getLocationMessage(location);
       setLocationMessage(locationMsg);
-      const [productsData, categoriesData, trendingData] = await Promise.all([
+const [productsData, categoriesData, trendingData, recipeBundlesData] = await Promise.all([
         ProductService.getAll(),
         CategoryService.getAll(),
-        ProductService.getTrendingByLocation(location)
+        ProductService.getTrendingByLocation(location),
+        RecipeBundleService.getFeatured(6)
       ]);
 
       setProducts(productsData);
       setCategories(categoriesData);
       setTrendingProducts(trendingData);
+      setRecipeBundles(recipeBundlesData);
       
       // Filter deals (products with discount)
       const dealsData = productsData.filter(product => 
         product.oldPrice && product.oldPrice > product.price
       );
-setDeals(dealsData);
-
+      setDeals(dealsData);
       // Show location-based success message (only if location was successfully obtained)
       if (location?.city && location.city !== "Pakistan" && !location.error) {
         showToast.success(`Products tailored for ${location.city}! Showing ${location.weather} weather favorites.`);
@@ -163,6 +168,14 @@ setDeals(dealsData);
         title={locationMessage}
         showLoadMore={false}
         initialCount={8}
+/>
+
+      {/* Recipe Bundles */}
+      <RecipeBundles 
+        bundles={recipeBundles}
+        title="🍽️ Complete Recipe Bundles"
+        subtitle="Everything you need for delicious homemade meals"
+        showViewAll={true}
       />
 
       {/* Fresh Arrivals */}

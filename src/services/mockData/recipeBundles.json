@@ -1,0 +1,344 @@
+[
+  {
+    "Id": 1,
+    "name": "Classic Chicken Biryani Bundle",
+    "description": "Everything you need for authentic chicken biryani with fragrant basmati rice, tender chicken, and traditional spices",
+    "image": "https://images.unsplash.com/photo-1563379091339-03246963d51a?w=600&h=450&fit=crop",
+    "category": "Pakistani",
+    "cookTime": "90 min",
+    "servings": 6,
+    "difficulty": "Medium",
+    "featured": true,
+    "products": [
+      {
+        "product": {
+          "Id": 1,
+          "name": "Basmati Rice Premium",
+          "image": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=200&h=200&fit=crop",
+          "price": 450,
+          "oldPrice": 500
+        },
+        "quantity": 1,
+        "unit": "kg"
+      },
+      {
+        "product": {
+          "Id": 15,
+          "name": "Fresh Chicken (Cut)",
+          "image": "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=200&h=200&fit=crop",
+          "price": 800,
+          "oldPrice": 850
+        },
+        "quantity": 1,
+        "unit": "kg"
+      },
+      {
+        "product": {
+          "Id": 25,
+          "name": "Biryani Masala Mix",
+          "image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=200&h=200&fit=crop",
+          "price": 180,
+          "oldPrice": 200
+        },
+        "quantity": 1,
+        "unit": "pack"
+      },
+      {
+        "product": {
+          "Id": 30,
+          "name": "Saffron Strands",
+          "image": "https://images.unsplash.com/photo-1609501676725-7186f734b2ba?w=200&h=200&fit=crop",
+          "price": 120,
+          "oldPrice": 150
+        },
+        "quantity": 1,
+        "unit": "pack"
+      }
+    ]
+  },
+  {
+    "Id": 2,
+    "name": "Authentic Karahi Chicken Bundle",
+    "description": "Traditional karahi chicken with fresh tomatoes, green chilies, and aromatic spices for a perfect family meal",
+    "image": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600&h=450&fit=crop",
+    "category": "Pakistani",
+    "cookTime": "45 min",
+    "servings": 4,
+    "difficulty": "Easy",
+    "featured": true,
+    "products": [
+      {
+        "product": {
+          "Id": 15,
+          "name": "Fresh Chicken (Cut)",
+          "image": "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=200&h=200&fit=crop",
+          "price": 800,
+          "oldPrice": 850
+        },
+        "quantity": 1,
+        "unit": "kg"
+      },
+      {
+        "product": {
+          "Id": 8,
+          "name": "Fresh Tomatoes",
+          "image": "https://images.unsplash.com/photo-1546094096-0df4bcaaa337?w=200&h=200&fit=crop",
+          "price": 80,
+          "oldPrice": 100
+        },
+        "quantity": 0.5,
+        "unit": "kg"
+      },
+      {
+        "product": {
+          "Id": 12,
+          "name": "Green Chilies",
+          "image": "https://images.unsplash.com/photo-1583170835824-c9ce97c66ff7?w=200&h=200&fit=crop",
+          "price": 60,
+          "oldPrice": 70
+        },
+        "quantity": 250,
+        "unit": "g"
+      },
+      {
+        "product": {
+          "Id": 28,
+          "name": "Karahi Masala",
+          "image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=200&h=200&fit=crop",
+          "price": 150,
+          "oldPrice": 180
+        },
+        "quantity": 1,
+        "unit": "pack"
+      }
+    ]
+  },
+  {
+    "Id": 3,
+    "name": "Fresh Fruit Chaat Bundle",
+    "description": "Refreshing fruit chaat with seasonal fruits, tangy chaat masala, and fresh mint for the perfect snack",
+    "image": "https://images.unsplash.com/photo-1570197788417-0e82375c9371?w=600&h=450&fit=crop",
+    "category": "Snacks",
+    "cookTime": "15 min",
+    "servings": 4,
+    "difficulty": "Easy",
+    "featured": true,
+    "products": [
+      {
+        "product": {
+          "Id": 35,
+          "name": "Mixed Seasonal Fruits",
+          "image": "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=200&h=200&fit=crop",
+          "price": 300,
+          "oldPrice": 350
+        },
+        "quantity": 1,
+        "unit": "kg"
+      },
+      {
+        "product": {
+          "Id": 26,
+          "name": "Chaat Masala",
+          "image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=200&h=200&fit=crop",
+          "price": 90,
+          "oldPrice": 110
+        },
+        "quantity": 1,
+        "unit": "pack"
+      },
+      {
+        "product": {
+          "Id": 18,
+          "name": "Fresh Mint Leaves",
+          "image": "https://images.unsplash.com/photo-1628531235411-2dde3ee658a7?w=200&h=200&fit=crop",
+          "price": 40,
+          "oldPrice": 50
+        },
+        "quantity": 1,
+        "unit": "bunch"
+      },
+      {
+        "product": {
+          "Id": 40,
+          "name": "Lemon Fresh",
+          "image": "https://images.unsplash.com/photo-1590502593747-42a4e0d4403e?w=200&h=200&fit=crop",
+          "price": 120,
+          "oldPrice": 140
+        },
+        "quantity": 4,
+        "unit": "pcs"
+      }
+    ]
+  },
+  {
+    "Id": 4,
+    "name": "Breakfast Paratha Bundle",
+    "description": "Complete breakfast set with fresh parathas, butter, jam, and chai masala for a perfect morning start",
+    "image": "https://images.unsplash.com/photo-1574085733277-851d9d856a3a?w=600&h=450&fit=crop",
+    "category": "Breakfast",
+    "cookTime": "30 min",
+    "servings": 4,
+    "difficulty": "Easy",
+    "featured": false,
+    "products": [
+      {
+        "product": {
+          "Id": 45,
+          "name": "Wheat Flour Premium",
+          "image": "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&h=200&fit=crop",
+          "price": 200,
+          "oldPrice": 220
+        },
+        "quantity": 1,
+        "unit": "kg"
+      },
+      {
+        "product": {
+          "Id": 50,
+          "name": "Pure Butter",
+          "image": "https://images.unsplash.com/photo-1589985269047-0dbf5ed50b63?w=200&h=200&fit=crop",
+          "price": 250,
+          "oldPrice": 280
+        },
+        "quantity": 200,
+        "unit": "g"
+      },
+      {
+        "product": {
+          "Id": 52,
+          "name": "Mixed Fruit Jam",
+          "image": "https://images.unsplash.com/photo-1599599810694-57a2ca8276a8?w=200&h=200&fit=crop",
+          "price": 180,
+          "oldPrice": 210
+        },
+        "quantity": 1,
+        "unit": "jar"
+      },
+      {
+        "product": {
+          "Id": 55,
+          "name": "Tea Masala",
+          "image": "https://images.unsplash.com/photo-1597318181409-cf64d0b3d525?w=200&h=200&fit=crop",
+          "price": 120,
+          "oldPrice": 140
+        },
+        "quantity": 1,
+        "unit": "pack"
+      }
+    ]
+  },
+  {
+    "Id": 5,
+    "name": "Healthy Salad Bundle",
+    "description": "Fresh and crispy salad ingredients with cucumber, lettuce, carrots, and homemade dressing for a nutritious meal",
+    "image": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&h=450&fit=crop",
+    "category": "Healthy",
+    "cookTime": "10 min",
+    "servings": 3,
+    "difficulty": "Easy",
+    "featured": false,
+    "products": [
+      {
+        "product": {
+          "Id": 10,
+          "name": "Fresh Cucumber",
+          "image": "https://images.unsplash.com/photo-1449300079323-02e209d9d3a6?w=200&h=200&fit=crop",
+          "price": 70,
+          "oldPrice": 90
+        },
+        "quantity": 0.5,
+        "unit": "kg"
+      },
+      {
+        "product": {
+          "Id": 65,
+          "name": "Fresh Lettuce",
+          "image": "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=200&h=200&fit=crop",
+          "price": 80,
+          "oldPrice": 100
+        },
+        "quantity": 1,
+        "unit": "head"
+      },
+      {
+        "product": {
+          "Id": 7,
+          "name": "Fresh Carrots",
+          "image": "https://images.unsplash.com/photo-1445282768818-728615cc910a?w=200&h=200&fit=crop",
+          "price": 90,
+          "oldPrice": 110
+        },
+        "quantity": 0.5,
+        "unit": "kg"
+      },
+      {
+        "product": {
+          "Id": 70,
+          "name": "Olive Oil Premium",
+          "image": "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=200&h=200&fit=crop",
+          "price": 450,
+          "oldPrice": 500
+        },
+        "quantity": 1,
+        "unit": "bottle"
+      }
+    ]
+  },
+  {
+    "Id": 6,
+    "name": "Weekend BBQ Bundle",
+    "description": "Complete BBQ essentials with fresh meat, marinades, and vegetables for the perfect weekend grill session",
+    "image": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&h=450&fit=crop",
+    "category": "BBQ",
+    "cookTime": "120 min",
+    "servings": 8,
+    "difficulty": "Medium",
+    "featured": true,
+    "products": [
+      {
+        "product": {
+          "Id": 75,
+          "name": "Beef Cubes Premium",
+          "image": "https://images.unsplash.com/photo-1588347818017-54a3def3d203?w=200&h=200&fit=crop",
+          "price": 1200,
+          "oldPrice": 1300
+        },
+        "quantity": 1,
+        "unit": "kg"
+      },
+      {
+        "product": {
+          "Id": 80,
+          "name": "BBQ Marinade Mix",
+          "image": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=200&h=200&fit=crop",
+          "price": 200,
+          "oldPrice": 230
+        },
+        "quantity": 2,
+        "unit": "pack"
+      },
+      {
+        "product": {
+          "Id": 11,
+          "name": "Mixed Bell Peppers",
+          "image": "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=200&h=200&fit=crop",
+          "price": 160,
+          "oldPrice": 180
+        },
+        "quantity": 0.5,
+        "unit": "kg"
+      },
+      {
+        "product": {
+          "Id": 9,
+          "name": "Fresh Onions",
+          "image": "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=200&h=200&fit=crop",
+          "price": 60,
+          "oldPrice": 80
+        },
+        "quantity": 0.5,
+        "unit": "kg"
+      }
+    ]
+  }
+]

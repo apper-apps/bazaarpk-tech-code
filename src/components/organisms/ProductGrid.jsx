@@ -10,6 +10,7 @@ const ProductGrid = ({
   title = "Featured Products",
   showLoadMore = false,
   initialCount = 12,
+  gridType = "products", // "products" or "bundles"
   className,
   ...props 
 }) => {
