@@ -730,8 +730,8 @@ return (
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="all">All Categories</option>
+>
+              <option key="all" value="all">All Categories</option>
               {categories.map((category) => (
                 <option key={category.slug} value={category.slug}>
                   {category.name}
@@ -768,11 +768,11 @@ return (
               value={stockFilter}
               onChange={(e) => setStockFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="all">All Stock</option>
-              <option value="in-stock">In Stock (10+)</option>
-              <option value="low-stock">Low Stock (1-10)</option>
-              <option value="out-of-stock">Out of Stock</option>
+>
+              <option key="all" value="all">All Stock</option>
+              <option key="in-stock" value="in-stock">In Stock (10+)</option>
+              <option key="low-stock" value="low-stock">Low Stock (1-10)</option>
+              <option key="out-of-stock" value="out-of-stock">Out of Stock</option>
             </select>
           </div>
 
@@ -783,8 +783,8 @@ return (
               value={tagFilter}
               onChange={(e) => setTagFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="all">All Tags</option>
+>
+              <option key="all" value="all">All Tags</option>
               {availableTags.map((tag) => (
                 <option key={tag} value={tag}>
                   {tag}
@@ -801,9 +801,9 @@ return (
               onChange={(e) => setFeaturedFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
-              <option value="all">All Products</option>
-              <option value="featured">Featured Only</option>
-              <option value="not-featured">Not Featured</option>
+<option key="all" value="all">All Products</option>
+              <option key="featured" value="featured">Featured Only</option>
+              <option key="not-featured" value="not-featured">Not Featured</option>
             </select>
           </div>
 
