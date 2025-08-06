@@ -963,12 +963,12 @@ return (
                       value={bulkEditData.priceAdjustment.type}
                       onChange={(e) => setBulkEditData(prev => ({
                         ...prev,
-                        priceAdjustment: { ...prev.priceAdjustment, type: e.target.value }
+priceAdjustment: { ...prev.priceAdjustment, type: e.target.value }
                       }))}
                       className="px-3 py-2 border border-gray-300 rounded-md text-sm"
                     >
-                      <option value="percentage">Percentage</option>
-                      <option value="fixed">Fixed Amount</option>
+                      <option key="percentage" value="percentage">Percentage</option>
+                      <option key="fixed" value="fixed">Fixed Amount</option>
                     </select>
                     <Input
                       type="number"
@@ -1008,12 +1008,12 @@ return (
                     Change Status
                   </label>
                   <select
-                    value={bulkEditData.status}
+value={bulkEditData.status}
                     onChange={(e) => setBulkEditData(prev => ({ ...prev, status: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                   >
-                    <option value="">Keep Current</option>
-<option key="published" value="published">Published</option>
+                    <option key="" value="">Keep Current</option>
+                    <option key="published" value="published">Published</option>
                     <option key="draft" value="draft">Draft</option>
                   </select>
                 </div>
