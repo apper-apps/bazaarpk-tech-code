@@ -5,7 +5,7 @@ import { ToastContainer } from "react-toastify";
 import ApperIcon from "@/components/ApperIcon";
 import Header from "@/components/organisms/Header";
 import CartDrawer from "@/components/organisms/CartDrawer";
-import Error from "@/components/ui/Error";
+import ErrorComponent from "@/components/ui/Error";
 import UserManagement from "@/components/pages/UserManagement";
 import AddRecipeBundle from "@/components/pages/AddRecipeBundle";
 import Home from "@/components/pages/Home";
@@ -238,7 +238,7 @@ useEffect(() => {
       window.removeEventListener('admin_mask_error', handleAdminMaskError);
       console.error = originalConsoleError;
     };
-  }, [browserInfo, performanceMetrics]);
+}, []); // Run only once on mount - browser detection and performance monitoring initialization
 
 const handleAdminAccess = async () => {
     const startTime = performance.now();
