@@ -1,11 +1,11 @@
 import '@/index.css';
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import ApperIcon from "@/components/ApperIcon";
 import Header from "@/components/organisms/Header";
 import CartDrawer from "@/components/organisms/CartDrawer";
-import ErrorComponent from "@/components/ui/Error";
+import ErrorComponent, { Error } from "@/components/ui/Error";
 import UserManagement from "@/components/pages/UserManagement";
 import AddRecipeBundle from "@/components/pages/AddRecipeBundle";
 import Home from "@/components/pages/Home";
@@ -240,8 +240,14 @@ useEffect(() => {
     };
 }, []); // Run only once on mount - browser detection and performance monitoring initialization
 
-const handleAdminAccess = async () => {
+const cleanupRef = useRef(false);
+  
+  const handleAdminAccess = useCallback(async () => {
+    // Prevent multiple simultaneous calls
+    if (isAdminLoading || cleanupRef.current) return;
+    
     const startTime = performance.now();
+    cleanupRef.current = false;
     setIsAdminLoading(true);
     setAdminLoadProgress(0);
     setAdminError(null);
@@ -260,6 +266,10 @@ const handleAdminAccess = async () => {
     // Adaptive progress interval based on device performance
     const intervalDelay = browserInfo?.mobile ? 150 : 100;
     const progressInterval = setInterval(() => {
+      if (cleanupRef.current) {
+        clearInterval(progressInterval);
+        return;
+      }
       setAdminLoadProgress(prev => {
         if (prev >= 90) return prev;
         return prev + Math.random() * 15;
@@ -272,6 +282,7 @@ const handleAdminAccess = async () => {
                            8000 : 5000;
     
     const timeoutId = setTimeout(() => {
+      if (cleanupRef.current) return;
       setShowForceExit(true);
       setAdminError(`Loading timeout - Dashboard taking longer than expected (${timeoutDuration/1000}s timeout)`);
       
@@ -304,26 +315,29 @@ const handleAdminAccess = async () => {
       document.body.setAttribute('aria-live', 'polite');
       
       // Browser-optimized loading stages
-      setAdminLoadProgress(20);
+      if (!cleanupRef.current) setAdminLoadProgress(20);
       await new Promise(resolve => setTimeout(resolve, browserInfo?.mobile ? 300 : 200));
       
       // Preload critical admin resources
-      setAdminLoadProgress(40);
+      if (!cleanupRef.current) setAdminLoadProgress(40);
       if ('requestIdleCallback' in window) {
         await new Promise(resolve => window.requestIdleCallback(resolve));
       } else {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
-      setAdminLoadProgress(60);
+      if (!cleanupRef.current) setAdminLoadProgress(60);
       await new Promise(resolve => setTimeout(resolve, browserInfo?.mobile ? 400 : 300));
       
       // Navigate to admin dashboard
-      setAdminLoadProgress(80);
-      navigate('/admin');
+      if (!cleanupRef.current) {
+        setAdminLoadProgress(80);
+        cleanupRef.current = true; // Prevent further state updates
+        navigate('/admin');
+      }
       
       // Complete loading with smooth transition
-      setAdminLoadProgress(100);
+      if (!cleanupRef.current) setAdminLoadProgress(100);
       await new Promise(resolve => setTimeout(resolve, 200));
       
       // Calculate and log performance metrics
@@ -346,13 +360,9 @@ const handleAdminAccess = async () => {
         });
       }
       
-      // Clear states
-      clearInterval(progressInterval);
-      clearTimeout(timeoutId);
-      
     } catch (error) {
-      clearInterval(progressInterval);
-      clearTimeout(timeoutId);
+      if (cleanupRef.current) return; // Don't process errors after cleanup
+      
       console.error('Admin access error:', error);
       
       // Enhanced error categorization
@@ -386,39 +396,44 @@ const handleAdminAccess = async () => {
         });
       }
       
-      // Implement exponential backoff retry with browser-specific delays
-      const retryWithBackoff = async (attempt) => {
+      // Implement simple retry logic without recursion
+      if (retryCount < 3 && errorCategory !== 'compatibility') {
         const baseDelay = browserInfo?.mobile ? 2000 : 1000;
-        const delay = Math.pow(2, attempt) * baseDelay; // Longer delays for mobile
-        setTimeout(async () => {
-          if (attempt < 3) {
+        const delay = Math.pow(2, retryCount) * baseDelay;
+        
+        setTimeout(() => {
+          if (!cleanupRef.current) {
             setRetryCount(prev => prev + 1);
-            await handleAdminAccess();
+            // Don't call handleAdminAccess recursively - let user manually retry
+            setShowForceExit(true);
           }
         }, delay);
-      };
-      
-      if (retryCount < 3 && errorCategory !== 'compatibility') {
-        retryWithBackoff(retryCount);
       }
       
     } finally {
+      // Cleanup resources
+      clearInterval(progressInterval);
+      clearTimeout(timeoutId);
+      
       setTimeout(() => {
-        setIsAdminLoading(false);
-        setAdminLoadProgress(0);
+        if (!cleanupRef.current) {
+          setIsAdminLoading(false);
+          setAdminLoadProgress(0);
+        }
         document.body.classList.remove('admin-accessing');
         document.body.classList.remove('content-layer');
         document.body.removeAttribute('aria-busy');
         document.body.removeAttribute('aria-live');
-        clearInterval(progressInterval);
-        clearTimeout(timeoutId);
       }, 500);
     }
-  };
+  }, [isAdminLoading, navigate, browserInfo, retryCount]);
 
-  // Force exit handler for emergency situations
-  const handleForceExit = () => {
+// Force exit handler for emergency situations
+  const handleForceExit = useCallback(() => {
     console.warn('🚨 Force exit triggered - Emergency admin access cleanup');
+    
+    // Set cleanup flag to prevent further operations
+    cleanupRef.current = true;
     
     // Track emergency exits
     if (typeof window !== 'undefined' && window.gtag) {
@@ -445,11 +460,12 @@ const handleAdminAccess = async () => {
     // Remove emergency class after cleanup
     setTimeout(() => {
       document.body.classList.remove('admin-emergency-exit');
+      cleanupRef.current = false; // Reset for next attempt
     }, 1000);
     
     // Navigate to safe route
     navigate('/');
-  };
+  }, [navigate, browserInfo, adminError]);
 
   return (
 <div className="min-h-screen bg-background content-layer">
@@ -677,7 +693,7 @@ onClick={(e) => {
   );
 }
 
-function App() {
+function MainApp() {
   return (
     <BrowserRouter>
       <AppContent />
@@ -685,4 +701,4 @@ function App() {
   );
 }
 
-export default App;
+export default MainApp;
