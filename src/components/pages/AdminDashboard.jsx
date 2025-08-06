@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ApperIcon from '@/components/ApperIcon';
@@ -9,7 +9,19 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [expandedSections, setExpandedSections] = useState(['products']); // Products expanded by default
+const [expandedSections, setExpandedSections] = useState(['products']); // Products expanded by default
+
+  const focusFirstAdminElement = () => {
+    // Set keyboard focus on the first interactive admin element
+    const firstButton = document.querySelector('.admin-nav button, .admin-sidebar button');
+    if (firstButton) {
+      firstButton.focus();
+    }
+  };
+
+  useEffect(() => {
+    focusFirstAdminElement();
+  }, []);
 
   const toggleSection = (section) => {
     setExpandedSections(prev => 
@@ -236,14 +248,15 @@ id: 'products',
             {sidebarItems.map((item) => (
               <div key={item.id}>
                 {/* Main Item */}
-                <button
+<button
                   onClick={item.expandable ? () => toggleSection(item.id) : item.onClick}
                   className={cn(
-                    "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                    "admin-nav w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
                     isActive(item.path) 
                       ? "bg-primary-100 text-primary-700 border-r-2 border-primary-500" 
                       : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                   )}
+                  tabIndex={0}
                 >
                   <ApperIcon name={item.icon} className="w-5 h-5 flex-shrink-0" />
                   {!sidebarCollapsed && (
