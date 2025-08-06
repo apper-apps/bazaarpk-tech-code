@@ -814,10 +814,10 @@ return (
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="all">All Status</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
+>
+              <option key="all" value="all">All Status</option>
+              <option key="published" value="published">Published</option>
+              <option key="draft" value="draft">Draft</option>
             </select>
           </div>
         </div>
@@ -830,16 +830,16 @@ return (
             onChange={(e) => setSortBy(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
-            <option value="name-asc">Name (A-Z)</option>
-            <option value="name-desc">Name (Z-A)</option>
-            <option value="price-high">Price (High-Low)</option>
-            <option value="price-low">Price (Low-High)</option>
-            <option value="stock-high">Stock (High-Low)</option>
-            <option value="stock-low">Stock (Low-High)</option>
-            <option value="most-popular">Most Popular</option>
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-            <option value="last-updated">Last Updated</option>
+<option key="name-asc" value="name-asc">Name (A-Z)</option>
+            <option key="name-desc" value="name-desc">Name (Z-A)</option>
+            <option key="price-high" value="price-high">Price (High-Low)</option>
+            <option key="price-low" value="price-low">Price (Low-High)</option>
+            <option key="stock-high" value="stock-high">Stock (High-Low)</option>
+            <option key="stock-low" value="stock-low">Stock (Low-High)</option>
+            <option key="most-popular" value="most-popular">Most Popular</option>
+            <option key="newest" value="newest">Newest First</option>
+            <option key="oldest" value="oldest">Oldest First</option>
+            <option key="last-updated" value="last-updated">Last Updated</option>
           </select>
         </div>
       </div>
