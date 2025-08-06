@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/useToast";
 import { CategoryService } from "@/services/api/CategoryService";
 import { ProductService } from "@/services/api/ProductService";
 import ApperIcon from "@/components/ApperIcon";
+import Home from "@/components/pages/Home";
+import Category from "@/components/pages/Category";
+import Badge from "@/components/atoms/Badge";
 import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
 import Card from "@/components/atoms/Card";
@@ -41,7 +44,23 @@ const [formData, setFormData] = useState({
     includeInDeals: false,
     shippingFreeThreshold: "1000",
     returnPolicy: "7-day",
-    visibility: "draft"
+    visibility: "draft",
+    moderatorApproved: false,
+    requiresApproval: true,
+    metaTitle: "",
+    metaDescription: "",
+    seoKeywords: []
+  });
+
+  // Admin/Moderator permissions
+  const [currentUser] = useState({
+    role: 'admin', // admin, moderator
+    permissions: {
+      canPublish: true,
+      canSchedule: true,
+      canApprove: true,
+      canBypassApproval: true
+    }
   });
   
 // UI state
@@ -116,16 +135,27 @@ const [formData, setFormData] = useState({
 
 const tabs = [
     { id: "basic", label: "Basic Information", icon: "Info" },
-    { id: "pricing", label: "Pricing", icon: "DollarSign" },
-    { id: "inventory", label: "Inventory", icon: "Package" },
-    { id: "marketing", label: "Marketing", icon: "Tag" },
-    { id: "media", label: "Media", icon: "Image" },
-    { id: "shipping", label: "Shipping & Policies", icon: "Truck" }
+    { id: "pricing", label: "Pricing & Variants", icon: "DollarSign" },
+    { id: "inventory", label: "Inventory & Stock", icon: "Package" },
+    { id: "marketing", label: "Marketing & Deals", icon: "Tag" },
+    { id: "media", label: "Media Gallery", icon: "Image" },
+    { id: "shipping", label: "Shipping & Policies", icon: "Truck" },
+    { id: "seo", label: "SEO Settings", icon: "Search" },
+    { id: "approval", label: "Approval Settings", icon: "Shield" }
   ];
 
 const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setUnsavedChanges(true);
+    
+    // Auto-generate SKU if title changes
+    if (field === 'title' && value) {
+      const autoSku = `${formData.category?.substring(0,3).toUpperCase() || 'PRD'}-${value.substring(0,3).toUpperCase()}-${Date.now().toString().slice(-3)}`;
+      if (!formData.sku) {
+        setFormData(prev => ({ ...prev, sku: autoSku }));
+      }
+    }
+    
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
@@ -222,7 +252,7 @@ const handleInputChange = (field, value) => {
     return Object.keys(newErrors).length === 0;
   };
 
-const handleSave = async (publish = false, silent = false) => {
+const handleSave = async (publish = false, silent = false, schedule = null) => {
     if (!validateForm() && !silent) {
       showToast("Please fix the errors before saving", "error");
       return;
@@ -230,9 +260,25 @@ const handleSave = async (publish = false, silent = false) => {
 
     setLoading(true);
     try {
+      let visibility = 'draft';
+      let requiresApproval = formData.requiresApproval;
+      
+      if (publish) {
+        if (currentUser.permissions.canBypassApproval || currentUser.role === 'admin') {
+          visibility = 'published';
+          requiresApproval = false;
+        } else {
+          visibility = 'pending';
+          requiresApproval = true;
+        }
+      }
+
       const productData = {
         ...formData,
-        visibility: publish ? "published" : "draft",
+        visibility,
+        requiresApproval,
+        moderatorApproved: currentUser.permissions.canBypassApproval,
+        scheduledPublish: schedule,
         price: sellingPrice,
         oldPrice: discountedPrice > 0 ? sellingPrice : null,
         discountedPrice: discountedPrice > 0 ? discountedPrice : null,
@@ -245,24 +291,41 @@ const handleSave = async (publish = false, silent = false) => {
         variants: [],
         barcode: formData.barcode,
         returnPolicy: formData.returnPolicy,
-        includeInDeals: formData.includeInDeals
+        includeInDeals: formData.includeInDeals,
+        seo: {
+          metaTitle: formData.metaTitle || formData.title,
+          metaDescription: formData.metaDescription || formData.shortDescription,
+          keywords: formData.seoKeywords
+        },
+        createdBy: currentUser.role,
+        createdAt: new Date(),
+        lastModified: new Date()
       };
 
       await ProductService.create(productData);
       
       if (!silent) {
-        showToast(
-          `Product ${publish ? 'published' : 'saved as draft'} successfully!`, 
-          "success"
-        );
+        let message = 'Product saved as draft successfully!';
+        if (publish) {
+          if (requiresApproval) {
+            message = 'Product submitted for approval successfully!';
+          } else {
+            message = 'Product published successfully!';
+          }
+        }
+        if (schedule) {
+          message = `Product scheduled for ${schedule} successfully!`;
+        }
+        
+        showToast(message, "success");
       }
       
       setUnsavedChanges(false);
       setLastSaved(new Date());
       
       // Reset form or navigate
-      if (publish) {
-        navigate("/category");
+      if (publish && !requiresApproval) {
+        navigate("/admin/products");
       } else if (!silent) {
         // Reset form for another product
         setFormData({
@@ -285,7 +348,12 @@ const handleSave = async (publish = false, silent = false) => {
           includeInDeals: false,
           shippingFreeThreshold: "1000",
           returnPolicy: "7-day",
-          visibility: "draft"
+          visibility: "draft",
+          moderatorApproved: false,
+          requiresApproval: true,
+          metaTitle: "",
+          metaDescription: "",
+          seoKeywords: []
         });
         setImagePreview(null);
         setActiveTab("basic");
@@ -299,6 +367,111 @@ const handleSave = async (publish = false, silent = false) => {
       setLoading(false);
     }
   };
+
+  // SEO Tab Render Function
+  const renderSEO = () => (
+    <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Meta Title
+        </label>
+        <Input
+          value={formData.metaTitle}
+          onChange={(e) => handleInputChange('metaTitle', e.target.value)}
+          placeholder="SEO-friendly title (60 characters max)"
+          maxLength={60}
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          {formData.metaTitle.length}/60 characters
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Meta Description
+        </label>
+        <textarea
+          value={formData.metaDescription}
+          onChange={(e) => handleInputChange('metaDescription', e.target.value)}
+          placeholder="Brief description for search engines (160 characters max)"
+          maxLength={160}
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          {formData.metaDescription.length}/160 characters
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          SEO Keywords (comma-separated)
+        </label>
+        <Input
+          value={formData.seoKeywords.join(', ')}
+          onChange={(e) => handleInputChange('seoKeywords', e.target.value.split(',').map(k => k.trim()))}
+          placeholder="keyword1, keyword2, keyword3"
+        />
+      </div>
+    </div>
+  );
+
+  // Approval Settings Tab Render Function
+  const renderApproval = () => (
+    <div className="space-y-6">
+      {currentUser.role === 'admin' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <ApperIcon name="Shield" className="w-5 h-5 text-blue-600 mr-2" />
+            <span className="font-medium text-blue-900">Administrator Settings</span>
+          </div>
+          <p className="text-blue-700 text-sm mt-1">
+            As an administrator, you can bypass approval workflows and publish directly.
+          </p>
+        </div>
+      )}
+
+      <div>
+        <label className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={formData.requiresApproval}
+            onChange={(e) => handleInputChange('requiresApproval', e.target.checked)}
+            disabled={currentUser.permissions.canBypassApproval}
+            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span className="text-sm font-medium text-gray-700">
+            Requires moderator approval
+          </span>
+        </label>
+        <p className="text-xs text-gray-500 mt-1">
+          {currentUser.permissions.canBypassApproval 
+            ? "Admin users can publish directly without approval"
+            : "Product will need approval before going live"
+          }
+        </p>
+      </div>
+
+      {(currentUser.role === 'admin' || currentUser.role === 'moderator') && (
+        <div>
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={formData.moderatorApproved}
+              onChange={(e) => handleInputChange('moderatorApproved', e.target.checked)}
+              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Pre-approve this product
+            </span>
+          </label>
+          <p className="text-xs text-gray-500 mt-1">
+            Skip the approval workflow for this product
+          </p>
+        </div>
+      )}
+    </div>
+  );
 
   const renderBasicInfo = () => (
     <div className="space-y-6">
@@ -920,6 +1093,8 @@ const renderTabContent = () => {
       case "marketing": return renderMarketing();
       case "media": return renderMedia();
       case "shipping": return renderShipping();
+      case "seo": return renderSEO();
+      case "approval": return renderApproval();
       default: return renderBasicInfo();
     }
   };
@@ -1078,16 +1253,23 @@ return (
           </div>
 
 {/* Action Buttons */}
-          <div className="border-t border-gray-200 px-6 py-4">
+<div className="border-t border-gray-200 px-6 py-4">
             <div className="flex justify-between items-center">
-              <Button
-                variant="outline"
-                onClick={() => navigate(-1)}
-                disabled={loading}
-              >
-                <ApperIcon name="ArrowLeft" className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(-1)}
+                  disabled={loading}
+                >
+                  <ApperIcon name="ArrowLeft" className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+
+                {/* Role Badge */}
+                <Badge variant={currentUser.role === 'admin' ? 'default' : 'secondary'} className="text-xs">
+                  {currentUser.role.toUpperCase()}
+                </Badge>
+              </div>
 
               <div className="flex space-x-3">
                 <Button
@@ -1117,6 +1299,22 @@ return (
                   )}
                 </Button>
 
+                {currentUser.permissions.canSchedule && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const scheduleDate = prompt('Enter schedule date (YYYY-MM-DD):');
+                      if (scheduleDate) {
+                        handleSave(true, false, scheduleDate);
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    <ApperIcon name="Clock" className="w-4 h-4 mr-2" />
+                    Schedule
+                  </Button>
+                )}
+
                 <Button
                   onClick={() => handleSave(true)}
                   disabled={loading}
@@ -1124,12 +1322,18 @@ return (
                   {loading ? (
                     <>
                       <ApperIcon name="Loader2" className="w-4 h-4 mr-2 animate-spin" />
-                      Publishing...
+                      {formData.requiresApproval && !currentUser.permissions.canBypassApproval 
+                        ? 'Submitting...' 
+                        : 'Publishing...'
+                      }
                     </>
                   ) : (
                     <>
                       <ApperIcon name="Upload" className="w-4 h-4 mr-2" />
-                      Publish Now
+                      {formData.requiresApproval && !currentUser.permissions.canBypassApproval 
+                        ? 'Submit for Approval' 
+                        : 'Publish Now'
+                      }
                     </>
                   )}
                 </Button>

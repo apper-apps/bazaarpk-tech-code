@@ -19,7 +19,7 @@ const ManageProducts = () => {
   const { showToast } = useToast();
 
 // State management
-  const [products, setProducts] = useState([]);
+const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +43,18 @@ const ManageProducts = () => {
   const [featuredFilter, setFeaturedFilter] = useState('all'); // all, featured, not-featured
   const [statusFilter, setStatusFilter] = useState('all'); // all, published, draft
 
+  // Admin role and permissions
+  const [currentUser] = useState({
+    role: 'admin', // admin, moderator
+    permissions: {
+      canDelete: true,
+      canBulkEdit: true,
+      canPublish: true,
+      canManageUsers: true,
+      canViewReports: true
+    }
+  });
+
   // Confirmation dialog state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
@@ -56,6 +68,9 @@ const ManageProducts = () => {
     status: '',
     tags: { action: 'add', values: [] }
   });
+
+  // Activity logging state
+  const [activityLog, setActivityLog] = useState([]);
   // Load data
   useEffect(() => {
     loadData();
@@ -80,7 +95,20 @@ const ManageProducts = () => {
   };
 
   // Filter and sort products
-useEffect(() => {
+// Activity logging function
+  const logActivity = (action, details) => {
+    const logEntry = {
+      id: Date.now(),
+      timestamp: new Date(),
+      user: currentUser.role,
+      action,
+      details
+    };
+    setActivityLog(prev => [logEntry, ...prev.slice(0, 99)]); // Keep last 100 entries
+    console.log('Activity Log:', logEntry);
+  };
+
+  useEffect(() => {
     let filtered = [...products];
 
     // Apply search filter
@@ -159,6 +187,14 @@ useEffect(() => {
       });
     }
 
+    // Apply role-based filtering for moderators
+    if (currentUser.role === 'moderator') {
+      // Moderators might see only certain categories or approved products
+      filtered = filtered.filter(product => 
+        product.visibility !== 'hidden' && product.moderatorApproved !== false
+      );
+    }
+
     // Apply sorting
     switch (sortBy) {
       case 'name-asc':
@@ -191,12 +227,17 @@ useEffect(() => {
       case 'last-updated':
         filtered.sort((a, b) => b.Id - a.Id); // Using ID as proxy for last updated
         break;
+      case 'pending-approval':
+        if (currentUser.role === 'admin' || currentUser.role === 'moderator') {
+          filtered = filtered.filter(p => p.status === 'pending' || p.moderatorApproved === false);
+        }
+        break;
       default:
         break;
     }
 
     setFilteredProducts(filtered);
-  }, [products, searchQuery, selectedCategory, sortBy, priceRange, stockFilter, tagFilter, featuredFilter, statusFilter]);
+  }, [products, searchQuery, selectedCategory, sortBy, priceRange, stockFilter, tagFilter, featuredFilter, statusFilter, currentUser.role]);
 
 // Bulk selection handlers
   const handleSelectAll = () => {
@@ -227,11 +268,21 @@ useEffect(() => {
     setShowBulkActions(selectedProducts.size > 0);
   }, [selectedProducts]);
 
-  // Bulk action handlers
+// Bulk action handlers with role-based permissions
   const handleBulkDelete = async () => {
+    if (!currentUser.permissions.canDelete) {
+      showToast('You do not have permission to delete products', 'error');
+      return;
+    }
+
     try {
       setActionLoading(true);
       const selectedIds = Array.from(selectedProducts);
+      
+      logActivity('bulk_delete_initiated', { 
+        productCount: selectedIds.length,
+        productIds: selectedIds 
+      });
       
       for (const id of selectedIds) {
         await ProductService.delete(id);
@@ -239,13 +290,59 @@ useEffect(() => {
       
       setProducts(prev => prev.filter(p => !selectedProducts.has(p.Id)));
       setSelectedProducts(new Set());
+      
+      logActivity('bulk_delete_completed', { 
+        productCount: selectedIds.length,
+        success: true 
+      });
+      
       showToast(`${selectedIds.length} products deleted successfully`, 'success');
     } catch (error) {
       console.error('Error bulk deleting products:', error);
+      logActivity('bulk_delete_failed', { error: error.message });
       showToast('Failed to delete some products', 'error');
     } finally {
       setActionLoading(false);
       setShowBulkDeleteDialog(false);
+    }
+  };
+
+  // Bulk approval for moderators
+  const handleBulkApprove = async () => {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'moderator') {
+      showToast('You do not have permission to approve products', 'error');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const selectedIds = Array.from(selectedProducts);
+      
+      const updates = selectedIds.map(id => ({
+        id,
+        data: { 
+          moderatorApproved: true, 
+          status: 'approved',
+          visibility: 'published'
+        }
+      }));
+      
+      await ProductService.bulkUpdate(updates);
+      
+      setProducts(prev => prev.map(p => 
+        selectedIds.includes(p.Id) 
+          ? { ...p, moderatorApproved: true, status: 'approved', visibility: 'published' }
+          : p
+      ));
+      
+      setSelectedProducts(new Set());
+      logActivity('bulk_approve', { productCount: selectedIds.length });
+      showToast(`${selectedIds.length} products approved successfully`, 'success');
+    } catch (error) {
+      console.error('Error approving products:', error);
+      showToast('Failed to approve products', 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -358,19 +455,43 @@ useEffect(() => {
     setShowDeleteDialog(true);
   };
 
-  const handleDeleteConfirm = async () => {
+const handleDeleteConfirm = async () => {
     if (!productToDelete) return;
+    
+    if (!currentUser.permissions.canDelete) {
+      showToast('You do not have permission to delete products', 'error');
+      setShowDeleteDialog(false);
+      setProductToDelete(null);
+      return;
+    }
 
     try {
       setActionLoading(true);
+      
+      logActivity('product_delete_initiated', { 
+        productId: productToDelete.Id,
+        productTitle: productToDelete.title 
+      });
+      
       const deleted = await ProductService.delete(productToDelete.Id);
       
       if (deleted) {
         setProducts(prev => prev.filter(p => p.Id !== productToDelete.Id));
+        
+        logActivity('product_deleted', { 
+          productId: productToDelete.Id,
+          productTitle: productToDelete.title,
+          success: true
+        });
+        
         showToast('Product deleted successfully', 'success');
       }
     } catch (error) {
       console.error('Error deleting product:', error);
+      logActivity('product_delete_failed', { 
+        productId: productToDelete.Id,
+        error: error.message 
+      });
       showToast('Failed to delete product', 'error');
     } finally {
       setActionLoading(false);
@@ -434,7 +555,7 @@ return (
         </div>
 
         {/* Bulk Actions */}
-        <AnimatePresence>
+<AnimatePresence>
           {showBulkActions && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -442,43 +563,80 @@ return (
               exit={{ opacity: 0, y: -10 }}
               className="flex items-center space-x-2"
             >
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowBulkEditModal(true)}
-                disabled={actionLoading}
-              >
-                <ApperIcon name="Edit3" className="w-4 h-4 mr-2" />
-                Bulk Edit
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setShowBulkDeleteDialog(true)}
-                disabled={actionLoading}
-              >
-                <ApperIcon name="Trash2" className="w-4 h-4 mr-2" />
-                Delete Selected
-              </Button>
+              {(currentUser.role === 'admin' || currentUser.role === 'moderator') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkApprove}
+                  disabled={actionLoading}
+                >
+                  <ApperIcon name="CheckCircle" className="w-4 h-4 mr-2" />
+                  Approve Selected
+                </Button>
+              )}
+              
+              {currentUser.permissions.canBulkEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowBulkEditModal(true)}
+                  disabled={actionLoading}
+                >
+                  <ApperIcon name="Edit3" className="w-4 h-4 mr-2" />
+                  Bulk Edit
+                </Button>
+              )}
+              
+              {currentUser.permissions.canDelete && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowBulkDeleteDialog(true)}
+                  disabled={actionLoading}
+                >
+                  <ApperIcon name="Trash2" className="w-4 h-4 mr-2" />
+                  Delete Selected
+                </Button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="flex items-center space-x-2">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-          >
-            <ApperIcon name="Grid3X3" className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-          >
-            <ApperIcon name="List" className="w-4 h-4" />
-          </Button>
+<div className="flex items-center space-x-4">
+          {/* View Mode Toggle */}
+          <div className="flex items-center space-x-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+            >
+              <ApperIcon name="Grid3X3" className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+            >
+              <ApperIcon name="List" className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Role Badge */}
+          <Badge variant={currentUser.role === 'admin' ? 'default' : 'secondary'} className="text-xs">
+            {currentUser.role.toUpperCase()}
+          </Badge>
+
+          {/* Activity Log Access */}
+          {currentUser.role === 'admin' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/admin/activity-log')}
+            >
+              <ApperIcon name="FileText" className="w-4 h-4 mr-2" />
+              Activity Log
+            </Button>
+          )}
         </div>
       </div>
 
@@ -500,21 +658,38 @@ return (
         </div>
 
         {/* View Mode Toggle */}
-        <div className="flex items-center space-x-2">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-          >
-            <ApperIcon name="Grid3X3" className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-          >
-            <ApperIcon name="List" className="w-4 h-4" />
-          </Button>
+<div className="flex items-center space-x-4">
+          {/* View Mode Toggle */}
+          <div className="flex items-center space-x-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+            >
+              <ApperIcon name="Grid3X3" className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+            >
+              <ApperIcon name="List" className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Approval Status Filter for Moderators */}
+          {(currentUser.role === 'admin' || currentUser.role === 'moderator') && (
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="all">All Status</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+              <option value="pending-approval">Pending Approval</option>
+            </select>
+          )}
         </div>
 
         {/* Select All Checkbox */}
@@ -527,7 +702,7 @@ return (
             className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
           <label htmlFor="select-all" className="text-sm font-medium text-gray-700">
-            Select All
+            Select All ({filteredProducts.length} items)
           </label>
         </div>
       </div>
@@ -668,51 +843,85 @@ return (
           </select>
         </div>
       </div>
-
-      {/* Products Grid/List */}
+{/* Products Grid/List */}
       {filteredProducts.length === 0 ? (
         <Empty
           title="No products found"
           message={
             searchQuery || selectedCategory !== 'all'
               ? "Try adjusting your filters or search terms"
-              : "Start by adding your first product to the catalog"
+              : currentUser.role === 'moderator' 
+                ? "No products available for moderation"
+                : "Start by adding your first product to the catalog"
           }
           action={
-            <Button onClick={() => navigate('/admin/products/add')}>
-              <ApperIcon name="Plus" className="w-4 h-4 mr-2" />
-              Add New Product
-            </Button>
+            currentUser.permissions.canPublish && (
+              <Button onClick={() => navigate('/admin/products/add')}>
+                <ApperIcon name="Plus" className="w-4 h-4 mr-2" />
+                Add New Product
+              </Button>
+            )
           }
         />
       ) : (
-<motion.div
-          className={cn(
-            "grid gap-6",
-            viewMode === 'grid'
-              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-              : "grid-cols-1"
-          )}
-          layout
-        >
-          <AnimatePresence>
-            {filteredProducts.map((product) => (
-              <ProductManagementCard
-                key={product.Id}
-                product={product}
-                viewMode={viewMode}
-                selected={selectedProducts.has(product.Id)}
-                onSelect={handleSelectProduct}
-                onToggleVisibility={handleToggleVisibility}
-                onToggleFeatured={handleToggleFeatured}
-                onEdit={handleEdit}
-                onView={handleViewProduct}
-                onDelete={handleDeleteClick}
-                loading={actionLoading}
-              />
-            ))}
-          </AnimatePresence>
-        </motion.div>
+        <>
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="text-2xl font-bold text-gray-900">
+                {filteredProducts.length}
+              </div>
+              <div className="text-sm text-gray-600">Total Products</div>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="text-2xl font-bold text-green-600">
+                {filteredProducts.filter(p => p.visibility === 'published').length}
+              </div>
+              <div className="text-sm text-gray-600">Published</div>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="text-2xl font-bold text-orange-600">
+                {filteredProducts.filter(p => p.stock <= 10 && p.stock > 0).length}
+              </div>
+              <div className="text-sm text-gray-600">Low Stock</div>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="text-2xl font-bold text-red-600">
+                {filteredProducts.filter(p => p.stock === 0).length}
+              </div>
+              <div className="text-sm text-gray-600">Out of Stock</div>
+            </div>
+          </div>
+
+          <motion.div
+            className={cn(
+              "grid gap-6",
+              viewMode === 'grid'
+                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                : "grid-cols-1"
+            )}
+            layout
+          >
+            <AnimatePresence>
+              {filteredProducts.map((product) => (
+                <ProductManagementCard
+                  key={product.Id}
+                  product={product}
+                  viewMode={viewMode}
+                  selected={selectedProducts.has(product.Id)}
+                  onSelect={handleSelectProduct}
+                  onToggleVisibility={handleToggleVisibility}
+                  onToggleFeatured={handleToggleFeatured}
+                  onEdit={handleEdit}
+                  onView={handleViewProduct}
+                  onDelete={handleDeleteClick}
+                  loading={actionLoading}
+                  currentUser={currentUser}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        </>
       )}
 
       {/* Bulk Edit Modal */}
@@ -866,7 +1075,7 @@ return (
               </p>
               
               <div className="flex space-x-3 justify-end">
-                <Button
+<Button
                   variant="ghost"
                   onClick={() => setShowBulkDeleteDialog(false)}
                   disabled={actionLoading}
@@ -876,7 +1085,7 @@ return (
                 <Button
                   variant="destructive"
                   onClick={handleBulkDelete}
-                  disabled={actionLoading}
+                  disabled={actionLoading || !currentUser.permissions.canDelete}
                 >
                   {actionLoading ? (
                     <>
@@ -886,7 +1095,7 @@ return (
                   ) : (
                     <>
                       <ApperIcon name="Trash2" className="w-4 h-4 mr-2" />
-                      Delete Products
+                      Delete Products ({selectedProducts.size})
                     </>
                   )}
                 </Button>
@@ -932,10 +1141,10 @@ return (
                 >
                   Cancel
                 </Button>
-                <Button
+<Button
                   variant="destructive"
                   onClick={handleDeleteConfirm}
-                  disabled={actionLoading}
+                  disabled={actionLoading || !currentUser.permissions.canDelete}
                 >
                   {actionLoading ? (
                     <>
@@ -945,7 +1154,7 @@ return (
                   ) : (
                     <>
                       <ApperIcon name="Trash2" className="w-4 h-4 mr-2" />
-                      Delete Product
+                      Delete "{productToDelete?.title}"
                     </>
                   )}
                 </Button>

@@ -71,38 +71,126 @@ id: 'products',
     },
     {
       id: 'orders',
-      label: 'Orders',
+      label: 'Order Management',
       icon: 'ShoppingCart',
-      path: '/admin/orders',
-      onClick: () => navigate('/admin/orders')
+      expandable: true,
+      children: [
+        {
+          id: 'all-orders',
+          label: 'All Orders',
+          icon: 'List',
+          path: '/admin/orders',
+          onClick: () => navigate('/admin/orders')
+        },
+        {
+          id: 'pending-orders',
+          label: 'Pending Orders',
+          icon: 'Clock',
+          path: '/admin/orders/pending',
+          onClick: () => navigate('/admin/orders?status=pending')
+        },
+        {
+          id: 'returns-refunds',
+          label: 'Returns & Refunds',
+          icon: 'RotateCcw',
+          path: '/admin/orders/returns',
+          onClick: () => navigate('/admin/orders/returns')
+        }
+      ]
     },
     {
-      id: 'customers',
-      label: 'Customers',
+      id: 'users',
+      label: 'User Management',
       icon: 'Users',
-      path: '/admin/customers',
-      onClick: () => navigate('/admin/customers')
+      expandable: true,
+      children: [
+        {
+          id: 'customers',
+          label: 'Customers',
+          icon: 'User',
+          path: '/admin/customers',
+          onClick: () => navigate('/admin/customers')
+        },
+        {
+          id: 'admin-users',
+          label: 'Admin & Moderators',
+          icon: 'Shield',
+          path: '/admin/users',
+          onClick: () => navigate('/admin/users')
+        },
+        {
+          id: 'roles-permissions',
+          label: 'Roles & Permissions',
+          icon: 'Lock',
+          path: '/admin/roles',
+          onClick: () => navigate('/admin/roles')
+        }
+      ]
+    },
+    {
+      id: 'reports',
+      label: 'Reports & Analytics',
+      icon: 'BarChart3',
+      expandable: true,
+      children: [
+        {
+          id: 'sales-reports',
+          label: 'Sales Reports',
+          icon: 'TrendingUp',
+          path: '/admin/reports',
+          onClick: () => navigate('/admin/reports')
+        },
+        {
+          id: 'product-analytics',
+          label: 'Product Analytics',
+          icon: 'PieChart',
+          path: '/admin/reports/products',
+          onClick: () => navigate('/admin/reports/products')
+        },
+        {
+          id: 'customer-insights',
+          label: 'Customer Insights',
+          icon: 'Users',
+          path: '/admin/reports/customers',
+          onClick: () => navigate('/admin/reports/customers')
+        }
+      ]
     },
     {
       id: 'marketing',
-      label: 'Marketing',
+      label: 'Marketing Tools',
       icon: 'Megaphone',
       path: '/admin/marketing',
       onClick: () => navigate('/admin/marketing')
     },
     {
-      id: 'reports',
-      label: 'Reports',
-      icon: 'BarChart3',
-      path: '/admin/reports',
-      onClick: () => navigate('/admin/reports')
-    },
-    {
       id: 'settings',
-      label: 'Settings',
+      label: 'System Settings',
       icon: 'Settings',
-      path: '/admin/settings',
-      onClick: () => navigate('/admin/settings')
+      expandable: true,
+      children: [
+        {
+          id: 'general-settings',
+          label: 'General Settings',
+          icon: 'Settings',
+          path: '/admin/settings',
+          onClick: () => navigate('/admin/settings')
+        },
+        {
+          id: 'payment-settings',
+          label: 'Payment Settings',
+          icon: 'CreditCard',
+          path: '/admin/settings/payments',
+          onClick: () => navigate('/admin/settings/payments')
+        },
+        {
+          id: 'security-audit',
+          label: 'Security & Audit',
+          icon: 'Shield',
+          path: '/admin/settings/security',
+          onClick: () => navigate('/admin/settings/security')
+        }
+      ]
     }
   ];
 
@@ -230,9 +318,10 @@ id: 'products',
                  location.pathname.includes('/products/add') ? 'Add New Product' :
                  location.pathname.includes('/orders') ? 'Orders Management' :
                  location.pathname.includes('/customers') ? 'Customer Management' :
+                 location.pathname.includes('/users') ? 'User Management' :
                  location.pathname.includes('/marketing') ? 'Marketing Tools' :
                  location.pathname.includes('/reports') ? 'Reports & Analytics' :
-                 location.pathname.includes('/settings') ? 'Settings' :
+                 location.pathname.includes('/settings') ? 'System Settings' :
                  'Admin Dashboard'}
               </h1>
               <p className="text-gray-600 mt-1">
