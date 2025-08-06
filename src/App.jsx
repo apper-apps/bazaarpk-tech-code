@@ -8,7 +8,8 @@ import ProductDetail from "@/components/pages/ProductDetail";
 import Cart from "@/components/pages/Cart";
 import Category from "@/components/pages/Category";
 import AddProduct from "@/components/pages/AddProduct";
-
+import AddRecipeBundle from "@/components/pages/AddRecipeBundle";
+import RecipeBundlesPage from "@/components/pages/RecipeBundlesPage";
 function App() {
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 
@@ -25,6 +26,8 @@ function App() {
             <Route path="/category" element={<Category />} />
             <Route path="/deals" element={<Category />} />
             <Route path="/admin/add-product" element={<AddProduct />} />
+            <Route path="/admin/recipe-bundles" element={<RecipeBundlesPage />} />
+            <Route path="/admin/add-recipe-bundle" element={<AddRecipeBundle />} />
           </Routes>
         </main>
 

@@ -87,7 +87,7 @@ class RecipeBundleServiceClass {
     });
   }
 
-  // Create new recipe bundle
+// Create new recipe bundle
   create(bundleData) {
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -133,6 +133,78 @@ class RecipeBundleServiceClass {
         } else {
           reject(new Error(`Recipe bundle with ID ${id} not found`));
         }
+      }, 200);
+    });
+  }
+
+  // Add component to bundle
+  addComponent(bundleId, product, quantity, unit = "pc") {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const bundle = this.bundles.find(b => b.Id === parseInt(bundleId));
+        if (!bundle) {
+          reject(new Error(`Recipe bundle with ID ${bundleId} not found`));
+          return;
+        }
+
+        const existingComponent = bundle.products.find(p => p.product.Id === product.Id);
+        if (existingComponent) {
+          reject(new Error("Product already exists in bundle"));
+          return;
+        }
+
+        const newComponent = {
+          product: { ...product },
+          quantity,
+          unit
+        };
+
+        bundle.products.push(newComponent);
+        bundle.updatedAt = new Date().toISOString();
+        resolve({ ...bundle });
+      }, 200);
+    });
+  }
+
+  // Remove component from bundle
+  removeComponent(bundleId, productId) {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const bundle = this.bundles.find(b => b.Id === parseInt(bundleId));
+        if (!bundle) {
+          reject(new Error(`Recipe bundle with ID ${bundleId} not found`));
+          return;
+        }
+
+        bundle.products = bundle.products.filter(p => p.product.Id !== parseInt(productId));
+        bundle.updatedAt = new Date().toISOString();
+        resolve({ ...bundle });
+      }, 200);
+    });
+  }
+
+  // Update component in bundle
+  updateComponent(bundleId, productId, updates) {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const bundle = this.bundles.find(b => b.Id === parseInt(bundleId));
+        if (!bundle) {
+          reject(new Error(`Recipe bundle with ID ${bundleId} not found`));
+          return;
+        }
+
+        const componentIndex = bundle.products.findIndex(p => p.product.Id === parseInt(productId));
+        if (componentIndex === -1) {
+          reject(new Error("Product not found in bundle"));
+          return;
+        }
+
+        bundle.products[componentIndex] = {
+          ...bundle.products[componentIndex],
+          ...updates
+        };
+        bundle.updatedAt = new Date().toISOString();
+        resolve({ ...bundle });
       }, 200);
     });
   }
