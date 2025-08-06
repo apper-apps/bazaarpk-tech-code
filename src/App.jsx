@@ -1,5 +1,5 @@
 import '@/index.css';
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import ApperIcon from "@/components/ApperIcon";
@@ -25,7 +25,28 @@ const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [adminLoadProgress, setAdminLoadProgress] = useState(0);
   const [adminError, setAdminError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [showForceExit, setShowForceExit] = useState(false);
+const [showForceExit, setShowForceExit] = useState(false);
+
+  // Error logging setup for debugging
+  useEffect(() => {
+    const handleAdminMaskError = (e) => {
+      console.error('Mask persistence error:', e.detail);
+      
+      // Capture exception with Sentry if available
+      if (typeof window !== 'undefined' && window.Sentry) {
+        window.Sentry.captureException(e.detail.error);
+      }
+    };
+
+    // Add event listener for admin mask errors
+    window.addEventListener('admin_mask_error', handleAdminMaskError);
+
+    // Cleanup on component unmount
+    return () => {
+      window.removeEventListener('admin_mask_error', handleAdminMaskError);
+    };
+  }, []);
+
 const handleAdminAccess = async () => {
     setIsAdminLoading(true);
     setAdminLoadProgress(0);
