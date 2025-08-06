@@ -1,21 +1,24 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
+import QuantityDiscountTable from "@/components/molecules/QuantityDiscountTable";
+import { useCart } from "@/hooks/useCart";
+import { useToast } from "@/hooks/useToast";
+import { ProductService } from "@/services/api/ProductService";
 import ApperIcon from "@/components/ApperIcon";
-import Button from "@/components/atoms/Button";
-import Badge from "@/components/atoms/Badge";
+import ProductBadges from "@/components/molecules/ProductBadges";
 import PriceDisplay from "@/components/molecules/PriceDisplay";
 import QuantitySelector from "@/components/molecules/QuantitySelector";
 import StockIndicator from "@/components/molecules/StockIndicator";
-import ProductBadges from "@/components/molecules/ProductBadges";
 import ProductGrid from "@/components/organisms/ProductGrid";
 import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
-import { ProductService } from "@/services/api/ProductService";
-import { useCart } from "@/hooks/useCart";
-import { useToast } from "@/hooks/useToast";
-import { formatPrice, calculateDiscount, calculateSavings } from "@/utils/currency";
+import Home from "@/components/pages/Home";
+import Cart from "@/components/pages/Cart";
+import Badge from "@/components/atoms/Badge";
+import Button from "@/components/atoms/Button";
 import { cn } from "@/utils/cn";
+import { calculateBulkDiscount, calculateDiscount, calculateSavings, formatPrice } from "@/utils/currency";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -72,8 +75,10 @@ const ProductDetail = () => {
     const cartItem = {
       productId: product.Id,
       quantity,
-      variant: selectedVariant,
-      price: selectedVariant ? selectedVariant.price : product.price
+variant: selectedVariant,
+      price: selectedVariant ? selectedVariant.price : product.price,
+      discountTier: selectedTier,
+      bulkSavings: selectedTier?.savings || 0
     };
 
     addToCart(cartItem);
@@ -90,10 +95,28 @@ const ProductDetail = () => {
     setQuantity(1); // Reset quantity when variant changes
   };
 
+const [selectedTier, setSelectedTier] = useState(null);
+  
   const currentPrice = selectedVariant ? selectedVariant.price : product?.price || 0;
   const currentOldPrice = selectedVariant ? selectedVariant.oldPrice : product?.oldPrice;
   const discount = currentOldPrice ? calculateDiscount(currentOldPrice, currentPrice) : 0;
   const savings = currentOldPrice ? calculateSavings(currentOldPrice, currentPrice) : 0;
+  
+  const bulkDiscount = selectedTier ? calculateBulkDiscount(
+    product?.price || 0, 
+    selectedTier.pricePerUnit, 
+    selectedTier.quantity
+  ) : 0;
+  const totalSavings = savings + (selectedTier?.savings || 0);
+
+  function handleTierSelect(tier) {
+    setSelectedTier(tier);
+    if (tier.variant) {
+      handleVariantSelect(tier.variant);
+      setQuantity(tier.quantity);
+    }
+    showToast(`Selected ${tier.quantity}x quantity tier - Save ${formatPrice(tier.savings)}!`, 'success');
+  }
 
   if (loading) {
     return (
@@ -216,16 +239,35 @@ const ProductDetail = () => {
 
             {/* Price */}
             <div className="space-y-2">
-              <PriceDisplay 
+<PriceDisplay 
                 price={currentPrice}
                 oldPrice={currentOldPrice}
                 size="xl"
+                bulkSavings={selectedTier?.savings}
+                showBulkDiscount={!!selectedTier}
               />
               
-              {savings > 0 && (
-                <p className="text-green-600 font-medium">
-                  You save {formatPrice(savings)} ({discount}% off)
-                </p>
+              {totalSavings > 0 && (
+                <div className="space-y-1">
+                  {savings > 0 && (
+                    <p className="text-green-600 font-medium">
+                      Regular discount: {formatPrice(savings)} ({discount}% off)
+                    </p>
+                  )}
+                  {selectedTier?.savings > 0 && (
+                    <p className="text-green-700 font-semibold">
+                      Bulk discount: {formatPrice(selectedTier.savings)} 
+                      <span className="text-sm ml-1">
+                        ({selectedTier.discountPercent}% additional off)
+                      </span>
+                    </p>
+                  )}
+                  {totalSavings > 0 && (
+                    <p className="text-green-800 font-bold text-lg">
+                      Total savings: {formatPrice(totalSavings)}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 
@@ -279,7 +321,19 @@ const ProductDetail = () => {
                   max={product.stock}
                   size="lg"
                 />
-              </div>
+</div>
+
+              {/* Quantity Discount Table */}
+              {product?.variants && product.variants.length > 1 && (
+                <div className="mt-8">
+                  <QuantityDiscountTable
+                    variants={product.variants}
+                    basePrice={product.price}
+                    selectedTier={selectedTier}
+                    onTierSelect={handleTierSelect}
+                  />
+                </div>
+              )}
 
               <div className="flex space-x-4">
                 <Button

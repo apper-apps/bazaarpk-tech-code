@@ -8,6 +8,8 @@ const PriceDisplay = ({
   className,
   size = "md",
   showDiscount = true,
+  bulkSavings = 0,
+  showBulkDiscount = false,
   ...props 
 }) => {
   const discount = oldPrice ? calculateDiscount(oldPrice, price) : 0;
@@ -35,24 +37,37 @@ const PriceDisplay = ({
     }
   };
 
-  return (
-    <div className={cn("flex items-center space-x-2", className)} {...props}>
-      <span className={cn("price-highlight", sizes[size].current)}>
-        {formatPrice(price)}
-      </span>
-      
-      {oldPrice && oldPrice > price && (
-        <>
-          <span className={cn("text-gray-500 line-through", sizes[size].old)}>
-            {formatPrice(oldPrice)}
-          </span>
-          
-          {showDiscount && discount > 0 && (
-            <span className={cn("text-accent-600 font-medium", sizes[size].discount)}>
-              {discount}% OFF
+return (
+    <div className={cn("space-y-2", className)} {...props}>
+      <div className="flex items-center space-x-2">
+        <span className={cn("price-highlight", sizes[size].current)}>
+          {formatPrice(price)}
+        </span>
+        
+        {oldPrice && oldPrice > price && (
+          <>
+            <span className={cn("text-gray-500 line-through", sizes[size].old)}>
+              {formatPrice(oldPrice)}
             </span>
-          )}
-        </>
+            
+            {showDiscount && discount > 0 && (
+              <span className={cn("text-accent-600 font-medium", sizes[size].discount)}>
+                {discount}% OFF
+              </span>
+            )}
+          </>
+        )}
+      </div>
+
+      {showBulkDiscount && bulkSavings > 0 && (
+        <div className="flex items-center space-x-2">
+          <span className="text-green-600 font-semibold text-sm">
+            Bulk Savings: {formatPrice(bulkSavings)}
+          </span>
+          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+            Extra Discount Applied
+          </span>
+        </div>
       )}
     </div>
   );
