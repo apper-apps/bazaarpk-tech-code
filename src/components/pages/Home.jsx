@@ -36,9 +36,9 @@ const loadData = async () => {
         setWeatherData(location);
       }
 
-      // Initialize all data promises
+// Initialize all data promises
       const [categoriesData, productsData, trendingData, recipeBundlesData] = await Promise.all([
-        CategoryService.getAllCategories(),
+        CategoryService.getAll(),
         ProductService.getAllProducts(),
         ProductService.getTrendingByLocation(location),
         RecipeBundleService.getFeatured(6)
