@@ -732,8 +732,8 @@ return (
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
 >
               <option key="all" value="all">All Categories</option>
-              {categories.map((category) => (
-                <option key={category.slug} value={category.slug}>
+{categories.map((category, index) => (
+                <option key={`${category.slug}-${index}`} value={category.slug}>
                   {category.name}
                 </option>
               ))}
@@ -785,8 +785,8 @@ return (
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
 >
               <option key="all" value="all">All Tags</option>
-              {availableTags.map((tag) => (
-                <option key={tag} value={tag}>
+{availableTags.map((tag, index) => (
+                <option key={`${tag}-${index}`} value={tag}>
                   {tag}
                 </option>
               ))}
@@ -994,8 +994,8 @@ priceAdjustment: { ...prev.priceAdjustment, type: e.target.value }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                   >
 <option key="keep-current" value="">Keep Current</option>
-                    {categories.map((category) => (
-                      <option key={category.slug} value={category.slug}>
+{categories.map((category, index) => (
+                      <option key={`${category.slug}-edit-${index}`} value={category.slug}>
                         {category.name}
                       </option>
                     ))}
