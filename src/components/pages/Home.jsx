@@ -4,11 +4,11 @@ import { LocationService } from "@/services/api/LocationService";
 import { CategoryService } from "@/services/api/CategoryService";
 import { ProductService } from "@/services/api/ProductService";
 import { RecipeBundleService } from "@/services/api/RecipeBundleService";
+import RecipeBundles from "@/components/organisms/RecipeBundles";
 import DealsSection from "@/components/organisms/DealsSection";
 import HeroBanner from "@/components/organisms/HeroBanner";
 import ProductGrid from "@/components/organisms/ProductGrid";
 import CategoryCarousel from "@/components/organisms/CategoryCarousel";
-import RecipeBundles from "@/components/organisms/RecipeBundles";
 import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
 
@@ -28,65 +28,53 @@ const [products, setProducts] = useState([]);
 const loadData = async () => {
     try {
       setLoading(true);
-setError("");
 
-      // Get user location with comprehensive error handling
+      // Get user location first with null check
       const location = await LocationService.getUserLocation();
-      setUserLocation(location);
-      
-      // Enhanced debugging for location service (development only)
-      if (import.meta.env.DEV && location?.error) {
-        console.info('Location service fallback activated:', {
-          city: location.city || 'Unknown',
-          errorCode: location.error?.code || 'N/A',
-          errorMessage: location.error?.message || 'No error message',
-          fallbackActive: true
-        });
+      if (location) {
+        setUserLocation(location);
+        setWeatherData(location);
       }
-      
-      const locationMsg = LocationService.getLocationMessage(location);
-      setLocationMessage(locationMsg);
-const [productsData, categoriesData, trendingData, recipeBundlesData] = await Promise.all([
-        ProductService.getAll(),
-        CategoryService.getAll(),
+
+      // Initialize all data promises
+      const [categoriesData, productsData, trendingData, recipeBundlesData] = await Promise.all([
+        CategoryService.getAllCategories(),
+        ProductService.getAllProducts(),
         ProductService.getTrendingByLocation(location),
         RecipeBundleService.getFeatured(6)
       ]);
 
-setProducts(productsData);
+      // Set basic data
+      setProducts(productsData);
       setCategories(categoriesData);
       setTrendingProducts(trendingData);
       setRecipeBundles(recipeBundlesData);
       
-      // Get weather data and filter seasonal products
-      const locationData = await LocationService.getUserLocation();
-      setUserLocation(locationData);
-      setWeatherData(locationData);
-      
-      // Get weather-based seasonal products
-      const seasonalProductNames = LocationService.getSeasonalProducts(locationData.weather);
-      const weatherFilteredProducts = productsData.filter(product => 
-        seasonalProductNames.some(name => product.name.toLowerCase().includes(name.toLowerCase()))
-      );
-      setSeasonalProducts(weatherFilteredProducts);
-      
-      // Update location message based on weather
-      const weatherMessage = LocationService.getLocationMessage(locationData);
-      setLocationMessage(weatherMessage);
-      
-      // Filter deals (products with discount)
-      const dealsData = productsData.filter(product => 
-        product.oldPrice && product.oldPrice > product.price
-      );
-      setDeals(dealsData);
-      // Show location-based success message (only if location was successfully obtained)
-      if (location?.city && location.city !== "Pakistan" && !location.error) {
-        showToast.success(`Products tailored for ${location.city}! Showing ${location.weather} weather favorites.`);
-      } else if (location?.error && location.error.code === 1) {
-        // Quietly handle permission denied - no need to show error toast as fallback works
-        console.info('Using default location-based products due to permission settings');
+      // Get weather-based seasonal products with null checks
+      if (location?.weather) {
+        const seasonalProductNames = LocationService.getSeasonalProducts(location.weather) || [];
+        const weatherFilteredProducts = productsData?.filter(product => 
+          product?.name && seasonalProductNames.some(name => 
+            name && product.name.toLowerCase().includes(name.toLowerCase())
+          )
+        ) || [];
+        setSeasonalProducts(weatherFilteredProducts);
+        
+        // Update location message based on weather
+        const weatherMessage = LocationService.getLocationMessage(location);
+        if (weatherMessage) {
+          setLocationMessage(weatherMessage);
+        }
       }
-} catch (err) {
+      
+      // Filter deals (products with discount) with null checks
+      const dealsData = productsData?.filter(product => 
+        product?.oldPrice && product?.price && product.oldPrice > product.price
+      ) || [];
+      setDeals(dealsData);
+
+      setLoading(false);
+    } catch (err) {
       console.error("Error loading home data:", err);
       
       // Enhanced error handling with categorized messaging
