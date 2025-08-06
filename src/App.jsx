@@ -1,10 +1,11 @@
 import '@/index.css';
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import ApperIcon from "@/components/ApperIcon";
 import Header from "@/components/organisms/Header";
 import CartDrawer from "@/components/organisms/CartDrawer";
+import Error from "@/components/ui/Error";
 import UserManagement from "@/components/pages/UserManagement";
 import AddRecipeBundle from "@/components/pages/AddRecipeBundle";
 import Home from "@/components/pages/Home";
@@ -28,14 +29,63 @@ const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 const [showForceExit, setShowForceExit] = useState(false);
 
   // Error logging setup for debugging
-  useEffect(() => {
+useEffect(() => {
     const handleAdminMaskError = (e) => {
-      console.error('Mask persistence error:', e.detail);
+      // Enhanced console logging for debugging
+      console.group('🔴 Admin Mask Persistence Error');
+      console.error('Error Details:', {
+        timestamp: new Date().toISOString(),
+        errorType: e.detail?.type || 'unknown',
+        errorMessage: e.detail?.message || 'No message provided',
+        errorStack: e.detail?.error?.stack,
+        currentRoute: window.location.pathname,
+        userAgent: navigator.userAgent,
+        adminState: {
+          isAdminRoute: window.location.pathname.includes('/admin'),
+          hasAdminClass: document.body.classList.contains('admin-accessing'),
+          adminElements: document.querySelectorAll('.admin-dashboard, [data-admin-content]').length
+        }
+      });
       
-      // Capture exception with Sentry if available
+      // Log DOM state for debugging
+      console.log('DOM State:', {
+        overlayElements: document.querySelectorAll('.overlay-mask, .modal-backdrop, .loading-overlay').length,
+        adminElements: document.querySelectorAll('.admin-dashboard, .admin-panel').length,
+        zIndexIssues: Array.from(document.querySelectorAll('*')).filter(el => {
+          const zIndex = parseInt(window.getComputedStyle(el).zIndex);
+          return zIndex > 10000 && !el.closest('.admin-dashboard');
+        }).length
+      });
+      console.groupEnd();
+      
+      // Enhanced Sentry integration with context
       if (typeof window !== 'undefined' && window.Sentry) {
-        window.Sentry.captureException(e.detail.error);
+        window.Sentry.withScope((scope) => {
+          scope.setTag('error_category', 'admin_mask_persistence');
+          scope.setContext('admin_state', {
+            route: window.location.pathname,
+            timestamp: new Date().toISOString(),
+            adminClassesPresent: document.body.className,
+            errorType: e.detail?.type
+          });
+          scope.setLevel('error');
+          window.Sentry.captureException(e.detail?.error || new Error(e.detail?.message || 'Admin mask error'));
+        });
       }
+      
+      // Dispatch custom event for additional error tracking
+      window.dispatchEvent(new CustomEvent('admin_debug_log', {
+        detail: {
+          type: 'mask_error',
+          severity: 'high',
+          data: e.detail,
+          debugInfo: {
+            route: window.location.pathname,
+            timestamp: Date.now(),
+            retryable: e.detail?.retryable !== false
+          }
+        }
+      }));
     };
 
     // Add event listener for admin mask errors
