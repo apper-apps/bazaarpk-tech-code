@@ -1,214 +1,317 @@
-import React, { useEffect } from "react";
-import ApperIcon from "@/components/ApperIcon";
-import Home from "@/components/pages/Home";
+import React, { useCallback, useState } from "react";
+import { AlertTriangle, ArrowLeft, Home, RefreshCw } from "lucide-react";
 import Button from "@/components/atoms/Button";
-import { cn } from "@/utils/cn";
-
-const Error = ({ 
-  title = "Something went wrong",
-  message = "We encountered an error while loading this content. Please try again.",
+/**
+ * Error Component - Displays various error states with recovery options
+ * 
+ * @param {Object} props
+ * @param {string} props.title - Error title
+ * @param {string} props.message - Error message
+ * @param {string} props.type - Error type: 'network', 'validation', 'notFound', 'server', 'general'
+ * @param {string} props.variant - Display variant: 'inline', 'card', 'fullscreen'
+ * @param {Function} props.onRetry - Retry callback function
+ * @param {Function} props.onGoBack - Go back callback function
+ * @param {Function} props.onGoHome - Go home callback function
+ * @param {boolean} props.showRetry - Show retry button
+ * @param {boolean} props.showGoBack - Show go back button
+ * @param {boolean} props.showGoHome - Show go home button
+ * @param {boolean} props.isRetrying - Show loading state on retry
+ * @param {string} props.className - Additional CSS classes
+ * @param {React.ReactNode} props.children - Custom error content
+ */
+export const Error = ({
+  title,
+  message,
+  type = 'general',
+  variant = 'card',
   onRetry,
+  onGoBack,
+  onGoHome,
   showRetry = true,
-  className,
-  errorType,
-  ...props 
+  showGoBack = false,
+  showGoHome = false,
+  isRetrying = false,
+  className = '',
+  children
 }) => {
-  // Enhanced error message parsing for better UX
-  const getErrorIcon = () => {
-    if (message?.includes('location') || message?.includes('geolocation')) {
-      return "MapPin";
+  // Default error messages based on type
+  const getDefaultContent = () => {
+    switch (type) {
+      case 'network':
+        return {
+          title: 'Connection Error',
+          message: 'Unable to connect to the server. Please check your internet connection and try again.',
+          icon: AlertTriangle
+        };
+      case 'validation':
+        return {
+          title: 'Invalid Input',
+          message: 'Please check your input and try again.',
+          icon: AlertTriangle
+        };
+      case 'notFound':
+        return {
+          title: 'Page Not Found',
+          message: 'The page you are looking for does not exist or has been moved.',
+          icon: AlertTriangle
+        };
+      case 'server':
+        return {
+          title: 'Server Error',
+          message: 'Something went wrong on our end. Please try again later.',
+          icon: AlertTriangle
+        };
+      default:
+        return {
+          title: 'Something went wrong',
+          message: 'An unexpected error occurred. Please try again.',
+          icon: AlertTriangle
+        };
     }
-    if (message?.includes('network') || message?.includes('connection')) {
-      return "Wifi";
-    }
-    return "AlertTriangle";
-  };
-  
-  const getErrorTitle = () => {
-    if (message?.includes('location') || message?.includes('geolocation')) {
-      return "Location Service Notice";
-    }
-    if (message?.includes('network') || message?.includes('connection')) {
-      return "Connection Issue";
-    }
-    return title;
-  };
-const errorIcon = getErrorIcon();
-  const errorTitle = getErrorTitle();
-  const isLocationError = message?.includes('location') || message?.includes('geolocation');
-  const isAdminError = message?.includes('admin') || message?.includes('dashboard') || message?.includes('timeout');
-  
-  // Enhanced error logging and debugging
-  React.useEffect(() => {
-    if (isAdminError) {
-      console.group('🔴 Admin Error Component Mounted');
-      console.error('Admin Error Details:', {
-        title: getErrorTitle(),
-        message,
-        errorType,
-        timestamp: new Date().toISOString(),
-        retryCount: errorType?.retryCount || 0,
-        currentRoute: window.location.pathname,
-        domState: {
-          adminElements: document.querySelectorAll('.admin-dashboard, [data-admin-content]').length,
-          overlayElements: document.querySelectorAll('.overlay-mask, .modal-backdrop').length,
-          bodyClasses: document.body.className
-        }
-      });
-      console.groupEnd();
-console.groupEnd();
-      
-      // Fire debug event for error tracking
-      if (typeof window !== 'undefined' && window.CustomEvent) {
-        window.dispatchEvent(new window.CustomEvent('admin_debug_log', {
-          detail: {
-            type: 'error_component_render',
-            severity: 'medium',
-            data: { title: getErrorTitle(), message, errorType }
-          }
-        }));
-      }
-  }, [message, errorType, isAdminError]);
-  
-  // Admin-specific error handling with enhanced debugging
-  const handleAdminForceExit = () => {
-    console.warn('🚨 Admin Force Exit Triggered');
-    console.log('Pre-exit DOM state:', {
-      bodyClasses: document.body.className,
-      adminElements: document.querySelectorAll('.admin-dashboard').length,
-      overlayElements: document.querySelectorAll('.overlay-mask, .modal-backdrop').length
-    });
-    
-    document.body.classList.add('admin-emergency-exit');
-    
-    // Log exit process
-    setTimeout(() => {
-      console.log('Force exit cleanup completed');
-      document.body.classList.remove('admin-emergency-exit', 'admin-accessing', 'content-layer');
-      window.location.href = '/';
-    }, 100);
   };
 
-// Enhanced retry with exponential backoff and logging
-  const handleRetryWithBackoff = () => {
-    if (onRetry) {
-      const retryCount = errorType?.retryCount || 0;
-      const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 8000);
-      
-      console.group('🔄 Admin Error Retry Initiated');
-      console.log('Retry Details:', {
-        attempt: retryCount + 1,
-        delay: retryDelay,
-        maxRetries: 3,
-        errorType: errorType?.type,
-        timestamp: new Date().toISOString()
-      });
-      console.groupEnd();
-console.groupEnd();
-      
-      // Log retry attempt
-      if (typeof window !== 'undefined' && window.CustomEvent) {
-        window.dispatchEvent(new window.CustomEvent('admin_debug_log', {
-          detail: {
-            type: 'error_retry',
-            severity: 'low',
-            data: { retryCount: retryCount + 1, delay: retryDelay }
-          }
-        }));
-      }
-      setTimeout(() => {
-        console.log(`⚡ Executing retry attempt ${retryCount + 1}`);
-        onRetry();
-      }, retryDelay);
+  const defaultContent = getDefaultContent();
+  const errorTitle = title || defaultContent.title;
+  const errorMessage = message || defaultContent.message;
+  const IconComponent = defaultContent.icon;
+
+  // Handle retry with loading state
+  const handleRetry = () => {
+    if (onRetry && !isRetrying) {
+      onRetry();
     }
   };
-  
+
+  // Base styles for different variants
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'inline':
+        return 'p-4 bg-red-50 border border-red-200 rounded-lg';
+      case 'fullscreen':
+        return 'min-h-screen flex items-center justify-content p-6 bg-background';
+      default: // card
+        return 'p-6 bg-white rounded-xl shadow-soft border border-gray-100';
+    }
+  };
+
+  const variantStyles = getVariantStyles();
+  const textAlign = variant === 'fullscreen' ? 'text-center' : '';
+
   return (
-    <div className={cn(
-      "flex flex-col items-center justify-center p-8 text-center",
-      isAdminError && "admin-error-container",
-      className
-    )} {...props}>
-      <div className={cn(
-        "w-24 h-24 rounded-full flex items-center justify-center mb-6",
-        isLocationError ? "bg-info/10" : 
-        isAdminError ? "bg-warning/10" : "bg-error/10"
-      )}>
-        <ApperIcon 
-          name={errorIcon} 
-          className={cn(
-            "w-12 h-12",
-            isLocationError ? "text-info" : 
-            isAdminError ? "text-warning" : "text-error"
-          )} 
-        />
-      </div>
-      
-      <h3 className="text-xl font-display font-bold text-gray-900 mb-2">
-        {errorTitle}
-      </h3>
-      
-      <p className="text-gray-600 mb-6 max-w-md">
-        {message}
-      </p>
-      
-{/* Admin-specific error actions with debugging info */}
-      {isAdminError && (
-        <div className="space-y-3 w-full max-w-xs">
-{/* Debug information for development */}
-          {(typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') && (
-            <div className="bg-gray-100 p-3 rounded text-xs text-left">
-              <div className="font-semibold mb-1">Debug Info:</div>
-              <div>Route: {window.location.pathname}</div>
-              <div>Error Type: {errorType?.type || 'unknown'}</div>
-              <div>Retry Count: {errorType?.retryCount || 0}</div>
-              <div>Admin Elements: {document.querySelectorAll('.admin-dashboard').length}</div>
-              <div>Overlay Elements: {document.querySelectorAll('.overlay-mask').length}</div>
-            </div>
-          )}
+    <div 
+      className={`${variantStyles} ${textAlign} ${className}`}
+      role="alert"
+      aria-live="polite"
+    >
+      {variant === 'fullscreen' && (
+        <div className="max-w-md mx-auto">
+          <div className="mb-6">
+            <IconComponent 
+              className="w-16 h-16 text-error mx-auto mb-4" 
+              aria-hidden="true"
+            />
+          </div>
+        </div>
+      )}
+
+      {variant !== 'fullscreen' && (
+        <div className="flex items-start space-x-3">
+          <IconComponent 
+            className="w-6 h-6 text-error mt-0.5 flex-shrink-0" 
+            aria-hidden="true"
+          />
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {errorTitle}
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {errorMessage}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {variant === 'fullscreen' && (
+        <div className="max-w-md mx-auto">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            {errorTitle}
+          </h1>
+          <p className="text-gray-600 mb-8 text-lg">
+            {errorMessage}
+          </p>
+        </div>
+      )}
+
+      {/* Custom children content */}
+      {children && (
+        <div className={variant === 'fullscreen' ? 'max-w-md mx-auto mb-6' : 'mb-4'}>
+          {children}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      {(showRetry || showGoBack || showGoHome) && (
+        <div className={`flex gap-3 ${variant === 'fullscreen' ? 'justify-center max-w-md mx-auto' : 'justify-start'}`}>
           {showRetry && onRetry && (
-            <Button onClick={handleRetryWithBackoff} variant="primary" className="w-full">
-              <ApperIcon name="RefreshCw" className="w-4 h-4 mr-2" />
-              Retry Admin Access
+            <Button
+              onClick={handleRetry}
+              disabled={isRetrying}
+              variant="primary"
+              size="sm"
+              className="flex items-center gap-2"
+              aria-label="Retry the failed operation"
+            >
+              <RefreshCw 
+                className={`w-4 h-4 ${isRetrying ? 'animate-spin' : ''}`} 
+                aria-hidden="true"
+              />
+              {isRetrying ? 'Retrying...' : 'Try Again'}
             </Button>
           )}
-          <Button onClick={handleAdminForceExit} variant="outline" className="w-full">
-            <ApperIcon name="LogOut" className="w-4 h-4 mr-2" />
-            Force Exit to Home
-          </Button>
-          {errorType?.retryCount > 0 && (
-            <p className="text-xs text-gray-500 mt-2">
-Retry attempt {errorType.retryCount} of 3
-              {(typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') && (
-                <span className="block text-xs text-blue-600 mt-1">
-                  Next delay: {Math.min(1000 * Math.pow(2, errorType.retryCount), 8000)}ms
-                </span>
-              )}
-            </p>
+
+          {showGoBack && onGoBack && (
+            <Button
+              onClick={onGoBack}
+              variant="secondary"
+              size="sm"
+              className="flex items-center gap-2"
+              aria-label="Go back to previous page"
+            >
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              Go Back
+            </Button>
+          )}
+
+          {showGoHome && onGoHome && (
+            <Button
+              onClick={onGoHome}
+              variant="secondary"
+              size="sm"
+              className="flex items-center gap-2"
+              aria-label="Go to home page"
+            >
+              <Home className="w-4 h-4" aria-hidden="true" />
+              Go Home
+            </Button>
           )}
         </div>
       )}
-      
-      {/* Standard error actions for non-admin errors */}
-      {!isAdminError && (
-        <>
-          {showRetry && onRetry && (
-            <Button onClick={onRetry} variant="primary">
-              <ApperIcon name="RefreshCw" className="w-4 h-4 mr-2" />
-              Try Again
-            </Button>
-          )}
-          
-          {!onRetry && (
-            <Button onClick={() => window.location.reload()} variant="outline">
-              <ApperIcon name="RotateCcw" className="w-4 h-4 mr-2" />
-              Reload Page
-            </Button>
-          )}
-        </>
-      )}
     </div>
   );
+};
+
+/**
+ * ErrorBoundary Component - Catches JavaScript errors in component tree
+ */
+export class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { 
+      hasError: false, 
+      error: null,
+      errorInfo: null 
+    };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.setState({
+      error: error,
+      errorInfo: errorInfo
+    });
+
+    // Log error for debugging
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  handleRetry = () => {
+    this.setState({ 
+      hasError: false, 
+      error: null, 
+      errorInfo: null 
+    });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Error
+          title="Application Error"
+          message="Something went wrong in the application. This error has been logged."
+          type="server"
+          variant="fullscreen"
+          onRetry={this.handleRetry}
+          showRetry={true}
+          showGoHome={true}
+          onGoHome={() => window.location.href = '/'}
+        >
+          {process.env.NODE_ENV === 'development' && this.state.error && (
+            <details className="mt-4 p-4 bg-gray-100 rounded-lg text-left">
+              <summary className="cursor-pointer font-medium text-gray-700 mb-2">
+                Error Details (Development Only)
+              </summary>
+              <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto">
+                {this.state.error.toString()}
+                {this.state.errorInfo.componentStack}
+              </pre>
+            </details>
+          )}
+        </Error>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+/**
+ * useErrorHandler Hook - For handling errors in functional components
+ */
+export const useErrorHandler = () => {
+  const [error, setError] = React.useState(null);
+  const [isRetrying, setIsRetrying] = React.useState(false);
+
+  const handleError = React.useCallback((error) => {
+    console.error('Error caught by useErrorHandler:', error);
+    setError(error);
+    setIsRetrying(false);
+  }, []);
+
+  const retry = React.useCallback((retryFn) => {
+    if (typeof retryFn === 'function') {
+      setIsRetrying(true);
+      setError(null);
+      
+      try {
+        const result = retryFn();
+        
+        // Handle promise-based retry functions
+        if (result && typeof result.catch === 'function') {
+          result.catch(handleError).finally(() => setIsRetrying(false));
+        } else {
+          setIsRetrying(false);
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    }
+  }, [handleError]);
+
+  const clearError = React.useCallback(() => {
+    setError(null);
+    setIsRetrying(false);
+  }, []);
+
+  return {
+    error,
+    isRetrying,
+    handleError,
+    retry,
+    clearError
+  };
 };
 
 export default Error;
