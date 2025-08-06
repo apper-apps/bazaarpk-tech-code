@@ -70,17 +70,27 @@ setDeals(dealsData);
       let errorMessage = "Failed to load page content. Please try again.";
       let showToastError = true;
       
-      // Handle specific error types
-      if (err?.message?.includes('location') || err?.message?.includes('geolocation')) {
-        errorMessage = "Products loaded successfully with default location settings.";
-        showToastError = false; // Don't show toast for location-related issues as fallback works
+      // Handle specific error types with improved categorization
+      if (err?.message?.includes('Geolocation') || 
+          err?.message?.includes('location') || 
+          err?.code === 1 || // PERMISSION_DENIED
+          err?.message?.includes('denied')) {
+        // Location errors are not critical - app works with fallback
+        errorMessage = null; // Don't show error state for location issues
+        showToastError = false;
+        console.info("Using default location settings - location access was denied or unavailable");
       } else if (err?.name === 'NetworkError' || err?.message?.includes('fetch')) {
         errorMessage = "Network connection issue. Please check your internet and try again.";
       } else if (err?.message?.includes('timeout')) {
         errorMessage = "Request timed out. Please try again.";
+      } else if (err?.message?.includes('products') || err?.message?.includes('categories')) {
+        errorMessage = "Unable to load product data. Please try again.";
       }
       
-      setError(errorMessage);
+      // Only set error state for actual failures that affect functionality
+      if (errorMessage) {
+        setError(errorMessage);
+      }
       
       // Show toast error only for actual failures that affect functionality
       if (showToastError) {

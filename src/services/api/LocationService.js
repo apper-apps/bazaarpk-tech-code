@@ -1,83 +1,83 @@
 class LocationService {
-  static async getUserLocation() {
-    return new Promise((resolve) => {
+static async getUserLocation() {
+    try {
       if (!navigator.geolocation) {
-        resolve({ 
+        return { 
           city: "Pakistan", 
           country: "Pakistan", 
           weather: "moderate",
           temperature: 25 
-        });
-        return;
+        };
       }
 
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const { latitude, longitude } = position.coords;
-            
-            // Mock location data based on coordinates (in real app, would use geocoding API)
-            const locationData = await LocationService.getLocationData(latitude, longitude);
-            resolve(locationData);
-          } catch (error) {
-console.error("Error getting location data:", error);
-            resolve({ 
-              city: "Pakistan", 
-              country: "Pakistan", 
-              weather: "moderate",
-              temperature: 25 
-            });
-          }
-        },
-(error) => {
-          const errorCode = error?.code || 0;
-          const errorMessage = error?.message || "Unknown error";
-          
-          let errorDescription = "Unknown geolocation error";
-          let fallbackCity = "Pakistan";
-          
-          // Handle specific error codes gracefully
-          switch(errorCode) {
-            case 1: // PERMISSION_DENIED
-              errorDescription = "Location access denied";
-              fallbackCity = "Pakistan";
-              break;
-            case 2: // POSITION_UNAVAILABLE
-              errorDescription = "Location unavailable";
-              fallbackCity = "Pakistan";
-              break;
-            case 3: // TIMEOUT
-              errorDescription = "Location request timeout";
-              fallbackCity = "Pakistan";
-              break;
-            default:
-              errorDescription = "Geolocation service unavailable";
-          }
+      const position = await new Promise((resolve, reject) => {
+        const options = {
+          enableHighAccuracy: true,
+          timeout: 10000, // 10 second timeout
+          maximumAge: 300000 // 5 minutes cache
+        };
+        
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+      });
+      
+      const { latitude, longitude } = position.coords;
+      
+      // Get location data based on coordinates
+      const locationData = await this.getLocationData(latitude, longitude);
+      
+      return locationData;
+    } catch (error) {
+      console.info("Geolocation unavailable, using default location:", error.message);
+      
+      const errorCode = error?.code || 0;
+      let errorDescription = "Unknown geolocation error";
+      
+      // Handle specific error codes gracefully
+      switch(errorCode) {
+        case 1: // PERMISSION_DENIED
+          errorDescription = "Location access denied";
+          break;
+        case 2: // POSITION_UNAVAILABLE
+          errorDescription = "Location unavailable";
+          break;
+        case 3: // TIMEOUT
+          errorDescription = "Location request timeout";
+          break;
+        default:
+          errorDescription = "Geolocation service unavailable";
+      }
 
-          // Simplified logging - only show in development mode
-          if (import.meta.env.DEV) {
-            console.info(`Geolocation fallback active: ${errorDescription} (Code: ${errorCode})`);
-          }
-          
-          // Return graceful fallback with minimal error details
-          resolve({ 
-            city: fallbackCity, 
-            country: "Pakistan", 
-            weather: "moderate",
-            temperature: 25,
-            error: {
-              code: errorCode,
-              message: errorDescription,
-              handled: true
-            }
-          });
-        },
-        {
-          timeout: 10000,
-          enableHighAccuracy: false
+      // Simplified logging - only show in development mode
+      if (import.meta.env.DEV) {
+        console.info(`Geolocation fallback active: ${errorDescription} (Code: ${errorCode})`);
+      }
+      
+      // Return graceful fallback with minimal error details
+      return { 
+        city: "Pakistan", 
+        country: "Pakistan", 
+        weather: "moderate",
+        temperature: 25,
+        error: {
+          code: errorCode,
+          message: errorDescription,
+          handled: true
         }
-      );
-    });
+      };
+    }
+  }
+
+  static getLocationErrorReason(errorCode) {
+    switch (errorCode) {
+      case 1: // PERMISSION_DENIED
+        return "Location access denied by user";
+      case 2: // POSITION_UNAVAILABLE
+        return "Location information unavailable";
+      case 3: // TIMEOUT
+        return "Location request timed out";
+      default:
+        return "Location service unavailable";
+    }
   }
 
   static async getLocationData(latitude, longitude) {
