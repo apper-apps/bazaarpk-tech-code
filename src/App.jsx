@@ -7,6 +7,7 @@ import Home from "@/components/pages/Home";
 import ProductDetail from "@/components/pages/ProductDetail";
 import Cart from "@/components/pages/Cart";
 import Category from "@/components/pages/Category";
+import AddProduct from "@/components/pages/AddProduct";
 
 function App() {
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
@@ -17,12 +18,13 @@ function App() {
         <Header />
         
         <main>
-          <Routes>
+<Routes>
             <Route path="/" element={<Home />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/category" element={<Category />} />
             <Route path="/deals" element={<Category />} />
+            <Route path="/admin/add-product" element={<AddProduct />} />
           </Routes>
         </main>
 
