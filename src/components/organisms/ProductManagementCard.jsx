@@ -12,6 +12,8 @@ import { formatPrice } from '@/utils/currency';
 const ProductManagementCard = ({
   product,
   viewMode = 'grid',
+  selected = false,
+  onSelect,
   onToggleVisibility,
   onToggleFeatured,
   onEdit,
@@ -24,15 +26,28 @@ const ProductManagementCard = ({
   const isLowStock = product.stock < 10;
   const isOutOfStock = product.stock === 0;
 
-  if (viewMode === 'list') {
+if (viewMode === 'list') {
     return (
       <motion.div
-        className="bg-white rounded-lg shadow-soft border border-gray-200 p-4"
+        className={cn(
+          "bg-white rounded-lg shadow-soft border-2 p-4 relative",
+          selected ? "border-primary-500 bg-primary-50" : "border-gray-200"
+        )}
         layout
         whileHover={{ y: -2 }}
         transition={{ duration: 0.2 }}
       >
-        <div className="flex items-center space-x-4">
+        {onSelect && (
+          <div className="absolute top-4 left-4 z-10">
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onSelect(product.Id)}
+              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+          </div>
+        )}
+        <div className="flex items-center space-x-4 pl-8">
           {/* Product Image */}
           <div className="flex-shrink-0">
             <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden">
@@ -52,9 +67,18 @@ const ProductManagementCard = ({
                   {product.title}
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">
-                  SKU: {product.sku || `PRD-${product.Id.toString().padStart(3, '0')}`}
-                </p>
-                <div className="flex items-center space-x-2 mt-2">
+SKU: {product.sku || `PRD-${product.Id.toString().padStart(3, '0')}`}
+              </p>
+              <p className="text-xs text-gray-500">
+                Category: {product.category}
+              </p>
+              <p className="text-xs text-gray-500">
+                Created: {new Date(product.Id * 24 * 60 * 60 * 1000).toLocaleDateString()}
+              </p>
+              <p className="text-xs text-gray-500">
+                Updated: {new Date(product.Id * 24 * 60 * 60 * 1000 + 86400000).toLocaleDateString()}
+              </p>
+              <div className="flex items-center space-x-2 mt-2">
                   <PriceDisplay price={product.price} oldPrice={product.oldPrice} size="sm" />
                   <StockIndicator stock={product.stock} size="sm" />
                 </div>
@@ -76,8 +100,13 @@ const ProductManagementCard = ({
                     name={isVisible ? "Eye" : "EyeOff"} 
                     className="w-3 h-3 mr-1" 
                   />
-                  {isVisible ? "Published" : "Draft"}
+{isVisible ? "Published" : "Draft"}
                 </Badge>
+                {product.featured && (
+                  <Badge variant="accent" size="sm">
+                    Featured
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -148,13 +177,25 @@ const ProductManagementCard = ({
       whileHover={{ y: -4, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
       transition={{ duration: 0.2 }}
     >
-      {/* Product Image */}
+{/* Product Image */}
       <div className="relative aspect-square bg-gray-100">
         <img
           src={product.images?.[0] || "/api/placeholder/300/300"}
           alt={product.title}
           className="w-full h-full object-cover"
         />
+        
+        {/* Selection Checkbox */}
+        {onSelect && (
+          <div className="absolute top-2 left-2 z-10">
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onSelect(product.Id)}
+              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 bg-white shadow-md"
+            />
+          </div>
+        )}
         
         {/* Status Indicators */}
         <div className="absolute top-2 left-2 flex space-x-1">

@@ -63,7 +63,7 @@ if (index !== -1) {
     return null;
   },
 
-  delete: async (id) => {
+delete: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 300));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
     if (index !== -1) {
@@ -71,6 +71,36 @@ if (index !== -1) {
       return { ...deleted };
     }
     return null;
+  },
+
+  // Bulk operations
+  bulkDelete: async (ids) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const deletedProducts = [];
+    
+    ids.forEach(id => {
+      const index = productsData.findIndex(product => product.Id === parseInt(id));
+      if (index !== -1) {
+        deletedProducts.push(productsData.splice(index, 1)[0]);
+      }
+    });
+    
+    return deletedProducts;
+  },
+
+  bulkUpdate: async (updates) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const updatedProducts = [];
+    
+    updates.forEach(({ id, data }) => {
+      const index = productsData.findIndex(product => product.Id === parseInt(id));
+      if (index !== -1) {
+        productsData[index] = { ...productsData[index], ...data };
+        updatedProducts.push({ ...productsData[index] });
+      }
+    });
+    
+    return updatedProducts;
   },
 
   // Admin-specific methods
