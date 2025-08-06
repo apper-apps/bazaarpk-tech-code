@@ -5,6 +5,22 @@ export const ProductService = {
     await new Promise(resolve => setTimeout(resolve, 300));
     return [...productsData];
   },
+  
+  getAllProducts: async () => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return [...productsData];
+  },
+  
+  getTrendingByLocation: async (location) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    // Filter products based on location preferences
+    const trendingProducts = productsData.filter(product => 
+      product.category === 'vegetables' || 
+      product.category === 'fruits' ||
+      (location && product.name.toLowerCase().includes('organic'))
+    ).slice(0, 12);
+    return trendingProducts;
+  },
 
   getById: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 200));
