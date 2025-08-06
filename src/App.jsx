@@ -20,31 +20,143 @@ import ReportsAnalytics from "@/components/pages/ReportsAnalytics";
 
 function AppContent() {
   const navigate = useNavigate();
-  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
-
-  const handleAdminAccess = async () => {
+  const [adminLoadProgress, setAdminLoadProgress] = useState(0);
+  const [adminError, setAdminError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [showForceExit, setShowForceExit] = useState(false);
+const handleAdminAccess = async () => {
     setIsAdminLoading(true);
+    setAdminLoadProgress(0);
+    setAdminError(null);
+    setShowForceExit(false);
     
+    // Start progress animation
+    const progressInterval = setInterval(() => {
+      setAdminLoadProgress(prev => {
+        if (prev >= 90) return prev;
+        return prev + Math.random() * 15;
+      });
+    }, 100);
+
+    // Timeout detection (5 seconds)
+    const timeoutId = setTimeout(() => {
+      setShowForceExit(true);
+      setAdminError('Loading timeout - Dashboard taking longer than expected');
+    }, 5000);
+
     try {
       // Ensure no overlays are blocking navigation
       document.body.classList.add('admin-accessing');
+      document.body.classList.add('content-layer');
       
-      // Navigate to admin dashboard
-      navigate('/admin');
+      // Simulate background loading preparation
+      setAdminLoadProgress(25);
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Brief delay to ensure navigation completes
+      setAdminLoadProgress(50);
       await new Promise(resolve => setTimeout(resolve, 300));
       
+      // Navigate to admin dashboard
+      setAdminLoadProgress(75);
+      navigate('/admin');
+      
+      // Complete loading with smooth transition
+      setAdminLoadProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Clear states
+      clearInterval(progressInterval);
+      clearTimeout(timeoutId);
+      
     } catch (error) {
+      clearInterval(progressInterval);
+      clearTimeout(timeoutId);
       console.error('Admin access error:', error);
+      setAdminError(error.message || 'Failed to access admin dashboard');
+      
+      // Implement exponential backoff retry
+      const retryWithBackoff = async (attempt) => {
+        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s, 8s
+        setTimeout(async () => {
+          if (attempt < 3) {
+            setRetryCount(prev => prev + 1);
+            await handleAdminAccess();
+          }
+        }, delay);
+      };
+      
+      if (retryCount < 3) {
+        retryWithBackoff(retryCount);
+      }
+      
     } finally {
-      setIsAdminLoading(false);
-      document.body.classList.remove('admin-accessing');
+      setTimeout(() => {
+        setIsAdminLoading(false);
+        setAdminLoadProgress(0);
+        document.body.classList.remove('admin-accessing');
+        document.body.classList.remove('content-layer');
+        clearInterval(progressInterval);
+        clearTimeout(timeoutId);
+      }, 500);
     }
   };
+
+  const handleForceExit = () => {
+    setIsAdminLoading(false);
+    setAdminLoadProgress(0);
+    setAdminError(null);
+    setShowForceExit(false);
+    setRetryCount(0);
+    document.body.classList.remove('admin-accessing', 'content-layer', 'admin-dashboard');
+    
+    // Force navigation back to home
+    navigate('/');
+  };
   return (
-    <div className="min-h-screen bg-background">
+<div className="min-h-screen bg-background content-layer">
+      {/* Admin Loading Progress Bar */}
+      {isAdminLoading && (
+        <>
+          <div className="admin-progress-bar">
+            <div 
+              className="admin-progress-fill" 
+              style={{ width: `${adminLoadProgress}%` }}
+            />
+          </div>
+          <div className="admin-loading-overlay">
+            <div className="admin-loading-modal">
+              <div className="admin-loading-spinner" />
+              <p className="admin-loading-text">
+                {adminLoadProgress < 25 ? 'Preparing dashboard...' : 
+                 adminLoadProgress < 50 ? 'Loading admin content...' :
+                 adminLoadProgress < 75 ? 'Securing connection...' :
+                 adminLoadProgress < 100 ? 'Finalizing access...' : 'Complete!'}
+              </p>
+              {adminError && (
+                <div className="admin-error-message">
+                  <p className="text-red-600 text-sm">{adminError}</p>
+                  {retryCount > 0 && (
+                    <p className="text-gray-500 text-xs mt-1">
+                      Retry attempt {retryCount} of 3...
+                    </p>
+                  )}
+                </div>
+              )}
+              {showForceExit && (
+                <button
+                  onClick={handleForceExit}
+                  className="admin-force-exit-btn"
+                  title="Emergency exit from loading state"
+                >
+                  Force Exit
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
         <Header />
         
 <main>
@@ -56,7 +168,11 @@ function AppContent() {
             <Route path="/deals" element={<Category />} />
             
             {/* Admin Dashboard Routes */}
-            <Route path="/admin" element={<AdminDashboard />}>
+<Route path="/admin" element={
+              <div className="admin-dashboard fade-in-admin">
+                <AdminDashboard />
+              </div>
+            }>
               <Route index element={<ManageProducts />} />
               <Route path="products" element={<ManageProducts />} />
               <Route path="products/manage" element={<ManageProducts />} />
@@ -106,8 +222,7 @@ function AppContent() {
           isOpen={isCartDrawerOpen} 
           onClose={() => setIsCartDrawerOpen(false)} 
         />
-
-        <ToastContainer
+<ToastContainer
           position="top-right"
           autoClose={3000}
           hideProgressBar={false}
@@ -121,41 +236,51 @@ function AppContent() {
         
         {/* Admin Access Portal - Footer Entry Point */}
         <footer className="bg-gray-900 text-white py-8 mt-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="mb-4 md:mb-0">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-500 rounded-lg flex items-center justify-center">
-                    <ApperIcon name="ShoppingBag" className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xl font-display font-bold">BazaarPK</span>
-                </div>
-                <p className="text-gray-400 mt-2">Your trusted online marketplace</p>
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              <div>
+                <h3 className="font-display font-bold text-lg mb-4">BazaarPK</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Your trusted online marketplace for fresh, organic, and quality products across Pakistan.
+                </p>
               </div>
               
-              <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6">
-                <div className="flex space-x-6 text-sm">
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors">About</a>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors">Contact</a>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy</a>
-                </div>
-                
-{/* Discreet Admin Access */}
-                <div className="border-l border-gray-700 pl-6 ml-6">
-                  <button
-                    onClick={handleAdminAccess}
-                    disabled={isAdminLoading}
-                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50 flex items-center space-x-1"
-                    title="Administrator Access"
+              <div>
+                <h4 className="font-medium mb-4">Quick Links</h4>
+                <ul className="space-y-2 text-sm">
+                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors">About Us</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Contact</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-medium mb-4">System</h4>
+                <div className="space-y-2">
+                  <a
+                    href="/admin-dashboard"
+                    className="admin-access-link"
+                    data-role="admin-entry"
+                    aria-label="Access admin dashboard"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleAdminAccess();
+                    }}
                   >
-                    {isAdminLoading && (
-                      <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
-                    )}
-                    <span>Admin Access</span>
-                  </button>
+                    <button
+                      disabled={isAdminLoading}
+                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50 flex items-center space-x-1"
+                      title="Administrator Access"
+                    >
+                      {isAdminLoading && (
+                        <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
+                      )}
+<span>Admin Access</span>
+                    </button>
+                  </a>
                 </div>
               </div>
-            </div>
             
             <div className="border-t border-gray-800 mt-6 pt-6 text-center">
               <p className="text-gray-400 text-sm">
@@ -163,7 +288,7 @@ function AppContent() {
               </p>
             </div>
           </div>
-</footer>
+        </footer>
       </div>
   );
 }

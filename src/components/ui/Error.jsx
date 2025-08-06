@@ -35,18 +35,44 @@ const Error = ({
 const errorIcon = getErrorIcon();
   const errorTitle = getErrorTitle();
   const isLocationError = message?.includes('location') || message?.includes('geolocation');
+  const isAdminError = message?.includes('admin') || message?.includes('dashboard') || message?.includes('timeout');
+  
+  // Admin-specific error handling
+  const handleAdminForceExit = () => {
+    document.body.classList.add('admin-emergency-exit');
+    setTimeout(() => {
+      document.body.classList.remove('admin-emergency-exit', 'admin-accessing', 'content-layer');
+      window.location.href = '/';
+    }, 100);
+  };
+
+  // Retry with exponential backoff for admin errors
+  const handleRetryWithBackoff = () => {
+    if (onRetry) {
+      const retryDelay = Math.min(1000 * Math.pow(2, (errorType?.retryCount || 0)), 8000);
+      setTimeout(() => {
+        onRetry();
+      }, retryDelay);
+    }
+  };
   
   return (
-    <div className={cn("flex flex-col items-center justify-center p-8 text-center", className)} {...props}>
+    <div className={cn(
+      "flex flex-col items-center justify-center p-8 text-center",
+      isAdminError && "admin-error-container",
+      className
+    )} {...props}>
       <div className={cn(
         "w-24 h-24 rounded-full flex items-center justify-center mb-6",
-        isLocationError ? "bg-info/10" : "bg-error/10"
+        isLocationError ? "bg-info/10" : 
+        isAdminError ? "bg-warning/10" : "bg-error/10"
       )}>
         <ApperIcon 
           name={errorIcon} 
           className={cn(
             "w-12 h-12",
-            isLocationError ? "text-info" : "text-error"
+            isLocationError ? "text-info" : 
+            isAdminError ? "text-warning" : "text-error"
           )} 
         />
       </div>
@@ -59,18 +85,44 @@ const errorIcon = getErrorIcon();
         {message}
       </p>
       
-      {showRetry && onRetry && (
-        <Button onClick={onRetry} variant="primary">
-          <ApperIcon name="RefreshCw" className="w-4 h-4 mr-2" />
-          Try Again
-        </Button>
+      {/* Admin-specific error actions */}
+      {isAdminError && (
+        <div className="space-y-3 w-full max-w-xs">
+          {showRetry && onRetry && (
+            <Button onClick={handleRetryWithBackoff} variant="primary" className="w-full">
+              <ApperIcon name="RefreshCw" className="w-4 h-4 mr-2" />
+              Retry Admin Access
+            </Button>
+          )}
+          <Button onClick={handleAdminForceExit} variant="outline" className="w-full">
+            <ApperIcon name="LogOut" className="w-4 h-4 mr-2" />
+            Force Exit to Home
+          </Button>
+          {errorType?.retryCount > 0 && (
+            <p className="text-xs text-gray-500 mt-2">
+              Retry attempt {errorType.retryCount} of 3
+            </p>
+          )}
+        </div>
       )}
       
-      {!onRetry && (
-        <Button onClick={() => window.location.reload()} variant="outline">
-          <ApperIcon name="RotateCcw" className="w-4 h-4 mr-2" />
-          Reload Page
-        </Button>
+      {/* Standard error actions for non-admin errors */}
+      {!isAdminError && (
+        <>
+          {showRetry && onRetry && (
+            <Button onClick={onRetry} variant="primary">
+              <ApperIcon name="RefreshCw" className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+          )}
+          
+          {!onRetry && (
+            <Button onClick={() => window.location.reload()} variant="outline">
+              <ApperIcon name="RotateCcw" className="w-4 h-4 mr-2" />
+              Reload Page
+            </Button>
+          )}
+        </>
       )}
     </div>
   );
