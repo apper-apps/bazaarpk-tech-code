@@ -677,17 +677,17 @@ return (
             </Button>
           </div>
 
-          {/* Approval Status Filter for Moderators */}
+{/* Approval Status Filter for Moderators */}
           {(currentUser.role === 'admin' || currentUser.role === 'moderator') && (
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
-              <option value="all">All Status</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-              <option value="pending-approval">Pending Approval</option>
+              <option key="all" value="all">All Status</option>
+              <option key="published" value="published">Published</option>
+              <option key="draft" value="draft">Draft</option>
+              <option key="pending-approval" value="pending-approval">Pending Approval</option>
             </select>
           )}
         </div>
