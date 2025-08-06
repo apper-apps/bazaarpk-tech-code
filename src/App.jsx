@@ -255,7 +255,7 @@ const handleAdminAccess = async () => {
                 </ul>
               </div>
               
-              <div>
+<div>
                 <h4 className="font-medium mb-4">System</h4>
                 <div className="space-y-2">
                   <a
@@ -276,11 +276,12 @@ const handleAdminAccess = async () => {
                       {isAdminLoading && (
                         <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
                       )}
-<span>Admin Access</span>
+                      <span>Admin Access</span>
                     </button>
                   </a>
                 </div>
               </div>
+            </div>
             
             <div className="border-t border-gray-800 mt-6 pt-6 text-center">
               <p className="text-gray-400 text-sm">
