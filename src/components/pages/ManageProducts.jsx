@@ -800,8 +800,8 @@ return (
               value={featuredFilter}
               onChange={(e) => setFeaturedFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-<option key="all" value="all">All Products</option>
+>
+              <option key="all" value="all">All Products</option>
               <option key="featured" value="featured">Featured Only</option>
               <option key="not-featured" value="not-featured">Not Featured</option>
             </select>
@@ -993,7 +993,7 @@ return (
                     onChange={(e) => setBulkEditData(prev => ({ ...prev, category: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                   >
-                    <option value="">Keep Current</option>
+<option key="keep-current" value="">Keep Current</option>
                     {categories.map((category) => (
                       <option key={category.slug} value={category.slug}>
                         {category.name}
@@ -1013,8 +1013,8 @@ return (
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                   >
                     <option value="">Keep Current</option>
-                    <option value="published">Published</option>
-                    <option value="draft">Draft</option>
+<option key="published" value="published">Published</option>
+                    <option key="draft" value="draft">Draft</option>
                   </select>
                 </div>
               </div>
