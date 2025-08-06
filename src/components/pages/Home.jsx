@@ -37,9 +37,9 @@ const loadData = async () => {
       }
 
 // Initialize all data promises
-      const [categoriesData, productsData, trendingData, recipeBundlesData] = await Promise.all([
+const [categoriesData, productsData, trendingData, recipeBundlesData] = await Promise.all([
         CategoryService.getAll(),
-        ProductService.getAllProducts(),
+        ProductService.getAll(),
         ProductService.getTrendingByLocation(location),
         RecipeBundleService.getFeatured(6)
       ]);

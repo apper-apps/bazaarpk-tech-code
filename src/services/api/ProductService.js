@@ -45,11 +45,11 @@ export const ProductService = {
       return { ...productsData[index] };
     }
     return null;
+return null;
   },
 
-delete: async (id) => {
+  delete: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 300));
-    const index = productsData.findIndex(p => p.Id === id);
     if (index !== -1) {
       const deleted = productsData.splice(index, 1)[0];
       return { ...deleted };
