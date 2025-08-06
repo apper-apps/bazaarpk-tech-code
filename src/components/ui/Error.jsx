@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { AlertTriangle, ArrowLeft, Home, RefreshCw } from "lucide-react";
+import HomePage from "@/components/pages/Home";
 import Button from "@/components/atoms/Button";
 /**
  * Error Component - Displays various error states with recovery options
@@ -245,13 +246,12 @@ export class ErrorBoundary extends React.Component {
           variant="fullscreen"
           onRetry={this.handleRetry}
           showRetry={true}
-          showGoHome={true}
-          onGoHome={() => window.location.href = '/'}
+onGoHome={() => window.location.href = '/'}
         >
-          {process.env.NODE_ENV === 'development' && this.state.error && (
+          {import.meta.env.MODE === 'development' && this.state.error && (
             <details className="mt-4 p-4 bg-gray-100 rounded-lg text-left">
               <summary className="cursor-pointer font-medium text-gray-700 mb-2">
-                Error Details (Development Only)
+Error Details (Development Only)
               </summary>
               <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto">
                 {this.state.error.toString()}
