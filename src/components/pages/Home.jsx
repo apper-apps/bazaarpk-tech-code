@@ -75,11 +75,20 @@ const [categoriesData, productsData, trendingData, recipeBundlesData] = await Pr
 
       setLoading(false);
     } catch (err) {
-      console.error("Error loading home data:", err);
+console.error("Error loading home data:", err);
       
-      // Enhanced error handling with categorized messaging
+      // Enhanced error handling with browser compatibility and categorized messaging
       let errorMessage = "Failed to load page content. Please try again.";
       let showToastError = true;
+      let errorCategory = 'unknown';
+      
+      // Browser compatibility detection
+      const userAgent = navigator.userAgent;
+      const isOldBrowser = (
+        (userAgent.includes('Chrome') && parseInt(userAgent.match(/Chrome\/(\d+)/)?.[1] || '0') < 60) ||
+        (userAgent.includes('Firefox') && parseInt(userAgent.match(/Firefox\/(\d+)/)?.[1] || '0') < 55) ||
+        (userAgent.includes('Safari') && !userAgent.includes('Chrome') && parseInt(userAgent.match(/Version\/(\d+)/)?.[1] || '0') < 11)
+      );
       
       // Handle specific error types with improved categorization
       if (err?.message?.includes('Geolocation') || 
@@ -89,13 +98,70 @@ const [categoriesData, productsData, trendingData, recipeBundlesData] = await Pr
         // Location errors are not critical - app works with fallback
         errorMessage = null; // Don't show error state for location issues
         showToastError = false;
+        errorCategory = 'location_permission';
         console.info("Using default location settings - location access was denied or unavailable");
+        
       } else if (err?.name === 'NetworkError' || err?.message?.includes('fetch')) {
-        errorMessage = "Network connection issue. Please check your internet and try again.";
+        errorCategory = 'network';
+        if (navigator.onLine === false) {
+          errorMessage = "You appear to be offline. Please check your internet connection and try again.";
+        } else {
+          errorMessage = "Network connection issue. Please check your internet and try again.";
+        }
+        
       } else if (err?.message?.includes('timeout')) {
-        errorMessage = "Request timed out. Please try again.";
+        errorCategory = 'timeout';
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) {
+          errorMessage = "Request timed out. Mobile connections may be slower. Please try again.";
+        } else {
+          errorMessage = "Request timed out. Please try again.";
+        }
+        
       } else if (err?.message?.includes('products') || err?.message?.includes('categories')) {
+        errorCategory = 'data_loading';
         errorMessage = "Unable to load product data. Please try again.";
+        
+      } else if (err?.message?.includes('localStorage') || err?.message?.includes('storage')) {
+        errorCategory = 'storage';
+        errorMessage = "Browser storage issue. Please enable cookies and refresh the page.";
+        
+      } else if (isOldBrowser) {
+        errorCategory = 'browser_compatibility';
+        errorMessage = "Your browser may not be fully supported. Please update your browser or try Chrome, Firefox, or Safari.";
+        
+      } else if (err?.message?.includes('CORS')) {
+        errorCategory = 'cors';
+        errorMessage = "Cross-origin request blocked. This may be a browser security setting.";
+        
+      } else if (err?.message?.includes('Script')) {
+        errorCategory = 'script_loading';
+        errorMessage = "Resource loading failed. Please refresh the page and try again.";
+      }
+      
+      // Log detailed error information for analytics
+      console.group('🏠 Home Page Load Error');
+      console.error('Error details:', {
+        category: errorCategory,
+        message: err?.message || 'Unknown error',
+        stack: err?.stack,
+        userAgent: navigator.userAgent,
+        online: navigator.onLine,
+        timestamp: new Date().toISOString(),
+        url: window.location.href
+      });
+      console.groupEnd();
+      
+      // Track errors in analytics
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'home_load_error', {
+          error_category: errorCategory,
+          error_message: err?.message || 'Unknown error',
+          browser_name: userAgent.includes('Chrome') ? 'Chrome' : 
+                       userAgent.includes('Firefox') ? 'Firefox' : 
+                       userAgent.includes('Safari') ? 'Safari' : 'Other',
+          is_mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
+          is_online: navigator.onLine
+        });
       }
       
       // Only set error state for actual failures that affect functionality
@@ -105,7 +171,26 @@ const [categoriesData, productsData, trendingData, recipeBundlesData] = await Pr
       
       // Show toast error only for actual failures that affect functionality
       if (showToastError) {
-        showToast.error("Failed to load products. Please check your connection and try again.");
+        let toastMessage = "Failed to load products. Please check your connection and try again.";
+        
+        // Customize toast message based on error category
+        switch (errorCategory) {
+          case 'network':
+            toastMessage = navigator.onLine === false ? 
+              "You're offline. Please check your internet connection." :
+              "Network error. Please check your connection and try again.";
+            break;
+          case 'browser_compatibility':
+            toastMessage = "Browser compatibility issue. Please update your browser.";
+            break;
+          case 'timeout':
+            toastMessage = "Loading timed out. Please try again.";
+            break;
+          default:
+            toastMessage = "Failed to load products. Please try again.";
+        }
+        
+        showToast.error(toastMessage);
       }
     } finally {
       setLoading(false);
@@ -116,22 +201,52 @@ const [categoriesData, productsData, trendingData, recipeBundlesData] = await Pr
     loadData();
   }, []);
 
-  if (loading) {
+if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background" role="main" aria-live="polite" aria-busy="true">
+        {/* Screen reader announcement */}
+        <div className="sr-only">Loading homepage content, please wait...</div>
+        
         {/* Hero Banner Skeleton */}
-        <div className="h-64 md:h-80 lg:h-96 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse rounded-2xl mx-4 mt-4 md:mx-6 lg:mx-8" />
+        <div 
+          className="h-64 md:h-80 lg:h-96 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse rounded-2xl mx-4 mt-4 md:mx-6 lg:mx-8"
+          aria-label="Loading hero banner"
+        />
         
         {/* Categories Skeleton */}
         <div className="px-4 md:px-6 lg:px-8 mt-8 mb-8">
-          <div className="h-8 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded w-48 animate-pulse mb-6" />
-          <Loading type="categories" />
+          <div 
+            className="h-8 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded w-48 animate-pulse mb-6"
+            aria-label="Loading categories section"
+          />
+          <Loading type="categories" aria-label="Loading product categories" />
         </div>
         
         {/* Products Skeleton */}
         <div className="px-4 md:px-6 lg:px-8">
-          <div className="h-8 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded w-56 animate-pulse mb-8" />
-          <Loading type="products" />
+          <div 
+            className="h-8 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded w-56 animate-pulse mb-8"
+            aria-label="Loading products section"
+          />
+          <Loading type="products" aria-label="Loading featured products" />
+        </div>
+
+        {/* Additional loading states for better UX */}
+        <div className="px-4 md:px-6 lg:px-8 mt-8 mb-8">
+          {/* Deals Section Skeleton */}
+          <div 
+            className="h-8 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded w-32 animate-pulse mb-6"
+            aria-label="Loading deals section"
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, index) => (
+              <div key={index} className="bg-white rounded-xl shadow-soft p-4 animate-pulse">
+                <div className="h-32 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded mb-4" />
+                <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded mb-2" />
+                <div className="h-4 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded w-3/4" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -139,11 +254,14 @@ const [categoriesData, productsData, trendingData, recipeBundlesData] = await Pr
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center" role="main">
         <Error
           title="Unable to load homepage"
           message={error}
           onRetry={loadData}
+          showRetry={true}
+          variant="card"
+          className="max-w-md mx-4"
         />
       </div>
     );
