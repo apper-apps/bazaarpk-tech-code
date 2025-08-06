@@ -99,6 +99,88 @@ body {
   display: none;
 }
 
+/* Prevent overlay conflicts for admin routes */
+body.admin-accessing .overlay-mask,
+body.admin-accessing .modal-backdrop,
+body.admin-accessing .loading-overlay {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: -1000 !important;
+  transition: none !important;
+}
+
+/* Ensure admin content is always visible and accessible */
+.admin-panel,
+[data-admin-content],
+.admin-dashboard {
+  z-index: 10000 !important;
+  position: relative !important;
+  background: white !important;
+}
+
+/* Force hide any persistent overlays on admin routes */
+body[class*="admin"] .overlay,
+body[class*="admin"] .mask,
+body[class*="admin"] .backdrop {
+  display: none !important;
+}
+
+/* Admin loading indicator styles */
+.admin-loading-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-loading-indicator .spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #4CAF50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Ensure proper stacking for admin navigation */
+.admin-nav,
+.admin-sidebar {
+  z-index: 1000;
+}
+
+/* Override any global overlay styles that might interfere */
+body.admin-route {
+  overflow: auto !important;
+}
+
+body.admin-route * {
+  pointer-events: auto !important;
+}
+
+/* Additional safeguards for modal libraries */
+.ReactModal__Overlay.admin-safe {
+  display: none !important;
+}
+
+div[class*="overlay"][style*="position: fixed"] {
+  display: none !important;
+}
+
 .badge-organic {
   background: linear-gradient(135deg, #4CAF50, #66BB6A);
 }

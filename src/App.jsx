@@ -21,7 +21,28 @@ import ReportsAnalytics from "@/components/pages/ReportsAnalytics";
 function AppContent() {
   const navigate = useNavigate();
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+  const [isAdminLoading, setIsAdminLoading] = useState(false);
 
+  const handleAdminAccess = async () => {
+    setIsAdminLoading(true);
+    
+    try {
+      // Ensure no overlays are blocking navigation
+      document.body.classList.add('admin-accessing');
+      
+      // Navigate to admin dashboard
+      navigate('/admin');
+      
+      // Brief delay to ensure navigation completes
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+    } catch (error) {
+      console.error('Admin access error:', error);
+    } finally {
+      setIsAdminLoading(false);
+      document.body.classList.remove('admin-accessing');
+    }
+  };
   return (
     <div className="min-h-screen bg-background">
         <Header />
@@ -119,14 +140,18 @@ function AppContent() {
                   <a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy</a>
                 </div>
                 
-                {/* Discreet Admin Access */}
+{/* Discreet Admin Access */}
                 <div className="border-l border-gray-700 pl-6 ml-6">
                   <button
-                    onClick={() => navigate('/admin')}
-                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                    onClick={handleAdminAccess}
+                    disabled={isAdminLoading}
+                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50 flex items-center space-x-1"
                     title="Administrator Access"
                   >
-                    Admin Access
+                    {isAdminLoading && (
+                      <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    )}
+                    <span>Admin Access</span>
                   </button>
                 </div>
               </div>
