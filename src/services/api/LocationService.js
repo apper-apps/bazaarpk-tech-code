@@ -54,13 +54,17 @@ console.error("Error getting location data:", error);
               errorDescription = errorMessage || "Geolocation service failed";
 }
 
-          console.error(`Geolocation error (Code: ${errorCode}): ${errorDescription}`, {
+console.error(`Geolocation error (Code: ${errorCode}): ${errorDescription}`, JSON.stringify({
             code: errorCode,
             message: errorMessage,
             description: errorDescription,
-            originalError: error,
+            originalError: error ? {
+              code: error.code,
+              message: error.message,
+              name: error.name || 'GeolocationError'
+            } : null,
             timestamp: new Date().toISOString()
-          });
+          }, null, 2));
           
           resolve({ 
             city: fallbackCity, 
