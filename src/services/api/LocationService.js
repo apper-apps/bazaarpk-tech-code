@@ -36,37 +36,30 @@ console.error("Error getting location data:", error);
           let errorDescription = "Unknown geolocation error";
           let fallbackCity = "Pakistan";
           
-          // Handle specific error codes
+          // Handle specific error codes gracefully
           switch(errorCode) {
             case 1: // PERMISSION_DENIED
-              errorDescription = "Location access denied by user";
+              errorDescription = "Location access denied";
               fallbackCity = "Pakistan";
               break;
             case 2: // POSITION_UNAVAILABLE
-              errorDescription = "Location information unavailable";
+              errorDescription = "Location unavailable";
               fallbackCity = "Pakistan";
               break;
             case 3: // TIMEOUT
-              errorDescription = "Location request timed out";
+              errorDescription = "Location request timeout";
               fallbackCity = "Pakistan";
-break;
+              break;
             default:
-              errorDescription = errorMessage || "Geolocation service failed";
+              errorDescription = "Geolocation service unavailable";
           }
 
-          console.error(`Geolocation error (Code: ${errorCode}): ${errorDescription}`);
-          console.error('Geolocation error details:', {
-            code: errorCode,
-            message: errorMessage,
-            description: errorDescription,
-            originalError: error ? {
-              code: error.code,
-              message: error.message,
-              name: error.name || 'GeolocationError'
-            } : null,
-            timestamp: new Date().toISOString()
-          });
+          // Simplified logging - only show in development mode
+          if (import.meta.env.DEV) {
+            console.info(`Geolocation fallback active: ${errorDescription} (Code: ${errorCode})`);
+          }
           
+          // Return graceful fallback with minimal error details
           resolve({ 
             city: fallbackCity, 
             country: "Pakistan", 
