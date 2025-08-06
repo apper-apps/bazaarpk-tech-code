@@ -13,9 +13,12 @@
       { "name": "1 KG", "price": 120, "oldPrice": 150 },
       { "name": "2 KG", "price": 220, "oldPrice": 280 },
       { "name": "5 KG", "price": 500, "oldPrice": 650 }
-    ]
+    ],
+    "sku": "VEG-TOM-001",
+    "visibility": "published",
+    "featured": true
   },
-  {
+{
     "Id": 2,
     "title": "Premium Basmati Rice",
     "price": 850,
@@ -29,7 +32,10 @@
       { "name": "5 KG", "price": 850, "oldPrice": 950 },
       { "name": "10 KG", "price": 1600, "oldPrice": 1850 },
       { "name": "25 KG", "price": 3800, "oldPrice": 4200 }
-    ]
+    ],
+    "sku": "GRO-RIC-002",
+    "visibility": "published",
+    "featured": true
   },
   {
     "Id": 3,
@@ -769,5 +775,19 @@
       { "name": "100ml", "price": 4200, "oldPrice": 4900 },
       { "name": "150ml", "price": 5800, "oldPrice": 6800 }
     ]
+},
+  {
+    "Id": 49,
+    "title": "Product Management System",
+    "price": 0,
+    "description": "Sample product for testing admin features",
+    "category": "system",
+    "stock": 1,
+    "badges": ["SYSTEM"],
+    "images": ["/api/placeholder/400/400"],
+    "variants": [],
+    "sku": "SYS-TEST-049",
+    "visibility": "draft",
+    "featured": false
   }
 ]

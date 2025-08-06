@@ -56,11 +56,11 @@ export const ProductService = {
   update: async (id, updates) => {
     await new Promise(resolve => setTimeout(resolve, 350));
     const index = productsData.findIndex(p => p.Id === id);
-    if (index !== -1) {
+if (index !== -1) {
       productsData[index] = { ...productsData[index], ...updates };
       return { ...productsData[index] };
     }
-return null;
+    return null;
   },
 
   delete: async (id) => {
@@ -71,6 +71,61 @@ return null;
       return { ...deleted };
     }
     return null;
+  },
+
+  // Admin-specific methods
+  toggleVisibility: async (id) => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const index = productsData.findIndex(product => product.Id === parseInt(id));
+    if (index !== -1) {
+      const currentVisibility = productsData[index].visibility || 'published';
+      productsData[index].visibility = currentVisibility === 'published' ? 'draft' : 'published';
+      return { ...productsData[index] };
+    }
+    return null;
+  },
+
+  toggleFeatured: async (id) => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const index = productsData.findIndex(product => product.Id === parseInt(id));
+    if (index !== -1) {
+      productsData[index].featured = !productsData[index].featured;
+      return { ...productsData[index] };
+    }
+    return null;
+  },
+
+  updateStatus: async (id, status) => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const index = productsData.findIndex(product => product.Id === parseInt(id));
+    if (index !== -1) {
+      productsData[index].status = status;
+      return { ...productsData[index] };
+    }
+    return null;
+  },
+
+  getByCategory: async (category) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    if (!category) return productsData.map(product => ({ ...product }));
+    
+    return productsData
+      .filter(product => product.category === category)
+      .map(product => ({ ...product }));
+  },
+
+  searchProducts: async (query) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    if (!query) return productsData.map(product => ({ ...product }));
+    
+    const lowercaseQuery = query.toLowerCase();
+    return productsData
+      .filter(product => 
+        product.title.toLowerCase().includes(lowercaseQuery) ||
+        product.sku?.toLowerCase().includes(lowercaseQuery) ||
+        product.description.toLowerCase().includes(lowercaseQuery)
+      )
+      .map(product => ({ ...product }));
   },
 
   getTrendingByLocation: async (location) => {

@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/useToast";
 import { CategoryService } from "@/services/api/CategoryService";
 import { ProductService } from "@/services/api/ProductService";
 import ApperIcon from "@/components/ApperIcon";
-import Home from "@/components/pages/Home";
-import Category from "@/components/pages/Category";
 import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
 import Card from "@/components/atoms/Card";
@@ -15,7 +13,9 @@ import { formatPrice } from "@/utils/currency";
 
 const AddProduct = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
+  const isInAdminDashboard = location.pathname.startsWith('/admin/');
   
   // Tab state
   const [activeTab, setActiveTab] = useState("basic");
@@ -994,20 +994,22 @@ const renderPreviewModal = () => {
     );
   };
 
-  return (
-    <div className="min-h-screen bg-background">
+return (
+    <div className={cn("min-h-screen", isInAdminDashboard ? "bg-white" : "bg-background")}>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
-                <button onClick={() => navigate("/")} className="hover:text-primary-600">
-                  Home
-                </button>
-                <ApperIcon name="ChevronRight" className="w-4 h-4" />
-                <span className="text-gray-900 font-medium">Add Product</span>
-              </nav>
+              {!isInAdminDashboard && (
+                <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+                  <button onClick={() => navigate("/")} className="hover:text-primary-600">
+                    Home
+                  </button>
+                  <ApperIcon name="ChevronRight" className="w-4 h-4" />
+                  <span className="text-gray-900 font-medium">Add Product</span>
+                </nav>
+              )}
               
               <h1 className="text-3xl font-display font-bold text-gray-900">
                 Add New Product
