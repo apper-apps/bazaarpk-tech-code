@@ -52,7 +52,7 @@ console.error("Error getting location data:", error);
               break;
             default:
               errorDescription = errorMessage || "Geolocation service failed";
-          }
+}
 
           console.error(`Geolocation error (Code: ${errorCode}): ${errorDescription}`, {
             code: errorCode,
