@@ -10,9 +10,9 @@ import CategoryCarousel from "@/components/organisms/CategoryCarousel";
 import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
 const Home = () => {
-  const [products, setProducts] = useState([]);
+const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-const [deals, setDeals] = useState([]);
+  const [deals, setDeals] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
   const [locationMessage, setLocationMessage] = useState("🔥 Trending Now");
@@ -22,9 +22,9 @@ const [deals, setDeals] = useState([]);
 const loadData = async () => {
     try {
       setLoading(true);
-      setError("");
+setError("");
 
-// Get user location with comprehensive error handling
+      // Get user location with comprehensive error handling
       const location = await LocationService.getUserLocation();
       setUserLocation(location);
       
@@ -54,9 +54,9 @@ const loadData = async () => {
       const dealsData = productsData.filter(product => 
         product.oldPrice && product.oldPrice > product.price
       );
-      setDeals(dealsData);
+setDeals(dealsData);
 
-// Show location-based success message (only if location was successfully obtained)
+      // Show location-based success message (only if location was successfully obtained)
       if (location?.city && location.city !== "Pakistan" && !location.error) {
         showToast.success(`Products tailored for ${location.city}! Showing ${location.weather} weather favorites.`);
       } else if (location?.error && location.error.code === 1) {
@@ -145,9 +145,9 @@ const loadData = async () => {
         title="Featured Products"
         showLoadMore={true}
         initialCount={12}
-      />
+/>
 
-{/* Location-Based Trending Products */}
+      {/* Location-Based Trending Products */}
       <ProductGrid 
         products={trendingProducts.length > 0 ? trendingProducts : products.filter(p => p.badges?.includes("BESTSELLER")).slice(0, 8)}
         title={locationMessage}

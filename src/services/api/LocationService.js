@@ -49,12 +49,13 @@ console.error("Error getting location data:", error);
             case 3: // TIMEOUT
               errorDescription = "Location request timed out";
               fallbackCity = "Pakistan";
-              break;
+break;
             default:
               errorDescription = errorMessage || "Geolocation service failed";
-}
+          }
 
-console.error(`Geolocation error (Code: ${errorCode}): ${errorDescription}`, JSON.stringify({
+          console.error(`Geolocation error (Code: ${errorCode}): ${errorDescription}`);
+          console.error('Geolocation error details:', {
             code: errorCode,
             message: errorMessage,
             description: errorDescription,
@@ -64,7 +65,7 @@ console.error(`Geolocation error (Code: ${errorCode}): ${errorDescription}`, JSO
               name: error.name || 'GeolocationError'
             } : null,
             timestamp: new Date().toISOString()
-          }, null, 2));
+          });
           
           resolve({ 
             city: fallbackCity, 
