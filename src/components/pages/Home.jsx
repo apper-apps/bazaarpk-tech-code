@@ -19,6 +19,8 @@ const [products, setProducts] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [recipeBundles, setRecipeBundles] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
+  const [weatherData, setWeatherData] = useState(null);
+  const [seasonalProducts, setSeasonalProducts] = useState([]);
   const [locationMessage, setLocationMessage] = useState("🔥 Trending Now");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -51,10 +53,26 @@ const [productsData, categoriesData, trendingData, recipeBundlesData] = await Pr
         RecipeBundleService.getFeatured(6)
       ]);
 
-      setProducts(productsData);
+setProducts(productsData);
       setCategories(categoriesData);
       setTrendingProducts(trendingData);
       setRecipeBundles(recipeBundlesData);
+      
+      // Get weather data and filter seasonal products
+      const locationData = await LocationService.getUserLocation();
+      setUserLocation(locationData);
+      setWeatherData(locationData);
+      
+      // Get weather-based seasonal products
+      const seasonalProductNames = LocationService.getSeasonalProducts(locationData.weather);
+      const weatherFilteredProducts = productsData.filter(product => 
+        seasonalProductNames.some(name => product.name.toLowerCase().includes(name.toLowerCase()))
+      );
+      setSeasonalProducts(weatherFilteredProducts);
+      
+      // Update location message based on weather
+      const weatherMessage = LocationService.getLocationMessage(locationData);
+      setLocationMessage(weatherMessage);
       
       // Filter deals (products with discount)
       const dealsData = productsData.filter(product => 
@@ -162,13 +180,19 @@ const [productsData, categoriesData, trendingData, recipeBundlesData] = await Pr
         initialCount={12}
 />
 
-      {/* Location-Based Trending Products */}
+{/* Weather-Based Seasonal Products */}
       <ProductGrid 
-        products={trendingProducts.length > 0 ? trendingProducts : products.filter(p => p.badges?.includes("BESTSELLER")).slice(0, 8)}
+        products={
+          seasonalProducts.length > 0 
+            ? seasonalProducts.slice(0, 8)
+            : trendingProducts.length > 0 
+            ? trendingProducts 
+            : products.filter(p => p.badges?.includes("BESTSELLER")).slice(0, 8)
+        }
         title={locationMessage}
         showLoadMore={false}
         initialCount={8}
-/>
+      />
 
       {/* Recipe Bundles */}
       <RecipeBundles 
