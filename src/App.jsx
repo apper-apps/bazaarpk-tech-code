@@ -18,163 +18,68 @@ import ManageProducts from "@/components/pages/ManageProducts";
 import Cart from "@/components/pages/Cart";
 import AdminDashboard from "@/components/pages/AdminDashboard";
 import ReportsAnalytics from "@/components/pages/ReportsAnalytics";
+// Browser detection at module level to avoid re-computation
+const detectBrowser = () => {
+  const userAgent = navigator.userAgent;
+  const browserInfo = {
+    name: 'Unknown',
+    version: 'Unknown',
+    mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
+    touch: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+    screenReader: window.speechSynthesis !== undefined,
+    reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+    highContrast: window.matchMedia('(prefers-contrast: high)').matches
+  };
+
+  // Browser detection
+  if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+    browserInfo.name = 'Chrome';
+    browserInfo.version = userAgent.match(/Chrome\/(\d+)/)?.[1] || 'Unknown';
+  } else if (userAgent.includes('Firefox')) {
+    browserInfo.name = 'Firefox';
+    browserInfo.version = userAgent.match(/Firefox\/(\d+)/)?.[1] || 'Unknown';
+  } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+    browserInfo.name = 'Safari';
+    browserInfo.version = userAgent.match(/Version\/(\d+)/)?.[1] || 'Unknown';
+  } else if (userAgent.includes('Edg')) {
+    browserInfo.name = 'Edge';
+    browserInfo.version = userAgent.match(/Edg\/(\d+)/)?.[1] || 'Unknown';
+  }
+
+  return browserInfo;
+};
+
+// Static browser info - computed once
+const BROWSER_INFO = detectBrowser();
 
 function AppContent() {
   const navigate = useNavigate();
-const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
   const [adminLoadProgress, setAdminLoadProgress] = useState(0);
   const [adminError, setAdminError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
   const [showForceExit, setShowForceExit] = useState(false);
-  const [browserInfo, setBrowserInfo] = useState(null);
   const [performanceMetrics, setPerformanceMetrics] = useState({});
 
-  // Error logging setup for debugging
-useEffect(() => {
-    // Initialize browser compatibility detection
-    const detectBrowser = () => {
-      const userAgent = navigator.userAgent;
-      const browserInfo = {
-        name: 'Unknown',
-        version: 'Unknown',
-        mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
-        touch: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
-        screenReader: window.speechSynthesis !== undefined,
-        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-        darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
-        highContrast: window.matchMedia('(prefers-contrast: high)').matches
-      };
+  // Ref to track component mount status
+  const isMountedRef = useRef(true);
 
-      // Browser detection
-      if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
-        browserInfo.name = 'Chrome';
-        browserInfo.version = userAgent.match(/Chrome\/(\d+)/)?.[1] || 'Unknown';
-      } else if (userAgent.includes('Firefox')) {
-        browserInfo.name = 'Firefox';
-        browserInfo.version = userAgent.match(/Firefox\/(\d+)/)?.[1] || 'Unknown';
-      } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
-        browserInfo.name = 'Safari';
-        browserInfo.version = userAgent.match(/Version\/(\d+)/)?.[1] || 'Unknown';
-      } else if (userAgent.includes('Edg')) {
-        browserInfo.name = 'Edge';
-        browserInfo.version = userAgent.match(/Edg\/(\d+)/)?.[1] || 'Unknown';
-      }
-
-      setBrowserInfo(browserInfo);
-      
-      // Log browser compatibility info
-      console.log('🔍 Browser Compatibility Check:', browserInfo);
-      
-      // Track compatibility issues
-      if (parseInt(browserInfo.version) < 80 && browserInfo.name === 'Chrome') {
-        console.warn('⚠️ Chrome version may have compatibility issues');
-      }
-    };
-
-    const handleAdminMaskError = (e) => {
-      // Enhanced console logging for debugging with browser context
-      console.group('🔴 Admin Mask Persistence Error');
-      console.error('Error Details:', {
-        timestamp: new Date().toISOString(),
-        errorType: e.detail?.type || 'unknown',
-        errorMessage: e.detail?.message || 'No message provided',
-        errorStack: e.detail?.error?.stack,
-        currentRoute: window.location.pathname,
-        userAgent: navigator.userAgent,
-        browserInfo: browserInfo,
-        screenInfo: {
-          width: window.screen.width,
-          height: window.screen.height,
-          availWidth: window.screen.availWidth,
-          availHeight: window.screen.availHeight,
-          devicePixelRatio: window.devicePixelRatio
-        },
-        adminState: {
-          isAdminRoute: window.location.pathname.includes('/admin'),
-          hasAdminClass: document.body.classList.contains('admin-accessing'),
-          adminElements: document.querySelectorAll('.admin-dashboard, [data-admin-content]').length
-        }
-      });
-      
-      // Enhanced DOM state analysis
-      console.log('DOM State Analysis:', {
-        overlayElements: document.querySelectorAll('.overlay-mask, .modal-backdrop, .loading-overlay').length,
-        adminElements: document.querySelectorAll('.admin-dashboard, .admin-panel').length,
-        zIndexIssues: Array.from(document.querySelectorAll('*')).filter(el => {
-          const zIndex = parseInt(window.getComputedStyle(el).zIndex);
-          return zIndex > 10000 && !el.closest('.admin-dashboard');
-        }).length,
-        accessibilityFeatures: {
-          ariaLabels: document.querySelectorAll('[aria-label]').length,
-          focusableElements: document.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])').length,
-          headings: document.querySelectorAll('h1, h2, h3, h4, h5, h6').length
-        }
-      });
-      console.groupEnd();
-      
-      // Track mask persistence errors in analytics
-      if (typeof window !== 'undefined' && window.gtag) {
-        window.gtag('event', 'admin_mask_persistence_error', {
-          error_type: e.detail?.type || 'unknown',
-          browser_name: browserInfo?.name || 'unknown',
-          browser_version: browserInfo?.version || 'unknown',
-          is_mobile: browserInfo?.mobile || false,
-          route: window.location.pathname,
-          timestamp: Date.now()
-        });
-      }
-      
-      // Enhanced Sentry integration with browser context
-      if (typeof window !== 'undefined' && window.Sentry) {
-        window.Sentry.withScope((scope) => {
-          scope.setTag('error_category', 'admin_mask_persistence');
-          scope.setTag('browser_name', browserInfo?.name || 'unknown');
-          scope.setTag('browser_version', browserInfo?.version || 'unknown');
-          scope.setTag('is_mobile', browserInfo?.mobile || false);
-          scope.setContext('admin_state', {
-            route: window.location.pathname,
-            timestamp: new Date().toISOString(),
-            adminClassesPresent: document.body.className,
-            errorType: e.detail?.type,
-            browserInfo: browserInfo
-          });
-          scope.setContext('device_info', {
-            userAgent: navigator.userAgent,
-            screenWidth: window.screen.width,
-            screenHeight: window.screen.height,
-            viewportWidth: window.innerWidth,
-            viewportHeight: window.innerHeight,
-            devicePixelRatio: window.devicePixelRatio,
-            orientation: window.screen.orientation?.type || 'unknown'
-          });
-          scope.setLevel('error');
-          window.Sentry.captureException(e.detail?.error || new Error(e.detail?.message || 'Admin mask error'));
-        });
-      }
-      
-      // Dispatch enhanced custom event for error tracking
-      window.dispatchEvent(new CustomEvent('admin_debug_log', {
-        detail: {
-          type: 'mask_error',
-          severity: 'high',
-          data: e.detail,
-          debugInfo: {
-            route: window.location.pathname,
-            timestamp: Date.now(),
-            retryable: e.detail?.retryable !== false,
-            browserInfo: browserInfo,
-            performanceMetrics: performanceMetrics
-          }
-        }
-      }));
-    };
+  // Initialize performance monitoring only once
+  useEffect(() => {
+    console.log('🔍 Browser Compatibility Check:', BROWSER_INFO);
+    
+    // Track compatibility issues
+    if (parseInt(BROWSER_INFO.version) < 80 && BROWSER_INFO.name === 'Chrome') {
+      console.warn('⚠️ Chrome version may have compatibility issues');
+    }
 
     // Performance monitoring setup
     const initPerformanceMonitoring = () => {
       if ('performance' in window) {
         const navigationTiming = performance.getEntriesByType('navigation')[0];
-        if (navigationTiming) {
+        if (navigationTiming && isMountedRef.current) {
           const metrics = {
             pageLoadTime: navigationTiming.loadEventEnd - navigationTiming.loadEventStart,
             domContentLoaded: navigationTiming.domContentLoadedEventEnd - navigationTiming.domContentLoadedEventStart,
@@ -192,31 +97,81 @@ useEffect(() => {
             }
           });
           
-          setPerformanceMetrics(metrics);
-          
-          // Log performance metrics
-          console.log('📊 Performance Metrics:', metrics);
-          
-          // Track performance in analytics
-          if (typeof window !== 'undefined' && window.gtag) {
-            window.gtag('event', 'page_performance', {
-              page_load_time: Math.round(metrics.pageLoadTime),
-              dom_content_loaded: Math.round(metrics.domContentLoaded),
-              first_contentful_paint: Math.round(metrics.firstContentfulPaint),
-              browser_name: browserInfo?.name || 'unknown'
-            });
+          if (isMountedRef.current) {
+            setPerformanceMetrics(metrics);
+            console.log('📊 Performance Metrics:', metrics);
+            
+            // Track performance in analytics
+            if (typeof window !== 'undefined' && window.gtag) {
+              window.gtag('event', 'page_performance', {
+                page_load_time: Math.round(metrics.pageLoadTime),
+                dom_content_loaded: Math.round(metrics.domContentLoaded),
+                first_contentful_paint: Math.round(metrics.firstContentfulPaint),
+                browser_name: BROWSER_INFO.name || 'unknown'
+              });
+            }
           }
         }
       }
     };
 
-    // Initialize browser detection and monitoring
-    detectBrowser();
-    initPerformanceMonitoring();
-    
-    // Add event listeners
-    window.addEventListener('admin_mask_error', handleAdminMaskError);
-    
+    const handleAdminMaskError = (e) => {
+      if (!isMountedRef.current) return;
+
+      // Enhanced console logging for debugging with browser context
+      console.group('🔴 Admin Mask Persistence Error');
+      console.error('Error Details:', {
+        timestamp: new Date().toISOString(),
+        errorType: e.detail?.type || 'unknown',
+        errorMessage: e.detail?.message || 'No message provided',
+        errorStack: e.detail?.error?.stack,
+        currentRoute: window.location.pathname,
+        userAgent: navigator.userAgent,
+        browserInfo: BROWSER_INFO,
+        screenInfo: {
+          width: window.screen.width,
+          height: window.screen.height,
+          availWidth: window.screen.availWidth,
+          availHeight: window.screen.availHeight,
+          devicePixelRatio: window.devicePixelRatio
+        },
+        adminState: {
+          isAdminRoute: window.location.pathname.includes('/admin'),
+          hasAdminClass: document.body.classList.contains('admin-accessing'),
+          adminElements: document.querySelectorAll('.admin-dashboard, [data-admin-content]').length
+        }
+      });
+      console.groupEnd();
+      
+      // Track mask persistence errors in analytics
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'admin_mask_persistence_error', {
+          error_type: e.detail?.type || 'unknown',
+          browser_name: BROWSER_INFO.name || 'unknown',
+          browser_version: BROWSER_INFO.version || 'unknown',
+          is_mobile: BROWSER_INFO.mobile || false,
+          route: window.location.pathname,
+          timestamp: Date.now()
+        });
+      }
+      
+      // Dispatch enhanced custom event for error tracking
+      window.dispatchEvent(new CustomEvent('admin_debug_log', {
+        detail: {
+          type: 'mask_error',
+          severity: 'high',
+          data: e.detail,
+          debugInfo: {
+            route: window.location.pathname,
+            timestamp: Date.now(),
+            retryable: e.detail?.retryable !== false,
+            browserInfo: BROWSER_INFO,
+            performanceMetrics
+          }
+        }
+      }));
+    };
+
     // Monitor console errors
     const originalConsoleError = console.error;
     console.error = (...args) => {
@@ -226,25 +181,30 @@ useEffect(() => {
       if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'console_error', {
           error_message: args[0]?.toString() || 'Unknown error',
-          browser_name: browserInfo?.name || 'unknown',
+          browser_name: BROWSER_INFO.name || 'unknown',
           route: window.location.pathname,
           timestamp: Date.now()
         });
       }
     };
 
+    // Initialize monitoring
+    initPerformanceMonitoring();
+    window.addEventListener('admin_mask_error', handleAdminMaskError);
+
     // Cleanup on component unmount
     return () => {
+      isMountedRef.current = false;
       window.removeEventListener('admin_mask_error', handleAdminMaskError);
       console.error = originalConsoleError;
     };
-}, []); // Run only once on mount - browser detection and performance monitoring initialization
+  }, []); // Empty dependency array is correct - this only runs once on mount
 
 const cleanupRef = useRef(false);
   
-  const handleAdminAccess = useCallback(async () => {
+const handleAdminAccess = useCallback(async () => {
     // Prevent multiple simultaneous calls
-    if (isAdminLoading || cleanupRef.current) return;
+    if (isAdminLoading || cleanupRef.current || !isMountedRef.current) return;
     
     const startTime = performance.now();
     cleanupRef.current = false;
@@ -256,17 +216,17 @@ const cleanupRef = useRef(false);
     // Track admin access attempt
     if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('event', 'admin_access_attempt', {
-        browser_name: browserInfo?.name || 'unknown',
-        browser_version: browserInfo?.version || 'unknown',
-        is_mobile: browserInfo?.mobile || false,
+        browser_name: BROWSER_INFO.name || 'unknown',
+        browser_version: BROWSER_INFO.version || 'unknown',
+        is_mobile: BROWSER_INFO.mobile || false,
         timestamp: Date.now()
       });
     }
     
     // Adaptive progress interval based on device performance
-    const intervalDelay = browserInfo?.mobile ? 150 : 100;
+    const intervalDelay = BROWSER_INFO.mobile ? 150 : 100;
     const progressInterval = setInterval(() => {
-      if (cleanupRef.current) {
+      if (cleanupRef.current || !isMountedRef.current) {
         clearInterval(progressInterval);
         return;
       }
@@ -277,12 +237,12 @@ const cleanupRef = useRef(false);
     }, intervalDelay);
 
     // Browser-specific timeout (longer for mobile/slower browsers)
-    const timeoutDuration = browserInfo?.mobile || 
-                           (browserInfo?.name === 'Safari' && parseInt(browserInfo?.version) < 14) ? 
+    const timeoutDuration = BROWSER_INFO.mobile || 
+                           (BROWSER_INFO.name === 'Safari' && parseInt(BROWSER_INFO.version) < 14) ? 
                            8000 : 5000;
     
     const timeoutId = setTimeout(() => {
-      if (cleanupRef.current) return;
+      if (cleanupRef.current || !isMountedRef.current) return;
       setShowForceExit(true);
       setAdminError(`Loading timeout - Dashboard taking longer than expected (${timeoutDuration/1000}s timeout)`);
       
@@ -290,8 +250,8 @@ const cleanupRef = useRef(false);
       if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'admin_load_timeout', {
           timeout_duration: timeoutDuration,
-          browser_name: browserInfo?.name || 'unknown',
-          is_mobile: browserInfo?.mobile || false
+          browser_name: BROWSER_INFO.name || 'unknown',
+          is_mobile: BROWSER_INFO.mobile || false
         });
       }
     }, timeoutDuration);
@@ -315,29 +275,29 @@ const cleanupRef = useRef(false);
       document.body.setAttribute('aria-live', 'polite');
       
       // Browser-optimized loading stages
-      if (!cleanupRef.current) setAdminLoadProgress(20);
-      await new Promise(resolve => setTimeout(resolve, browserInfo?.mobile ? 300 : 200));
+      if (!cleanupRef.current && isMountedRef.current) setAdminLoadProgress(20);
+      await new Promise(resolve => setTimeout(resolve, BROWSER_INFO.mobile ? 300 : 200));
       
       // Preload critical admin resources
-      if (!cleanupRef.current) setAdminLoadProgress(40);
+      if (!cleanupRef.current && isMountedRef.current) setAdminLoadProgress(40);
       if ('requestIdleCallback' in window) {
         await new Promise(resolve => window.requestIdleCallback(resolve));
       } else {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
-      if (!cleanupRef.current) setAdminLoadProgress(60);
-      await new Promise(resolve => setTimeout(resolve, browserInfo?.mobile ? 400 : 300));
+      if (!cleanupRef.current && isMountedRef.current) setAdminLoadProgress(60);
+      await new Promise(resolve => setTimeout(resolve, BROWSER_INFO.mobile ? 400 : 300));
       
       // Navigate to admin dashboard
-      if (!cleanupRef.current) {
+      if (!cleanupRef.current && isMountedRef.current) {
         setAdminLoadProgress(80);
         cleanupRef.current = true; // Prevent further state updates
         navigate('/admin');
       }
       
       // Complete loading with smooth transition
-      if (!cleanupRef.current) setAdminLoadProgress(100);
+      if (!cleanupRef.current && isMountedRef.current) setAdminLoadProgress(100);
       await new Promise(resolve => setTimeout(resolve, 200));
       
       // Calculate and log performance metrics
@@ -346,8 +306,8 @@ const cleanupRef = useRef(false);
       
       console.log('📊 Admin Load Performance:', {
         duration: Math.round(loadDuration),
-        browser: browserInfo?.name,
-        mobile: browserInfo?.mobile,
+        browser: BROWSER_INFO.name,
+        mobile: BROWSER_INFO.mobile,
         timeout: timeoutDuration
       });
       
@@ -355,13 +315,13 @@ const cleanupRef = useRef(false);
       if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'admin_load_success', {
           load_duration: Math.round(loadDuration),
-          browser_name: browserInfo?.name || 'unknown',
-          is_mobile: browserInfo?.mobile || false
+          browser_name: BROWSER_INFO.name || 'unknown',
+          is_mobile: BROWSER_INFO.mobile || false
         });
       }
       
     } catch (error) {
-      if (cleanupRef.current) return; // Don't process errors after cleanup
+      if (cleanupRef.current || !isMountedRef.current) return; // Don't process errors after cleanup
       
       console.error('Admin access error:', error);
       
@@ -383,26 +343,28 @@ const cleanupRef = useRef(false);
         userFriendlyMessage = 'Request timed out. The server may be busy. Please try again.';
       }
       
-      setAdminError(userFriendlyMessage);
+      if (isMountedRef.current) {
+        setAdminError(userFriendlyMessage);
+      }
       
       // Track admin load errors
       if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'admin_load_error', {
           error_category: errorCategory,
           error_message: error.message,
-          browser_name: browserInfo?.name || 'unknown',
-          is_mobile: browserInfo?.mobile || false,
+          browser_name: BROWSER_INFO.name || 'unknown',
+          is_mobile: BROWSER_INFO.mobile || false,
           retry_count: retryCount
         });
       }
       
       // Implement simple retry logic without recursion
       if (retryCount < 3 && errorCategory !== 'compatibility') {
-        const baseDelay = browserInfo?.mobile ? 2000 : 1000;
+        const baseDelay = BROWSER_INFO.mobile ? 2000 : 1000;
         const delay = Math.pow(2, retryCount) * baseDelay;
         
         setTimeout(() => {
-          if (!cleanupRef.current) {
+          if (!cleanupRef.current && isMountedRef.current) {
             setRetryCount(prev => prev + 1);
             // Don't call handleAdminAccess recursively - let user manually retry
             setShowForceExit(true);
@@ -416,7 +378,7 @@ const cleanupRef = useRef(false);
       clearTimeout(timeoutId);
       
       setTimeout(() => {
-        if (!cleanupRef.current) {
+        if (!cleanupRef.current && isMountedRef.current) {
           setIsAdminLoading(false);
           setAdminLoadProgress(0);
         }
@@ -426,8 +388,9 @@ const cleanupRef = useRef(false);
         document.body.removeAttribute('aria-live');
       }, 500);
     }
-  }, [isAdminLoading, navigate, browserInfo, retryCount]);
+  }, [isAdminLoading, navigate, retryCount]); // Removed browserInfo from dependencies since it's now static
 
+// Force exit handler for emergency situations
 // Force exit handler for emergency situations
   const handleForceExit = useCallback(() => {
     console.warn('🚨 Force exit triggered - Emergency admin access cleanup');
@@ -438,18 +401,20 @@ const cleanupRef = useRef(false);
     // Track emergency exits
     if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('event', 'admin_force_exit', {
-        browser_name: browserInfo?.name || 'unknown',
+        browser_name: BROWSER_INFO.name || 'unknown',
         error_state: adminError || 'timeout',
         timestamp: Date.now()
       });
     }
     
     // Emergency cleanup
-    setIsAdminLoading(false);
-    setAdminLoadProgress(0);
-    setAdminError(null);
-    setShowForceExit(false);
-    setRetryCount(0);
+    if (isMountedRef.current) {
+      setIsAdminLoading(false);
+      setAdminLoadProgress(0);
+      setAdminError(null);
+      setShowForceExit(false);
+      setRetryCount(0);
+    }
     
     // Force remove all admin-related classes and overlays
     document.body.classList.remove('admin-accessing', 'content-layer');
@@ -465,7 +430,7 @@ const cleanupRef = useRef(false);
     
     // Navigate to safe route
     navigate('/');
-  }, [navigate, browserInfo, adminError]);
+  }, [navigate, adminError]); // Removed browserInfo from dependencies
 
   return (
 <div className="min-h-screen bg-background content-layer">
@@ -489,12 +454,10 @@ const cleanupRef = useRef(false);
                  adminLoadProgress < 100 ? 'Finalizing access...' : 'Complete!'}
               </p>
               
-              {/* Browser compatibility info */}
-              {browserInfo && (
-                <div className="text-xs text-gray-500 mt-2" aria-live="polite">
-                  {browserInfo.name} {browserInfo.version} {browserInfo.mobile ? '(Mobile)' : '(Desktop)'}
-                </div>
-              )}
+{/* Browser compatibility info */}
+              <div className="text-xs text-gray-500 mt-2" aria-live="polite">
+                {BROWSER_INFO.name} {BROWSER_INFO.version} {BROWSER_INFO.mobile ? '(Mobile)' : '(Desktop)'}
+              </div>
               
               {adminError && (
                 <div className="admin-error-message" role="alert" aria-live="assertive">
@@ -508,14 +471,14 @@ const cleanupRef = useRef(false);
                         </p>
                       )}
                       
-                      {/* Browser-specific help */}
-                      {browserInfo?.name === 'Safari' && adminError.includes('timeout') && (
+{/* Browser-specific help */}
+                      {BROWSER_INFO.name === 'Safari' && adminError.includes('timeout') && (
                         <p className="text-blue-600 text-xs mt-1">
                           Safari may take longer to load. Consider using Chrome or Firefox for better performance.
                         </p>
                       )}
                       
-                      {browserInfo?.mobile && adminError.includes('timeout') && (
+                      {BROWSER_INFO.mobile && adminError.includes('timeout') && (
                         <p className="text-blue-600 text-xs mt-1">
                           Mobile connections may be slower. Please ensure you have a stable internet connection.
                         </p>
@@ -693,7 +656,7 @@ onClick={(e) => {
   );
 }
 
-function MainApp() {
+function App() {
   return (
     <BrowserRouter>
       <AppContent />
@@ -701,4 +664,4 @@ function MainApp() {
   );
 }
 
-export default MainApp;
+export default App;
