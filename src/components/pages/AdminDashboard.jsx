@@ -34,11 +34,25 @@ const AdminDashboard = () => {
       onClick: () => navigate('/admin')
     },
     {
-      id: 'products',
+id: 'products',
       label: 'Products',
       icon: 'Package',
       expandable: true,
       children: [
+        {
+          id: 'categories',
+          label: 'Categories',
+          icon: 'FolderOpen',
+          path: '/admin/categories',
+          onClick: () => navigate('/admin/categories')
+        },
+        {
+          id: 'inventory',
+          label: 'Inventory',
+          icon: 'Package2',
+          path: '/admin/inventory',
+          onClick: () => navigate('/admin/inventory')
+        },
         {
           id: 'manage-products',
           label: 'Manage Products',
@@ -208,8 +222,10 @@ const AdminDashboard = () => {
         <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-display font-bold text-gray-900">
+<h1 className="text-2xl font-display font-bold text-gray-900">
                 {location.pathname === '/admin' ? 'Dashboard Overview' :
+                 location.pathname.includes('/categories') ? 'Categories Management' :
+                 location.pathname.includes('/inventory') ? 'Inventory Management' :
                  location.pathname.includes('/products/manage') ? 'Manage Products' :
                  location.pathname.includes('/products/add') ? 'Add New Product' :
                  location.pathname.includes('/orders') ? 'Orders Management' :
@@ -221,7 +237,7 @@ const AdminDashboard = () => {
               </h1>
               <p className="text-gray-600 mt-1">
                 {location.pathname === '/admin' ? 'Welcome to your admin control center' :
-                 location.pathname.includes('/products') ? 'Manage your product catalog' :
+                 location.pathname.includes('/products') || location.pathname.includes('/categories') || location.pathname.includes('/inventory') ? 'Manage your product catalog' :
                  'Manage your business operations'}
               </p>
             </div>
