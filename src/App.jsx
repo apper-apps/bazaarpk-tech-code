@@ -1,25 +1,29 @@
+import '@/index.css';
 import React, { useState } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
-import "@/index.css";
 import ApperIcon from "@/components/ApperIcon";
 import Header from "@/components/organisms/Header";
 import CartDrawer from "@/components/organisms/CartDrawer";
+import UserManagement from "@/components/pages/UserManagement";
 import AddRecipeBundle from "@/components/pages/AddRecipeBundle";
 import Home from "@/components/pages/Home";
 import AddProduct from "@/components/pages/AddProduct";
 import ProductDetail from "@/components/pages/ProductDetail";
+import OrderManagement from "@/components/pages/OrderManagement";
 import Category from "@/components/pages/Category";
 import RecipeBundlesPage from "@/components/pages/RecipeBundlesPage";
 import ManageProducts from "@/components/pages/ManageProducts";
 import Cart from "@/components/pages/Cart";
 import AdminDashboard from "@/components/pages/AdminDashboard";
-function App() {
+import ReportsAnalytics from "@/components/pages/ReportsAnalytics";
+
+function AppContent() {
+  const navigate = useNavigate();
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
         <Header />
         
 <main>
@@ -134,8 +138,15 @@ function App() {
               </p>
             </div>
           </div>
-        </footer>
+</footer>
       </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 }
