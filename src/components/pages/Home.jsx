@@ -29,6 +29,15 @@ const loadData = async () => {
     try {
       setLoading(true);
 
+      // Import cache manager for cache-aware loading
+      let cacheManager;
+      try {
+        const { default: cm } = await import('@/utils/cacheManager');
+        cacheManager = cm;
+      } catch (importError) {
+        console.warn('Cache manager not available, using direct API calls');
+      }
+
       // Get user location first with null check
       const location = await LocationService.getUserLocation();
       if (location) {
@@ -36,22 +45,98 @@ const loadData = async () => {
         setWeatherData(location);
       }
 
-// Initialize all data promises
-const [categoriesData, productsData, trendingData, featuredData, recipeBundlesData] = await Promise.all([
-        CategoryService.getAll(),
-        ProductService.getAll(),
-        ProductService.getTrendingByLocation(location),
-        ProductService.getFeaturedProducts(),
-        RecipeBundleService.getFeatured(6)
-      ]);
+      // Cache-aware data loading
+      let categoriesData, productsData, trendingData, featuredData, recipeBundlesData;
 
-setCategories(categoriesData);
+      if (cacheManager) {
+        // Try to get cached data first
+        const cachedProducts = cacheManager.get('homepage_products');
+        const cachedCategories = cacheManager.get('categories');
+        const cachedFeatured = cacheManager.get('featured_products');
+        const cachedTrending = cacheManager.get('trending_products');
+        const cachedBundles = cacheManager.get('recipe_bundles');
+
+        // If we have fresh cached data, use it; otherwise fetch from API
+        const promises = [];
+        
+        if (cachedCategories) {
+          categoriesData = cachedCategories;
+          console.log('📦 Using cached categories');
+        } else {
+          promises.push(CategoryService.getAll().then(data => {
+            categoriesData = data;
+            cacheManager.set('categories', data, 10 * 60 * 1000); // 10 minutes
+            return data;
+          }));
+        }
+
+        if (cachedProducts) {
+          productsData = cachedProducts;
+          console.log('📦 Using cached homepage products');
+        } else {
+          promises.push(ProductService.getAll().then(data => {
+            productsData = data;
+            cacheManager.set('homepage_products', data, 5 * 60 * 1000); // 5 minutes
+            return data;
+          }));
+        }
+
+        if (cachedTrending) {
+          trendingData = cachedTrending;
+          console.log('📦 Using cached trending products');
+        } else {
+          promises.push(ProductService.getTrendingByLocation(location).then(data => {
+            trendingData = data;
+            cacheManager.set('trending_products', data, 5 * 60 * 1000);
+            return data;
+          }));
+        }
+
+        if (cachedFeatured) {
+          featuredData = cachedFeatured;
+          console.log('📦 Using cached featured products');
+        } else {
+          promises.push(ProductService.getFeaturedProducts().then(data => {
+            featuredData = data;
+            cacheManager.set('featured_products', data, 15 * 60 * 1000); // 15 minutes
+            return data;
+          }));
+        }
+
+        if (cachedBundles) {
+          recipeBundlesData = cachedBundles;
+          console.log('📦 Using cached recipe bundles');
+        } else {
+          promises.push(RecipeBundleService.getFeatured(6).then(data => {
+            recipeBundlesData = data;
+            cacheManager.set('recipe_bundles', data, 10 * 60 * 1000); // 10 minutes
+            return data;
+          }));
+        }
+
+        // Wait for any remaining API calls
+        if (promises.length > 0) {
+          await Promise.all(promises);
+          console.log(`🔄 Fetched ${promises.length} fresh data sources`);
+        }
+      } else {
+        // Fallback to direct API calls if cache manager is unavailable
+        [categoriesData, productsData, trendingData, featuredData, recipeBundlesData] = await Promise.all([
+          CategoryService.getAll(),
+          ProductService.getAll(),
+          ProductService.getTrendingByLocation(location),
+          ProductService.getFeaturedProducts(),
+          RecipeBundleService.getFeatured(6)
+        ]);
+      }
+
+      setCategories(categoriesData);
       setProducts(productsData);
       setTrendingProducts(trendingData);
       setFeaturedProducts(featuredData);
       setRecipeBundles(recipeBundlesData);
       
-// Set seasonal products based on weather
+      // Set seasonal products based on weather
       if (weatherData?.main?.temp) {
         const temp = weatherData.main.temp;
         const seasonal = temp > 25 ? 
@@ -74,7 +159,7 @@ setCategories(categoriesData);
 
       setLoading(false);
     } catch (err) {
-console.error("Error loading home data:", err);
+      console.error("Error loading home data:", err);
       
       // Enhanced error handling with browser compatibility and categorized messaging
       let errorMessage = "Failed to load page content. Please try again.";
@@ -196,8 +281,28 @@ console.error("Error loading home data:", err);
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
     loadData();
+    
+    // Listen for cache invalidation events from other tabs/admin actions
+    let unsubscribe;
+    try {
+      import('@/utils/cacheManager').then(({ default: cacheManager }) => {
+        unsubscribe = cacheManager.onInvalidation((data) => {
+          console.log('🔄 Cache invalidated, refreshing home data:', data);
+          // Reload data when cache is invalidated by admin actions
+          loadData();
+        });
+      }).catch(error => {
+        console.warn('Could not set up cache invalidation listener:', error);
+      });
+    } catch (error) {
+      console.warn('Cache manager not available for event listening:', error);
+    }
+    
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
 if (loading) {

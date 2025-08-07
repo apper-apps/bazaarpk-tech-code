@@ -79,7 +79,7 @@ const [statusFilter, setStatusFilter] = useState('all'); // all, pending, approv
     loadData();
   }, []);
 
-  const loadData = async () => {
+const loadData = async () => {
     try {
       setLoading(true);
       const [productsData, categoriesData] = await Promise.all([
@@ -539,6 +539,21 @@ const handleBulkApprove = async () => {
               }
             : p
         ));
+        
+        // Cache invalidation middleware equivalent
+        // Clear homepage and store product caches after successful approval
+        try {
+          const { default: cacheManager } = await import('@/utils/cacheManager');
+          cacheManager.invalidateProductCaches({
+            action: 'bulk_approve',
+            productIds: successfulIds,
+            approvedBy: currentUser.role,
+            path: '/admin/products/approve'
+          });
+          console.log('✅ Cache invalidated after bulk approval');
+        } catch (cacheError) {
+          console.warn('Cache invalidation failed:', cacheError);
+        }
       }
       
       setSelectedProducts(new Set());
@@ -552,7 +567,8 @@ const handleBulkApprove = async () => {
         failedCount: failed.length,
         duration: Math.round(duration),
         approvedBy: currentUser.role,
-        autoPublished: successful.length
+        autoPublished: successful.length,
+        cacheInvalidated: successful.length > 0
       });
       
       // Enhanced success messaging
@@ -798,6 +814,22 @@ if (updatedProducts.length > 0) {
             setProducts(prev => prev.map(p => 
               p.Id === productId ? { ...p, ...updated } : p
             ));
+            
+            // Cache invalidation for auto-approve and publish
+            try {
+              const { default: cacheManager } = await import('@/utils/cacheManager');
+              cacheManager.invalidateProductCaches({
+                action: 'auto_approve_publish',
+                productId,
+                productTitle: product?.title,
+                approvedBy: currentUser.role,
+                path: '/admin/products/approve'
+              });
+              console.log('✅ Cache invalidated after auto-approve and publish');
+            } catch (cacheError) {
+              console.warn('Cache invalidation failed:', cacheError);
+            }
+            
             showToast('Product approved and published successfully!', 'success');
           }
         } else {
@@ -820,6 +852,28 @@ if (updatedProducts.length > 0) {
           } : p
         ));
         
+        // Cache invalidation for visibility changes that affect public display
+        const isNowPublished = updatedProduct.visibility === 'published';
+        const wasPublished = currentVisibility === 'published';
+        
+        if (isNowPublished !== wasPublished) {
+          try {
+            const { default: cacheManager } = await import('@/utils/cacheManager');
+            cacheManager.invalidateProductCaches({
+              action: 'visibility_toggle',
+              productId,
+              productTitle: updatedProduct.title,
+              newVisibility: updatedProduct.visibility,
+              previousVisibility: currentVisibility,
+              affectsPublicDisplay: true,
+              path: '/admin/products/visibility'
+            });
+            console.log('✅ Cache invalidated after visibility change');
+          } catch (cacheError) {
+            console.warn('Cache invalidation failed:', cacheError);
+          }
+        }
+        
         const endTime = performance.now();
         const duration = endTime - startTime;
         
@@ -828,7 +882,8 @@ if (updatedProducts.length > 0) {
           productTitle: updatedProduct.title,
           newVisibility: updatedProduct.visibility,
           newStatus: updatedProduct.status,
-          duration: Math.round(duration)
+          duration: Math.round(duration),
+          cacheInvalidated: isNowPublished !== wasPublished
         });
         
         const isPublished = updatedProduct.visibility === 'published';
