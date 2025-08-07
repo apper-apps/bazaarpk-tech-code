@@ -167,22 +167,82 @@ this.socket.onerror = (error) => {
             severity: readyState === 3 ? 'high' : 'medium'
           });
           
-          // Create a proper, serializable Error object for rejection
+// Create a proper, serializable Error object for rejection
           const rejectError = new Error(errorMessage);
           rejectError.code = errorCode;
           rejectError.details = errorDetails;
           rejectError.timestamp = new Date().toISOString();
           
-          // Ensure the error is properly serializable
+          // Enhanced serialization with deep cloning for nested objects
+          const safeDetails = {};
+          try {
+            // Safely copy details with fallbacks for non-serializable properties
+            for (const [key, value] of Object.entries(errorDetails)) {
+              if (value !== null && value !== undefined) {
+                if (typeof value === 'object') {
+                  // Handle nested objects safely
+                  safeDetails[key] = JSON.parse(JSON.stringify(value));
+                } else if (typeof value === 'function') {
+                  safeDetails[key] = value.name || 'function';
+                } else {
+                  safeDetails[key] = value;
+                }
+              }
+            }
+          } catch (detailsError) {
+            // Fallback if details serialization fails
+            safeDetails.serialization_error = 'Details could not be serialized';
+            safeDetails.original_error_type = typeof errorDetails;
+          }
+          
+          rejectError.details = safeDetails;
+          
+          // Enhanced toJSON method with comprehensive error handling
           Object.defineProperty(rejectError, 'toJSON', {
             value: function() {
-              return {
-                message: this.message,
-                code: this.code,
-                details: this.details,
-                timestamp: this.timestamp,
-                stack: this.stack
+              const result = {
+                message: this.message || 'Unknown WebSocket error',
+                code: this.code || 'WEBSOCKET_ERROR',
+                timestamp: this.timestamp || new Date().toISOString(),
+                name: this.name || 'WebSocketError'
               };
+              
+              // Safely include details
+              if (this.details && typeof this.details === 'object') {
+                try {
+                  result.details = JSON.parse(JSON.stringify(this.details));
+                } catch {
+                  result.details = { error: 'Details serialization failed' };
+                }
+              }
+// Include stack trace if available and in development
+              const isDevelopment = typeof window !== 'undefined' && 
+                (window.location?.hostname === 'localhost' || 
+                 window.location?.hostname === '127.0.0.1' ||
+                 window.location?.hostname === '' ||
+                 window.location?.port);
+              
+              if (this.stack && isDevelopment) {
+                result.stack = this.stack.split('\n').slice(0, 10); // Limit stack trace length
+              }
+              return result;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          
+          // Add valueOf method for primitive conversion
+          Object.defineProperty(rejectError, 'valueOf', {
+            value: function() {
+              return this.message;
+            },
+            enumerable: false
+          });
+          
+          // Ensure toString works correctly
+          Object.defineProperty(rejectError, 'toString', {
+            value: function() {
+              return `${this.name}: ${this.message}${this.code ? ` (${this.code})` : ''}`;
             },
             enumerable: false
           });
