@@ -237,7 +237,7 @@ const logActivity = (action, details) => {
 });
     }
 
-    // Apply sorting - remove async call from useEffect
+// Apply sorting - remove async call from useEffect
     switch (sortBy) {
       case 'name-asc':
         filtered.sort((a, b) => a.title.localeCompare(b.title));
@@ -250,6 +250,18 @@ const logActivity = (action, details) => {
         break;
       case 'oldest':
         filtered.sort((a, b) => (a.Id || 0) - (b.Id || 0));
+        break;
+      case 'price-asc':
+        filtered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+        break;
+      case 'price-desc':
+        filtered.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
+        break;
+      case 'stock-desc':
+        filtered.sort((a, b) => (parseInt(b.stock) || 0) - (parseInt(a.stock) || 0));
+        break;
+      case 'last-updated':
+        filtered.sort((a, b) => new Date(b.lastModified || 0) - new Date(a.lastModified || 0));
         break;
       default:
         break;
@@ -552,6 +564,8 @@ const handleBulkEdit = async () => {
 
       // Use the new bulk update service methods
       let updatedProducts = [];
+      let totalUpdated = 0;
+      let totalFailed = 0;
 
       // Handle price adjustments
       if (bulkEditData.priceAdjustment.value) {
@@ -564,7 +578,13 @@ const handleBulkEdit = async () => {
           throw new Error(`Invalid price adjustment value: ${bulkEditData.priceAdjustment.value}`);
         }
 
-        updatedProducts = await ProductService.bulkPriceAdjustment(selectedIds, adjustment);
+        try {
+          updatedProducts = await ProductService.bulkPriceAdjustment(selectedIds, adjustment);
+          totalUpdated += updatedProducts.length;
+        } catch (error) {
+          console.error('Price adjustment failed:', error);
+          totalFailed += selectedIds.length;
+        }
       }
 
       // Handle other bulk updates
@@ -584,35 +604,47 @@ const handleBulkEdit = async () => {
             return acc;
           }, {
             lastModified: new Date().toISOString(),
-            modifiedBy: currentUser.id || currentUser.role
+            modifiedBy: (typeof currentUser !== 'undefined' && currentUser?.id) || 
+                       (typeof currentUser !== 'undefined' && currentUser?.role) || 
+                       'system'
           })
         }));
 
-        const bulkUpdated = await ProductService.bulkUpdate(updates);
-        updatedProducts = bulkUpdated.length > 0 ? bulkUpdated : updatedProducts;
+        try {
+          const bulkUpdated = await ProductService.bulkUpdate(updates);
+          updatedProducts = bulkUpdated.length > 0 ? bulkUpdated : updatedProducts;
+          totalUpdated += bulkUpdated.length;
+        } catch (error) {
+          console.error('Bulk updates failed:', error);
+          totalFailed += selectedIds.length;
+        }
       }
-// Handle tags (if needed in future)
+
+      // Handle tags (if needed in future)
       if (bulkEditData.tags && bulkEditData.tags.values.length > 0) {
-        // Tag handling logic would go here
         const tagUpdates = selectedIds.map(id => ({
           id,
           data: { 
-            tags: bulkEditData.tags.action === 'add' ? [...(products.find(p => p.Id === id)?.tags || []), ...bulkEditData.tags.values] : bulkEditData.tags.values,
+            tags: bulkEditData.tags.action === 'add' ? 
+              [...(products.find(p => p.Id === id)?.tags || []), ...bulkEditData.tags.values] : 
+              bulkEditData.tags.values,
             lastModified: new Date().toISOString()
           }
         }));
-        await ProductService.bulkUpdate(tagUpdates);
+        
+        try {
+          await ProductService.bulkUpdate(tagUpdates);
+          totalUpdated += selectedIds.length;
+        } catch (error) {
+          console.error('Tag updates failed:', error);
+          totalFailed += selectedIds.length;
+        }
       }
       
-      const results = await Promise.allSettled(updatePromises);
-      const successful = results.filter(r => r.status === 'fulfilled' && r.value.success);
-      const failed = results.filter(r => r.status === 'rejected' || !r.value?.success);
-      
       // Update products list with successful updates
-      if (successful.length > 0) {
-        const successfulProducts = successful.map(r => r.value.product).filter(Boolean);
+      if (updatedProducts.length > 0) {
         setProducts(prev => prev.map(p => {
-          const updated = successfulProducts.find(u => u.Id === p.Id);
+          const updated = updatedProducts.find(u => u.Id === p.Id);
           return updated || p;
         }));
       }
@@ -624,8 +656,8 @@ const handleBulkEdit = async () => {
       
       logActivity('bulk_edit_completed', {
         productCount: selectedIds.length,
-        successfulCount: successful.length,
-        failedCount: failed.length,
+        successfulCount: totalUpdated,
+        failedCount: totalFailed,
         duration: Math.round(duration),
         editData: bulkEditData
       });
@@ -635,15 +667,15 @@ const handleBulkEdit = async () => {
         window.gtag('event', 'bulk_edit_performance', {
           product_count: selectedIds.length,
           duration_ms: Math.round(duration),
-          success_rate: (successful.length / selectedIds.length) * 100,
+          success_rate: totalFailed === 0 ? 100 : ((totalUpdated / selectedIds.length) * 100),
           edit_type: Object.keys(bulkEditData).filter(key => bulkEditData[key]).join(',')
         });
       }
       
-      if (failed.length === 0) {
-        showToast(`${successful.length} products updated successfully`, 'success');
-      } else if (successful.length > 0) {
-        showToast(`${successful.length} products updated, ${failed.length} failed`, 'warning');
+      if (totalFailed === 0) {
+        showToast(`${selectedIds.length} products updated successfully`, 'success');
+      } else if (totalUpdated > 0) {
+        showToast(`${totalUpdated} products updated, ${totalFailed} failed`, 'warning');
       } else {
         showToast('Failed to update products', 'error');
       }
