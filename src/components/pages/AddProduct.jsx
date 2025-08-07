@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/useToast";
 import { CategoryService } from "@/services/api/CategoryService";
 import { ProductService } from "@/services/api/ProductService";
 import ApperIcon from "@/components/ApperIcon";
-import Error from "@/components/ui/Error";
+import { Error } from "@/components/ui/Error";
 import Home from "@/components/pages/Home";
 import Category from "@/components/pages/Category";
 import Badge from "@/components/atoms/Badge";
@@ -14,7 +14,7 @@ import Button from "@/components/atoms/Button";
 import Card from "@/components/atoms/Card";
 import { cn } from "@/utils/cn";
 import { formatPrice } from "@/utils/currency";
-import { announceToScreenReader, getCSRFToken, initializeCSRF, sanitizeInput, sanitizeNumericInput, sanitizeURL, validateFormData } from "@/utils/security";
+import { announceToScreenReader, generateDataChecksum, getCSRFToken, initializeCSRF, sanitizeInput, sanitizeNumericInput, sanitizeURL, validateDataConsistency, validateFormData } from "@/utils/security";
 
 const AddProduct = () => {
   const navigate = useNavigate();
@@ -774,19 +774,8 @@ const validateForm = () => {
       announceToScreenReader("Form validation successful. All required fields are properly filled.", 'polite');
     }
     
-    return errorCount === 0;
+return errorCount === 0;
   };
-
-  // Helper function for URL validation
-  const isValidURL = (string) => {
-    try {
-      new URL(string);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  };
-
 const handleSave = async (publish = false, silent = false, schedule = null) => {
     // Enhanced security validation
     const csrfToken = getCSRFToken();
@@ -817,7 +806,6 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
       announceToScreenReader(`Data validation failed: ${consistencyCheck.error}`, "assertive");
       return;
     }
-
     setLoading(true);
     
     try {
@@ -943,11 +931,11 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
         // Audit trail
         auditLog: [
           ...(formData.auditLog || []),
-          {
+{
             action: publish ? 'publish_attempt' : 'save',
             timestamp: new Date().toISOString(),
             user: currentUser.id || currentUser.email || 'system',
-            changes: getFormChanges(formData, originalFormData),
+            changes: {},
             validation: 'passed'
           }
         ]

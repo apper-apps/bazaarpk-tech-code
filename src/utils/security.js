@@ -1,4 +1,4 @@
-import { Error } from "@/components/ui/Error";
+import { generateCSRFToken, setCSRFToken, getCSRFToken } from '@/utils/security';
 /**
  * Security utilities for input sanitization and CSRF protection
  * Implements WCAG compliance and security best practices
@@ -141,16 +141,15 @@ export const sanitizeInput = (input, options = {}) => {
       }
     }
   }
-  
 // Log sanitization for security monitoring
-  if (original !== sanitized && (typeof process !== 'undefined' ? process.env.NODE_ENV === 'development' : false)) {
+  if (original !== sanitized && (import.meta.env?.MODE === 'development' || import.meta.env?.DEV)) {
     console.log('🧹 Input Sanitized:', {
       original: original.substring(0, 100),
       sanitized: sanitized.substring(0, 100),
       changes: original.length - sanitized.length
     });
   }
-  return sanitized;
+return sanitized;
 };
 
 // Enhanced email sanitization with comprehensive validation
@@ -825,6 +824,6 @@ export const initializeSecurity = () => {
   if ('SecurityPolicyViolationEvent' in window) {
     document.addEventListener('securitypolicyviolation', (e) => {
       console.warn('CSP Violation:', e.violatedDirective, e.blockedURI);
-    });
+});
   }
 };
