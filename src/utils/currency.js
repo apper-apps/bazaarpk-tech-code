@@ -38,3 +38,44 @@ export const calculateDiscountPercent = (originalPrice, discountedPrice) => {
   }
   return Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
 };
+
+// Enhanced profit calculations for inventory management
+export const calculateProfit = (sellingPrice, buyingPrice) => {
+  const selling = parseFloat(sellingPrice) || 0;
+  const buying = parseFloat(buyingPrice) || 0;
+  return selling - buying;
+};
+
+export const calculateProfitMargin = (sellingPrice, buyingPrice) => {
+  const selling = parseFloat(sellingPrice) || 0;
+  const buying = parseFloat(buyingPrice) || 0;
+  if (buying <= 0) return 0;
+  return ((selling - buying) / buying) * 100;
+};
+
+export const calculateMarkup = (sellingPrice, buyingPrice) => {
+  const selling = parseFloat(sellingPrice) || 0;
+  const buying = parseFloat(buyingPrice) || 0;
+  if (buying <= 0) return 0;
+  return ((selling - buying) / buying) * 100;
+};
+
+export const calculateFinalPrice = (sellingPrice, discountAmount, discountType = "percentage") => {
+  const selling = parseFloat(sellingPrice) || 0;
+  const discount = parseFloat(discountAmount) || 0;
+  
+  if (discount <= 0) return selling;
+  
+  if (discountType === "percentage") {
+    return selling * (1 - discount / 100);
+  } else {
+    return Math.max(0, selling - discount);
+  }
+};
+
+export const calculateBreakEvenUnits = (targetAmount, profitPerUnit) => {
+  const target = parseFloat(targetAmount) || 0;
+  const profit = parseFloat(profitPerUnit) || 0;
+  if (profit <= 0) return 0;
+  return Math.ceil(target / profit);
+};

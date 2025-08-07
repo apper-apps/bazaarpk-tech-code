@@ -48,12 +48,77 @@ export const ProductService = {
     ).map(p => ({ ...p }));
   },
 
-  create: async (product) => {
+create: async (product) => {
     await new Promise(resolve => setTimeout(resolve, 400));
+    
+    // Generate new ID
     const maxId = Math.max(...productsData.map(p => p.Id));
-    const newProduct = { ...product, Id: maxId + 1 };
-    productsData.push(newProduct);
-    return { ...newProduct };
+    const newId = maxId + 1;
+    
+    // Process and validate inventory data
+    const processedProduct = {
+      ...product,
+      Id: newId,
+      // Core product fields
+      title: product.title || "",
+      brand: product.brand || "",
+      category: product.category || "",
+      subcategory: product.subcategory || "",
+      description: product.description || "",
+      shortDescription: product.shortDescription || "",
+      
+      // Enhanced pricing fields
+      price: parseFloat(product.sellingPrice) || 0,
+      sellingPrice: parseFloat(product.sellingPrice) || 0,
+      buyingPrice: parseFloat(product.buyingPrice) || 0,
+      costPrice: parseFloat(product.buyingPrice) || 0,
+      discountedPrice: parseFloat(product.discountedPrice) || 0,
+      discountAmount: parseFloat(product.discountAmount) || 0,
+      discountType: product.discountType || "percentage",
+      
+      // Calculate profit metrics
+      profit: (parseFloat(product.sellingPrice) || 0) - (parseFloat(product.buyingPrice) || 0),
+      profitMargin: parseFloat(product.buyingPrice) > 0 ? 
+        (((parseFloat(product.sellingPrice) || 0) - (parseFloat(product.buyingPrice) || 0)) / (parseFloat(product.buyingPrice) || 0)) * 100 : 0,
+      
+      // Enhanced inventory fields
+      stock: parseInt(product.stockQuantity) || 0,
+      stockQuantity: parseInt(product.stockQuantity) || 0,
+      stockStatus: product.stockStatus || "In Stock",
+      lowStockThreshold: parseInt(product.lowStockThreshold) || 10,
+      sku: product.sku || `PRD-${newId}`,
+      barcode: product.barcode || "",
+      
+      // Order management
+      unitOfMeasurement: product.unitOfMeasurement || "piece",
+      minimumOrderQuantity: parseInt(product.minimumOrderQuantity) || 1,
+      maximumOrderQuantity: parseInt(product.maximumOrderQuantity) || null,
+      reorderLevel: parseInt(product.reorderLevel) || 0,
+      
+      // Additional inventory details
+      location: product.location || "",
+      supplierInfo: product.supplierInfo || "",
+      lastRestocked: product.lastRestocked || "",
+      expiryDate: product.expiryDate || "",
+      batchNumber: product.batchNumber || "",
+      notes: product.notes || "",
+      
+      // System fields
+      createdAt: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+      visibility: product.visibility || "draft",
+      
+      // Legacy compatibility
+      image: product.mainImage || "",
+      oldPrice: parseFloat(product.sellingPrice) || 0,
+      badges: product.badges || [],
+      featured: product.featured || false
+    };
+    
+    // Add to products array
+    productsData.push(processedProduct);
+    
+    return { ...processedProduct };
   },
 
   update: async (id, updates) => {
