@@ -85,17 +85,44 @@ class WebSocketService {
           }
         };
 
-        this.socket.onerror = (error) => {
+this.socket.onerror = (error) => {
           console.error('WebSocket error:', error);
           this.isConnecting = false;
           
+          // WebSocket errors are Event objects, not Error objects
+          // Extract meaningful error information
+          let errorMessage = 'WebSocket connection error';
+          let errorDetails = {};
+          
+          if (error instanceof Event) {
+            // Handle WebSocket Event objects
+            errorMessage = `WebSocket error: ${error.type || 'connection_failed'}`;
+            errorDetails = {
+              type: error.type || 'error',
+              target: error.target?.readyState || 'unknown',
+              timestamp: error.timeStamp || Date.now()
+            };
+          } else if (error instanceof Error) {
+            // Handle regular Error objects
+            errorMessage = error.message || 'Connection error';
+            errorDetails = {
+              name: error.name,
+              stack: error.stack
+            };
+          } else if (typeof error === 'string') {
+            errorMessage = error;
+          }
+          
           this.emit('connection', { 
             status: 'error', 
-            error: error.message || 'Connection error',
+            error: errorMessage,
+            details: errorDetails,
             timestamp: new Date().toISOString()
           });
           
-          reject(error);
+          // Create a proper Error object for rejection
+          const rejectError = error instanceof Error ? error : new Error(errorMessage);
+          reject(rejectError);
         };
 
       } catch (error) {
