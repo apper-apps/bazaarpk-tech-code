@@ -66,13 +66,40 @@ function AppContent() {
   // Ref to track component mount status
   const isMountedRef = useRef(true);
   // Initialize performance monitoring only once
-  useEffect(() => {
+useEffect(() => {
     console.log('🔍 Browser Compatibility Check:', BROWSER_INFO);
     
     // Track compatibility issues
     if (parseInt(BROWSER_INFO.version) < 80 && BROWSER_INFO.name === 'Chrome') {
       console.warn('⚠️ Chrome version may have compatibility issues');
     }
+
+    // Override mask functions globally
+    window.showMask = function() { 
+      console.log("Mask disabled"); 
+      return null;
+    };
+    
+    window.createOverlay = function() { 
+      console.log("Overlay creation disabled");
+      return null; 
+    };
+
+    window.hideMask = function() {
+      console.log("Hide mask called (disabled)");
+      return null;
+    };
+
+    // Remove event listeners from admin links to prevent conflicts
+    const adminLinks = document.querySelectorAll('.admin-access-link, [href*="/admin"]');
+    adminLinks.forEach(adminLink => {
+      if (adminLink) {
+        const newLink = adminLink.cloneNode(true);
+        if (adminLink.parentNode) {
+          adminLink.parentNode.replaceChild(newLink, adminLink);
+        }
+      }
+    });
 
     // Performance monitoring setup
     const initPerformanceMonitoring = () => {
@@ -114,7 +141,10 @@ function AppContent() {
       }
     };
 
-// Cleanup on component unmount
+    // Initialize performance monitoring
+    initPerformanceMonitoring();
+
+    // Cleanup on component unmount
     return () => {
       isMountedRef.current = false;
     };
@@ -185,15 +215,27 @@ const handleAdminAccess = useCallback(async () => {
       if (!window.localStorage) {
         throw new Error('Browser does not support localStorage. Please enable cookies and try again.');
       }
-      
-      // Ensure no overlays are blocking navigation
+// Ensure no overlays are blocking navigation
       document.body.classList.add('admin-accessing');
       document.body.classList.add('content-layer');
+      document.body.classList.add('admin-route');
+      document.body.classList.add('admin-emergency-cleanup');
+      
+      // Force remove any existing overlays
+      const overlays = document.querySelectorAll('.overlay, .mask, .backdrop, [class*="overlay"], [class*="mask"]');
+      overlays.forEach(overlay => {
+        if (overlay) {
+          overlay.style.display = 'none';
+          overlay.style.opacity = '0';
+          overlay.style.visibility = 'hidden';
+          overlay.style.pointerEvents = 'none';
+          overlay.style.zIndex = '-1000';
+        }
+      });
       
       // Add accessibility attributes
       document.body.setAttribute('aria-busy', 'true');
       document.body.setAttribute('aria-live', 'polite');
-      
       // Browser-optimized loading stages
       if (!cleanupRef.current && isMountedRef.current) setAdminLoadProgress(20);
       await new Promise(resolve => setTimeout(resolve, BROWSER_INFO.mobile ? 300 : 200));
@@ -301,9 +343,11 @@ const handleAdminAccess = useCallback(async () => {
         if (!cleanupRef.current && isMountedRef.current) {
           setIsAdminLoading(false);
           setAdminLoadProgress(0);
-        }
+}
         document.body.classList.remove('admin-accessing');
         document.body.classList.remove('content-layer');
+        document.body.classList.remove('admin-route');
+        document.body.classList.remove('admin-emergency-cleanup');
         document.body.removeAttribute('aria-busy');
         document.body.removeAttribute('aria-live');
       }, 500);
@@ -337,10 +381,16 @@ const handleAdminAccess = useCallback(async () => {
     }
     
     // Force remove all admin-related classes and overlays
-    document.body.classList.remove('admin-accessing', 'content-layer');
+document.body.classList.remove('admin-accessing', 'content-layer', 'admin-route', 'admin-emergency-cleanup');
     document.body.classList.add('admin-emergency-exit');
     document.body.removeAttribute('aria-busy');
     document.body.removeAttribute('aria-live');
+    
+    // Force clear any remaining overlays
+    const allOverlays = document.querySelectorAll('[class*="overlay"], [class*="mask"], [class*="backdrop"]');
+    allOverlays.forEach(el => {
+      el.style.display = 'none !important';
+    });
     
     // Remove emergency class after cleanup
     setTimeout(() => {

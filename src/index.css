@@ -110,10 +110,29 @@ body.admin-accessing .loading-overlay {
   transition: none !important;
 }
 
-/* Ensure admin content is always visible and accessible */
-.admin-panel,
-[data-admin-content],
-.admin-dashboard {
+/* Permanent CSS Fix - Disable all masks and overlays on admin routes */
+body.admin-route .overlay,
+body.admin-route .mask,
+body.admin-route .backdrop,
+body.admin-accessing .overlay,
+body.admin-accessing .mask,
+body.admin-accessing .backdrop,
+body.admin-emergency-cleanup .overlay,
+body.admin-emergency-cleanup .mask,
+body.admin-emergency-cleanup .backdrop {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: -1000 !important;
+}
+
+/* Ensure admin content is visible */
+.admin-panel, 
+.admin-dashboard,
+[data-admin-content] {
+  opacity: 1 !important;
+  visibility: visible !important;
   z-index: 10000 !important;
   position: relative !important;
   background: white !important;
@@ -122,7 +141,21 @@ body.admin-accessing .loading-overlay {
 /* Force hide any persistent overlays on admin routes */
 body[class*="admin"] .overlay,
 body[class*="admin"] .mask,
-body[class*="admin"] .backdrop {
+body[class*="admin"] .backdrop,
+body[class*="admin"] [class*="overlay"],
+body[class*="admin"] [class*="mask"],
+body[class*="admin"] [class*="backdrop"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: -1000 !important;
+}
+
+/* Emergency cleanup for any remaining overlays */
+body.admin-emergency-cleanup *[class*="overlay"],
+body.admin-emergency-cleanup *[class*="mask"],
+body.admin-emergency-cleanup *[style*="position: fixed"] {
   display: none !important;
 }
 
@@ -173,11 +206,16 @@ body.admin-route * {
 }
 
 /* Additional safeguards for modal libraries */
-.ReactModal__Overlay.admin-safe {
+.ReactModal__Overlay.admin-safe,
+.ReactModal__Overlay[class*="admin"] {
   display: none !important;
 }
 
-div[class*="overlay"][style*="position: fixed"] {
+/* Force hide any fixed position overlays */
+div[class*="overlay"][style*="position: fixed"],
+div[class*="mask"][style*="position: fixed"],
+*[style*="position: fixed"][class*="overlay"],
+*[style*="position: fixed"][class*="mask"] {
   display: none !important;
 }
 
