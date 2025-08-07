@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/useToast";
 import ApperIcon from "@/components/ApperIcon";
 import ProductManagementCard from "@/components/organisms/ProductManagementCard";
 import Loading from "@/components/ui/Loading";
-import ErrorComponent from "@/components/ui/Error";
+import ErrorComponent, { Error } from "@/components/ui/Error";
 import Empty from "@/components/ui/Empty";
 import Category from "@/components/pages/Category";
 import Badge from "@/components/atoms/Badge";
@@ -43,7 +43,7 @@ const [products, setProducts] = useState([]);
   const [tagFilter, setTagFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [featuredFilter, setFeaturedFilter] = useState('all'); // all, featured, not-featured
-  const [statusFilter, setStatusFilter] = useState('all'); // all, published, draft
+const [visibilityFilter, setVisibilityFilter] = useState('all'); // all, published, draft
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   // Admin role and permissions
   const [currentUser] = useState({
@@ -224,9 +224,9 @@ const logActivity = (action, details) => {
     }
 
     // Apply status filter
-    if (statusFilter !== 'all') {
+if (visibilityFilter !== 'all') {
       filtered = filtered.filter(product => {
-        switch (statusFilter) {
+        switch (visibilityFilter) {
           case 'published':
             return product.visibility === 'published';
           case 'draft':
@@ -309,7 +309,7 @@ break;
         );
         break;
       case 'pending-approval':
-        if (currentUser.role === 'admin' || currentUser.role === 'moderator') {
+if (currentUser.role === 'admin' || currentUser.role === 'moderator') {
           filtered = filtered.filter(p => p.status === 'pending' || p.moderatorApproved === false);
         }
         break;
@@ -318,7 +318,7 @@ break;
     }
 
     setFilteredProducts(filtered);
-  }, [products, searchQuery, selectedCategory, sortBy, priceRange, stockFilter, tagFilter, featuredFilter, statusFilter, currentUser.role]);
+}, [products, searchQuery, selectedCategory, sortBy, priceRange, stockFilter, tagFilter, featuredFilter, visibilityFilter, currentUser.role]);
 
 // Bulk selection handlers
   const handleSelectAll = () => {
@@ -339,11 +339,10 @@ break;
     setSelectedProducts(newSelected);
   };
 
-  // Clear selections when filters change
+// Clear selections when filters change
 useEffect(() => {
     setSelectedProducts(new Set());
-  }, [searchQuery, selectedCategory, priceRange, stockFilter, tagFilter, featuredFilter, statusFilter, sortBy]);
-
+  }, [searchQuery, selectedCategory, priceRange, stockFilter, tagFilter, featuredFilter, visibilityFilter, sortBy]);
   // Show/hide bulk actions based on selection
   useEffect(() => {
     setShowBulkActions(selectedProducts.size > 0);
@@ -969,7 +968,7 @@ const handleDeleteConfirm = async () => {
     setTagFilter('all');
     setDateRange({ start: '', end: '' });
     setFeaturedFilter('all');
-    setStatusFilter('all');
+setVisibilityFilter('all');
     setSortBy('name-asc');
   };
 
@@ -1236,17 +1235,16 @@ return (
               {(currentUser.role === 'admin' || currentUser.role === 'moderator') && (
                 <div>
                   <label htmlFor="status-filter" className="sr-only">Filter by approval status</label>
-                  <select
-                    id="status-filter"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
+<select
+                    id="visibility-filter"
+                    value={visibilityFilter}
+                    onChange={(e) => setVisibilityFilter(e.target.value)}
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    aria-label="Filter products by approval status"
+                    aria-label="Filter products by visibility status"
                   >
-                    <option value="all">All Status</option>
+                    <option value="all">All Products</option>
                     <option value="published">Published</option>
                     <option value="draft">Draft</option>
-                    <option value="pending-approval">Pending Approval</option>
                   </select>
                 </div>
               )}
@@ -1392,19 +1390,19 @@ return (
                   </select>
                 </div>
 
-                {/* Status Filter */}
+{/* Visibility Filter */}
                 <div>
-                  <label htmlFor="visibility-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="visibility-filter-mobile" className="block text-sm font-medium text-gray-700 mb-1">
                     Visibility
                   </label>
                   <select
-                    id="visibility-filter"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
+                    id="visibility-filter-mobile"
+                    value={visibilityFilter}
+                    onChange={(e) => setVisibilityFilter(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     aria-label="Filter by publication status"
                   >
-                    <option value="all">All Status</option>
+                    <option value="all">All Products</option>
                     <option value="published">Published</option>
                     <option value="draft">Draft</option>
                   </select>
