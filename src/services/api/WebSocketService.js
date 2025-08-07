@@ -89,39 +89,102 @@ this.socket.onerror = (error) => {
           console.error('WebSocket error:', error);
           this.isConnecting = false;
           
-          // WebSocket errors are Event objects, not Error objects
-          // Extract meaningful error information
+          // Enhanced WebSocket error handling to prevent "[object Event]" serialization
           let errorMessage = 'WebSocket connection error';
           let errorDetails = {};
+          let errorCode = 'WEBSOCKET_ERROR';
           
           if (error instanceof Event) {
-            // Handle WebSocket Event objects
-            errorMessage = `WebSocket error: ${error.type || 'connection_failed'}`;
+            // Handle WebSocket Event objects with enhanced information extraction
+            const target = error.target;
+            const readyState = target?.readyState;
+            
+            // Map WebSocket readyState to meaningful messages
+            const readyStateMessages = {
+              0: 'connecting', // CONNECTING
+              1: 'connected',  // OPEN
+              2: 'closing',    // CLOSING
+              3: 'disconnected' // CLOSED
+            };
+            
+            const readyStateText = readyStateMessages[readyState] || 'unknown';
+            
+            // Create detailed error message based on event type and readyState
+            if (error.type === 'error') {
+              errorMessage = `WebSocket connection failed (state: ${readyStateText})`;
+              errorCode = readyState === 3 ? 'CONNECTION_CLOSED' : 'CONNECTION_ERROR';
+            } else {
+              errorMessage = `WebSocket ${error.type} event (state: ${readyStateText})`;
+              errorCode = `WEBSOCKET_${error.type.toUpperCase()}`;
+            }
+            
             errorDetails = {
               type: error.type || 'error',
-              target: error.target?.readyState || 'unknown',
-              timestamp: error.timeStamp || Date.now()
+              readyState: readyState,
+              readyStateText: readyStateText,
+              timestamp: error.timeStamp || Date.now(),
+              url: target?.url || this.url || 'unknown',
+              protocol: target?.protocol || 'unknown',
+              code: errorCode,
+              // Prevent Event object serialization issues
+              eventConstructor: error.constructor.name
             };
           } else if (error instanceof Error) {
             // Handle regular Error objects
             errorMessage = error.message || 'Connection error';
+            errorCode = error.name || 'ERROR';
             errorDetails = {
               name: error.name,
-              stack: error.stack
+              stack: error.stack,
+              code: errorCode
             };
           } else if (typeof error === 'string') {
             errorMessage = error;
+            errorCode = 'STRING_ERROR';
+            errorDetails = { code: errorCode };
+          } else {
+            // Handle any other error types
+            errorMessage = 'Unknown WebSocket error occurred';
+            errorCode = 'UNKNOWN_ERROR';
+            errorDetails = { 
+              code: errorCode,
+              errorType: typeof error,
+              errorConstructor: error?.constructor?.name || 'unknown'
+            };
           }
           
+          // Enhanced connection status emission with better error context
           this.emit('connection', { 
             status: 'error', 
             error: errorMessage,
+            code: errorCode,
             details: errorDetails,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            // Add retry information
+            retryable: !['PROTOCOL_ERROR', 'SECURITY_ERROR'].includes(errorCode),
+            severity: readyState === 3 ? 'high' : 'medium'
           });
           
-          // Create a proper Error object for rejection
-          const rejectError = error instanceof Error ? error : new Error(errorMessage);
+          // Create a proper, serializable Error object for rejection
+          const rejectError = new Error(errorMessage);
+          rejectError.code = errorCode;
+          rejectError.details = errorDetails;
+          rejectError.timestamp = new Date().toISOString();
+          
+          // Ensure the error is properly serializable
+          Object.defineProperty(rejectError, 'toJSON', {
+            value: function() {
+              return {
+                message: this.message,
+                code: this.code,
+                details: this.details,
+                timestamp: this.timestamp,
+                stack: this.stack
+              };
+            },
+            enumerable: false
+          });
+          
           reject(rejectError);
         };
 
