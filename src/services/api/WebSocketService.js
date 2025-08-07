@@ -201,10 +201,10 @@ this.socket.onerror = (error) => {
             status: 'error',
             error: errorMessage,
             code: errorCode,
-            readyState: Number(readyState) || 3,
+readyState: Number(readyState) || 3,
 timestamp: new Date().toISOString(),
 // Add debug info for development (will be filtered out in production)
-...((typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') && {
+...(import.meta.env.MODE === 'development' && {
 originalErrorType: error?.constructor?.name || typeof error,
 hasTarget: !!(error?.target)
 })

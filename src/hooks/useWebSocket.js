@@ -262,10 +262,10 @@ useEffect(() => {
             
             // Create safe data object for callback
             const safeCallbackData = {
-              ...data,
+...data,
 error: errorMessage,
               // Preserve original data for debugging in development
-              ...(typeof process !== 'undefined' && process.env?.NODE_ENV === 'development' && {
+              ...(import.meta.env.MODE === 'development' && {
                 originalData: data
               })
             };
