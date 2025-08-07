@@ -73,7 +73,73 @@ const [statusFilter, setStatusFilter] = useState('all'); // all, pending, approv
   });
 
   // Activity logging state
-  const [activityLog, setActivityLog] = useState([]);
+const [activityLog, setActivityLog] = useState([]);
+
+  // Move logActivity function here to resolve temporal dead zone
+  const logActivity = (action, details) => {
+    const logEntry = {
+      id: Date.now(),
+      timestamp: new Date(),
+      user: currentUser.role,
+      userId: currentUser.id || 'unknown',
+      action,
+      details,
+      browser: navigator.userAgent,
+      sessionId: sessionStorage.getItem('sessionId') || 'unknown',
+      performanceData: {
+        memoryUsage: window.performance?.memory?.usedJSHeapSize || 0,
+        timing: Date.now(),
+        loadTime: window.performance?.timing ? 
+          window.performance.timing.loadEventEnd - window.performance.timing.navigationStart : 0
+      }
+    };
+    
+    setActivityLog(prev => [logEntry, ...prev.slice(0, 99)]); // Keep last 100 entries
+    
+    // Enhanced console logging with browser compatibility info
+    console.group(`📋 Activity: ${action}`);
+    console.log('Details:', {
+      ...logEntry,
+      userAgent: navigator.userAgent,
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight
+      },
+      connection: navigator.connection ? {
+        effectiveType: navigator.connection.effectiveType,
+        downlink: navigator.connection.downlink,
+        rtt: navigator.connection.rtt
+      } : 'unknown',
+      websocket: {
+        status: connectionStatus,
+        connected: isConnected
+      }
+    });
+    console.groupEnd();
+    
+    // Track activity in analytics
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'admin_activity', {
+        action_type: action,
+        user_role: currentUser.role,
+        browser_name: navigator.userAgent.includes('Chrome') ? 'Chrome' : 
+                     navigator.userAgent.includes('Firefox') ? 'Firefox' : 
+                     navigator.userAgent.includes('Safari') ? 'Safari' : 'Other',
+        is_mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+        timestamp: Date.now()
+      });
+    }
+    
+    // Store in localStorage for persistence across sessions
+    try {
+      const storedLogs = JSON.parse(localStorage.getItem('admin_activity_log') || '[]');
+      const updatedLogs = [logEntry, ...storedLogs.slice(0, 199)]; // Keep last 200 entries
+      localStorage.setItem('admin_activity_log', JSON.stringify(updatedLogs));
+    } catch (error) {
+      console.warn('Failed to store activity log in localStorage:', error);
+    }
+  };
+
 // WebSocket integration for real-time updates
   const { 
     connectionStatus, 
@@ -167,69 +233,6 @@ const [statusFilter, setStatusFilter] = useState('all'); // all, pending, approv
 
   // Filter and sort products
   // Activity logging function
-  const logActivity = (action, details) => {
-    const logEntry = {
-      id: Date.now(),
-      timestamp: new Date(),
-      user: currentUser.role,
-      userId: currentUser.id || 'unknown',
-      action,
-      details,
-      browser: navigator.userAgent,
-      sessionId: sessionStorage.getItem('sessionId') || 'unknown',
-      performanceData: {
-        memoryUsage: window.performance?.memory?.usedJSHeapSize || 0,
-        timing: Date.now(),
-        loadTime: window.performance?.timing ? 
-          window.performance.timing.loadEventEnd - window.performance.timing.navigationStart : 0
-      }
-    };
-    
-    setActivityLog(prev => [logEntry, ...prev.slice(0, 99)]); // Keep last 100 entries
-    
-    // Enhanced console logging with browser compatibility info
-    console.group(`📋 Activity: ${action}`);
-    console.log('Details:', {
-      ...logEntry,
-      userAgent: navigator.userAgent,
-      viewport: {
-        width: window.innerWidth,
-        height: window.innerHeight
-      },
-      connection: navigator.connection ? {
-        effectiveType: navigator.connection.effectiveType,
-        downlink: navigator.connection.downlink,
-        rtt: navigator.connection.rtt
-      } : 'unknown',
-      websocket: {
-        status: connectionStatus,
-        connected: isConnected
-      }
-    });
-    console.groupEnd();
-    
-    // Track activity in analytics
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'admin_activity', {
-        action_type: action,
-        user_role: currentUser.role,
-        browser_name: navigator.userAgent.includes('Chrome') ? 'Chrome' : 
-                     navigator.userAgent.includes('Firefox') ? 'Firefox' : 
-                     navigator.userAgent.includes('Safari') ? 'Safari' : 'Other',
-        is_mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-        timestamp: Date.now()
-      });
-    }
-    
-    // Store in localStorage for persistence across sessions
-    try {
-      const storedLogs = JSON.parse(localStorage.getItem('admin_activity_log') || '[]');
-      const updatedLogs = [logEntry, ...storedLogs.slice(0, 199)]; // Keep last 200 entries
-      localStorage.setItem('admin_activity_log', JSON.stringify(updatedLogs));
-    } catch (error) {
-      console.warn('Failed to store activity log in localStorage:', error);
-    }
-  };
 
 useEffect(() => {
     let filtered = [...products];
