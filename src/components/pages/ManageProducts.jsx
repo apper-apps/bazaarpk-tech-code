@@ -1236,9 +1236,8 @@ return (
                 />
               </Button>
             </div>
-</div>
           </div>
-        </div>
+
           {/* Select All Checkbox */}
           <div className="flex items-center space-x-2">
             <input
@@ -1256,9 +1255,8 @@ return (
               Toggle selection of all visible products in the current filter
             </div>
           </div>
-        </div>
 
-{/* Advanced Filters */}
+          {/* Advanced Filters */}
           {showAdvancedFilters && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
@@ -1403,7 +1401,6 @@ return (
               </div>
             </motion.div>
           )}
-        </div>
 
           {/* Sort */}
           <div className="flex items-center space-x-4">
@@ -1429,6 +1426,8 @@ return (
           </div>
         </div>
       </section>
+
+      {/* Products Grid/List */}
 {/* Products Grid/List */}
       {filteredProducts.length === 0 ? (
         <Empty
