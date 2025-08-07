@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/useToast";
 import { CategoryService } from "@/services/api/CategoryService";
 import { ProductService } from "@/services/api/ProductService";
 import ApperIcon from "@/components/ApperIcon";
-import { Error } from "@/components/ui/Error";
+import Error from "@/components/ui/Error";
 import Home from "@/components/pages/Home";
 import Category from "@/components/pages/Category";
 import Badge from "@/components/atoms/Badge";
