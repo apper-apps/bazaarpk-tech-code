@@ -69,10 +69,18 @@ barcode: "",
     bundleSavings: "",
     preparationTime: "",
     servings: "",
-    visibility: "draft",
+visibility: "draft",
     moderatorApproved: false,
     requiresApproval: true,
     scheduledPublish: "",
+    publishImmediately: false,
+    scheduledPublishType: "none", // none, date, recurring
+    recurringSchedule: {
+      frequency: "daily", // daily, weekly, monthly
+      dayOfWeek: 1, // 1-7 for weekly
+      dayOfMonth: 1, // 1-31 for monthly
+      time: "09:00"
+    },
 metaTitle: "",
     metaDescription: "",
     urlSlug: "",
@@ -844,6 +852,33 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
       return;
     }
 
+    // Schedule validation when scheduling is requested
+    if (schedule || formData.scheduledPublish) {
+      const scheduleDate = schedule || formData.scheduledPublish;
+      const scheduledTime = new Date(scheduleDate);
+      const now = new Date();
+      
+      if (isNaN(scheduledTime.getTime())) {
+        showToast("Invalid schedule date format. Please select a valid date and time.", "error");
+        announceToScreenReader("Scheduled publication date is invalid", "assertive");
+        return;
+      }
+      
+      if (scheduledTime <= now) {
+        showToast("Scheduled publication time must be in the future", "error");
+        announceToScreenReader("Cannot schedule publication for past date", "assertive");
+        return;
+      }
+      
+      // Check if schedule is too far in future (1 year limit)
+      const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+      if (scheduledTime > oneYearFromNow) {
+        showToast("Cannot schedule more than 1 year in advance", "error");
+        announceToScreenReader("Schedule date exceeds maximum allowed range", "assertive");
+        return;
+      }
+    }
+
     // Frontend-Backend consistency validation
     const consistencyCheck = await validateDataConsistency(formData);
     if (!consistencyCheck.isValid) {
@@ -854,12 +889,18 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
     setLoading(true);
     
     try {
-      // Enhanced visibility and approval logic
+      // Enhanced visibility and approval logic with scheduling support
       let visibility = 'draft';
       let requiresApproval = formData.requiresApproval;
       let workflowStatus = 'draft';
       
-      if (publish) {
+      if (schedule || formData.scheduledPublish) {
+        // Scheduling logic
+        visibility = 'scheduled';
+        workflowStatus = 'scheduled';
+        requiresApproval = false; // Scheduled items are pre-approved
+        announceToScreenReader("Product scheduled for automatic publication", "polite");
+      } else if (publish) {
         if (currentUser.permissions.canBypassApproval || currentUser.role === 'admin') {
           visibility = 'published';
           requiresApproval = false;
@@ -905,7 +946,7 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
           allowNumbers: true, 
           allowSpecialChars: false 
         }),
-metaTitle: sanitizeInput(formData.metaTitle, { 
+        metaTitle: sanitizeInput(formData.metaTitle, { 
           maxLength: 60, 
           allowNumbers: true, 
           allowSpecialChars: true 
@@ -975,18 +1016,24 @@ metaTitle: sanitizeInput(formData.metaTitle, {
         modifiedBy: currentUser.id || currentUser.email || 'system',
         version: (formData.version || 0) + 1,
         
+        // Enhanced scheduling fields
+        scheduledPublish: schedule || formData.scheduledPublish,
+        scheduledPublishType: formData.scheduledPublishType || "none",
+        publishImmediately: formData.publishImmediately || false,
+        recurringSchedule: formData.recurringSchedule || null,
+        
         // Data integrity fields
         dataChecksum: generateDataChecksum(formData),
         validationTimestamp: new Date().toISOString(),
         
-        // Audit trail
+        // Audit trail with scheduling events
         auditLog: [
           ...(formData.auditLog || []),
-{
-            action: publish ? 'publish_attempt' : 'save',
+          {
+            action: schedule ? 'schedule' : (publish ? 'publish_attempt' : 'save'),
             timestamp: new Date().toISOString(),
             user: currentUser.id || currentUser.email || 'system',
-            changes: {},
+            changes: schedule ? { scheduledPublish: schedule } : {},
             validation: 'passed'
           }
         ]
@@ -1054,7 +1101,7 @@ metaTitle: sanitizeInput(formData.metaTitle, {
           preparationTime: sanitizeInput(sanitizedData.preparationTime, { maxLength: 50 }),
           servings: sanitizeInput(sanitizedData.servings, { maxLength: 20 })
         } : null,
-seo: {
+        seo: {
           metaTitle: sanitizedData.metaTitle || sanitizedData.title,
           metaDescription: sanitizedData.metaDescription || sanitizedData.shortDescription,
           urlSlug: sanitizedData.urlSlug || sanitizedData.title?.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 100),
@@ -1067,7 +1114,7 @@ seo: {
         lastModified: new Date().toISOString(),
         csrfToken: csrfToken,
         sessionId: sessionStorage.getItem('sessionId') || 'unknown',
-userAgent: navigator.userAgent,
+        userAgent: navigator.userAgent,
         featured: Boolean(sanitizedData.featured),
         priority: sanitizedData.featured ? Date.now() : 0
       };
@@ -1077,15 +1124,15 @@ userAgent: navigator.userAgent,
       
       if (!silent) {
         let message = 'Product saved as draft successfully!';
-        if (publish) {
+        if (schedule || formData.scheduledPublish) {
+          const scheduleDate = new Date(schedule || formData.scheduledPublish);
+          message = `Product scheduled for publication on ${scheduleDate.toLocaleDateString()} at ${scheduleDate.toLocaleTimeString()}`;
+        } else if (publish) {
           if (requiresApproval) {
             message = 'Product submitted for approval successfully!';
           } else {
             message = 'Product published successfully!';
           }
-        }
-        if (schedule) {
-          message = `Product scheduled for ${schedule} successfully!`;
         }
         
         showToast(message, "success");
@@ -1095,9 +1142,14 @@ userAgent: navigator.userAgent,
       setUnsavedChanges(false);
       setLastSaved(new Date());
       
-      // Reset form or navigate
+      // Reset form or navigate based on action
       if (publish && !requiresApproval) {
         navigate("/admin/products");
+      } else if (schedule || formData.scheduledPublish) {
+        // For scheduled items, show confirmation and stay on page
+        setTimeout(() => {
+          navigate("/admin/products");
+        }, 2000);
       } else if (!silent) {
         // Reset form for another product with sanitized defaults
         const cleanFormData = {
@@ -1142,8 +1194,16 @@ userAgent: navigator.userAgent,
           moderatorApproved: false,
           requiresApproval: true,
           scheduledPublish: "",
+          publishImmediately: false,
+          scheduledPublishType: "none",
+          recurringSchedule: {
+            frequency: "daily",
+            dayOfWeek: 1,
+            dayOfMonth: 1,
+            time: "09:00"
+          },
           metaTitle: "",
-metaDescription: "",
+          metaDescription: "",
           urlSlug: "",
           seoKeywords: [],
           relatedProducts: [],
@@ -3280,20 +3340,134 @@ const renderShipping = () => (
         </div>
       </div>
 
-      {currentUser.permissions.canSchedule && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Scheduled Publication
-          </label>
-          <Input
-            type="datetime-local"
-            value={formData.scheduledPublish}
-            onChange={(e) => handleInputChange('scheduledPublish', e.target.value)}
-            min={new Date().toISOString().slice(0, 16)}
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Product will be automatically published at the scheduled time
-          </p>
+{currentUser.permissions.canSchedule && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-medium text-gray-700">
+              Publication Scheduling
+            </label>
+            <select
+              value={formData.scheduledPublishType}
+              onChange={(e) => handleInputChange('scheduledPublishType', e.target.value)}
+              className="text-sm px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="none">Publish Immediately</option>
+              <option value="date">Schedule for Specific Date</option>
+              <option value="recurring">Recurring Schedule</option>
+            </select>
+          </div>
+
+          {formData.scheduledPublishType === 'date' && (
+            <div>
+              <Input
+                type="datetime-local"
+                value={formData.scheduledPublish}
+                onChange={(e) => handleInputChange('scheduledPublish', e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+                max={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)}
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Product will be automatically published at the scheduled time
+              </p>
+            </div>
+          )}
+
+          {formData.scheduledPublishType === 'recurring' && (
+            <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Frequency
+                  </label>
+                  <select
+                    value={formData.recurringSchedule.frequency}
+                    onChange={(e) => handleInputChange('recurringSchedule', {
+                      ...formData.recurringSchedule,
+                      frequency: e.target.value
+                    })}
+                    className="w-full text-sm px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+
+                {formData.recurringSchedule.frequency === 'weekly' && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Day of Week
+                    </label>
+                    <select
+                      value={formData.recurringSchedule.dayOfWeek}
+                      onChange={(e) => handleInputChange('recurringSchedule', {
+                        ...formData.recurringSchedule,
+                        dayOfWeek: parseInt(e.target.value)
+                      })}
+                      className="w-full text-sm px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
+                    >
+                      <option value={1}>Monday</option>
+                      <option value={2}>Tuesday</option>
+                      <option value={3}>Wednesday</option>
+                      <option value={4}>Thursday</option>
+                      <option value={5}>Friday</option>
+                      <option value={6}>Saturday</option>
+                      <option value={7}>Sunday</option>
+                    </select>
+                  </div>
+                )}
+
+                {formData.recurringSchedule.frequency === 'monthly' && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Day of Month
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="31"
+                      value={formData.recurringSchedule.dayOfMonth}
+                      onChange={(e) => handleInputChange('recurringSchedule', {
+                        ...formData.recurringSchedule,
+                        dayOfMonth: parseInt(e.target.value) || 1
+                      })}
+                      className="w-full text-sm px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Time
+                  </label>
+                  <input
+                    type="time"
+                    value={formData.recurringSchedule.time}
+                    onChange={(e) => handleInputChange('recurringSchedule', {
+                      ...formData.recurringSchedule,
+                      time: e.target.value
+                    })}
+                    className="w-full text-sm px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+              
+              <p className="text-xs text-amber-600">
+                <ApperIcon name="AlertTriangle" className="w-3 h-3 mr-1 inline" />
+                Recurring schedules will create new versions of this product automatically
+              </p>
+            </div>
+          )}
+
+          {(formData.scheduledPublishType === 'date' || formData.scheduledPublishType === 'recurring') && (
+            <div className="flex items-center space-x-2 text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+              <ApperIcon name="Clock" className="w-4 h-4" />
+              <span>
+                Scheduled items will be automatically published and require approval bypass
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -3548,19 +3722,28 @@ return (
                   )}
                 </Button>
 
-                {currentUser.permissions.canSchedule && (
+{currentUser.permissions.canSchedule && formData.scheduledPublishType !== 'none' && (
                   <Button
                     variant="outline"
                     onClick={() => {
-                      const scheduleDate = prompt('Enter schedule date (YYYY-MM-DD):');
-                      if (scheduleDate) {
-                        handleSave(true, false, scheduleDate);
+                      if (formData.scheduledPublishType === 'date' && !formData.scheduledPublish) {
+                        showToast("Please set a scheduled publication date first", "warning");
+                        return;
                       }
+                      if (formData.scheduledPublishType === 'recurring' && !formData.recurringSchedule.time) {
+                        showToast("Please set a time for recurring publication", "warning");
+                        return;
+                      }
+                      handleSave(true, false, formData.scheduledPublish);
                     }}
                     disabled={loading}
+                    className="relative"
                   >
                     <ApperIcon name="Clock" className="w-4 h-4 mr-2" />
-                    Schedule
+                    {formData.scheduledPublishType === 'recurring' ? 'Setup Recurring' : 'Schedule Publish'}
+                    {(formData.scheduledPublish || formData.scheduledPublishType === 'recurring') && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+                    )}
                   </Button>
                 )}
 

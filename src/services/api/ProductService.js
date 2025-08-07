@@ -302,7 +302,7 @@ create: async (product) => {
       throw new Error(`SKU '${product.sku}' already exists. Please use a unique SKU.`);
     }
     
-    // Enhanced data processing with comprehensive validation
+// Enhanced data processing with comprehensive validation
     const processedProduct = {
       ...product,
       Id: newId,
@@ -374,6 +374,19 @@ create: async (product) => {
       metaDescription: sanitizeAndValidateText(product.metaDescription, { maxLength: 160, required: false }),
       videoUrl: validateUrl(product.videoUrl),
       
+      // Enhanced scheduling fields with validation
+      scheduledPublish: product.scheduledPublish || null,
+      scheduledPublishType: product.scheduledPublishType || "none",
+      publishImmediately: Boolean(product.publishImmediately),
+      recurringSchedule: product.recurringSchedule ? {
+        frequency: product.recurringSchedule.frequency || "daily",
+        dayOfWeek: parseInt(product.recurringSchedule.dayOfWeek) || 1,
+        dayOfMonth: parseInt(product.recurringSchedule.dayOfMonth) || 1,
+        time: product.recurringSchedule.time || "09:00"
+      } : null,
+      scheduledAt: product.scheduledPublish ? new Date().toISOString() : null,
+      autoPublishEnabled: Boolean(product.scheduledPublish || product.recurringSchedule),
+      
       // System fields with audit trail
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
@@ -381,7 +394,7 @@ create: async (product) => {
       modifiedBy: product.modifiedBy || 'system',
       version: 1,
       
-      // Status and visibility with workflow
+      // Status and visibility with workflow and scheduling support
       visibility: product.visibility || "draft",
       workflowStatus: product.workflowStatus || "draft",
       requiresApproval: product.requiresApproval || false,
@@ -400,13 +413,20 @@ create: async (product) => {
       validatedAt: new Date().toISOString(),
       validationVersion: '1.0',
       
-      // Audit trail
+      // Enhanced audit trail with scheduling events
       auditLog: [{
-        action: 'created',
+        action: product.scheduledPublish ? 'scheduled' : 'created',
         timestamp: new Date().toISOString(),
         user: product.createdBy || 'system',
-        details: 'Product created successfully',
-        validation: 'passed'
+        details: product.scheduledPublish ? 
+          `Product scheduled for publication on ${new Date(product.scheduledPublish).toLocaleString()}` : 
+          'Product created successfully',
+        validation: 'passed',
+        schedulingInfo: product.scheduledPublish ? {
+          type: product.scheduledPublishType || "date",
+          scheduledTime: product.scheduledPublish,
+          recurring: product.recurringSchedule || null
+        } : null
       }],
       
       // Legacy compatibility fields

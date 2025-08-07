@@ -87,18 +87,91 @@ class RecipeBundleServiceClass {
     });
   }
 
-// Create new recipe bundle
+// Create new recipe bundle with scheduling support
   create(bundleData) {
     return new Promise((resolve) => {
       setTimeout(() => {
         const newBundle = {
           ...bundleData,
           Id: this.nextId++,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          
+          // Enhanced scheduling fields
+          scheduledPublish: bundleData.scheduledPublish || null,
+          scheduledPublishType: bundleData.scheduledPublishType || "none",
+          publishImmediately: Boolean(bundleData.publishImmediately),
+          recurringSchedule: bundleData.recurringSchedule || null,
+          scheduledAt: bundleData.scheduledPublish ? new Date().toISOString() : null,
+          autoPublishEnabled: Boolean(bundleData.scheduledPublish || bundleData.recurringSchedule),
+          
+          // Status and visibility with scheduling support
+          visibility: bundleData.visibility || "draft",
+          workflowStatus: bundleData.workflowStatus || "draft",
+          requiresApproval: bundleData.requiresApproval || false,
+          
+          // Audit trail with scheduling information
+          auditLog: bundleData.auditLog || [{
+            action: bundleData.scheduledPublish ? 'scheduled' : 'created',
+            timestamp: new Date().toISOString(),
+            user: 'system',
+            details: bundleData.scheduledPublish ? 
+              `Bundle scheduled for publication on ${new Date(bundleData.scheduledPublish).toLocaleString()}` : 
+              'Bundle created successfully',
+            validation: 'passed',
+            schedulingInfo: bundleData.scheduledPublish ? {
+              type: bundleData.scheduledPublishType || "date",
+              scheduledTime: bundleData.scheduledPublish,
+              recurring: bundleData.recurringSchedule || null
+            } : null
+          }]
         };
+        
         this.bundles.push(newBundle);
+        
+        // Setup auto-publish timer for scheduled items
+        if (newBundle.scheduledPublish && newBundle.visibility === 'scheduled') {
+          this.scheduleAutoPublish(newBundle);
+        }
+        
         resolve({ ...newBundle });
       }, 200);
+    });
+  }
+
+  // Auto-publish scheduled bundles
+  scheduleAutoPublish(bundle) {
+    const scheduleDate = new Date(bundle.scheduledPublish);
+    const now = new Date();
+    const delay = scheduleDate.getTime() - now.getTime();
+    
+    if (delay > 0) {
+      setTimeout(() => {
+        const index = this.bundles.findIndex(b => b.Id === bundle.Id);
+        if (index !== -1 && this.bundles[index].visibility === 'scheduled') {
+          this.bundles[index].visibility = 'published';
+          this.bundles[index].workflowStatus = 'published';
+          this.bundles[index].publishedAt = new Date().toISOString();
+          this.bundles[index].auditLog.push({
+            action: 'auto_published',
+            timestamp: new Date().toISOString(),
+            user: 'system',
+            details: 'Bundle automatically published via scheduled publication',
+            validation: 'passed'
+          });
+          console.log(`✅ Auto-published bundle: ${this.bundles[index].name}`);
+        }
+      }, delay);
+    }
+  }
+
+  // Get scheduled bundles
+  getScheduled() {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const scheduled = this.bundles.filter(bundle => bundle.visibility === 'scheduled');
+        resolve(scheduled);
+      }, 100);
     });
   }
 

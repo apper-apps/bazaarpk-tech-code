@@ -22,7 +22,7 @@ const AddRecipeBundle = () => {
   const showToast = useToast();
   
   // Bundle Form State
-  const [bundleData, setBundleData] = useState({
+const [bundleData, setBundleData] = useState({
     name: "",
     description: "",
     image: "",
@@ -30,7 +30,16 @@ const AddRecipeBundle = () => {
     cookTime: "",
     servings: 4,
     difficulty: "Easy",
-    featured: false
+    featured: false,
+    scheduledPublish: "",
+    publishImmediately: false,
+    scheduledPublishType: "none",
+    recurringSchedule: {
+      frequency: "daily",
+      dayOfWeek: 1,
+      dayOfMonth: 1,
+      time: "09:00"
+    }
   });
   
   // Bundle Components State
@@ -162,7 +171,8 @@ const AddRecipeBundle = () => {
   const totals = calculateBundleTotals();
 
   // Handle form submission
-const handleSubmit = async (e) => {
+// Handle form submission with scheduling support
+  const handleSubmit = async (e, scheduleForPublish = false) => {
     e.preventDefault();
     
     // Enhanced bundle validation with comprehensive checks
@@ -220,10 +230,34 @@ const handleSubmit = async (e) => {
       return total + (component.product.price * component.quantity);
     }, 0);
 
-    if (!bundleData.price || bundleData.price <= 0) {
-      validationErrors.push("Bundle price must be greater than 0");
-    } else if (bundleData.price >= totalBundlePrice) {
-      validationErrors.push("Bundle price should be less than individual item total to provide customer value");
+    // Scheduling validation
+    if (bundleData.scheduledPublishType === 'date' && bundleData.scheduledPublish) {
+      const scheduleDate = new Date(bundleData.scheduledPublish);
+      const now = new Date();
+      
+      if (isNaN(scheduleDate.getTime())) {
+        validationErrors.push("Invalid schedule date format. Please select a valid date and time.");
+      } else if (scheduleDate <= now) {
+        validationErrors.push("Scheduled publication time must be in the future");
+      } else {
+        // Check if schedule is too far in future (1 year limit)
+        const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+        if (scheduleDate > oneYearFromNow) {
+          validationErrors.push("Cannot schedule more than 1 year in advance");
+        }
+      }
+    }
+
+    if (bundleData.scheduledPublishType === 'recurring') {
+      if (!bundleData.recurringSchedule.time) {
+        validationErrors.push("Recurring schedule requires a specific time");
+      }
+      if (bundleData.recurringSchedule.frequency === 'weekly' && (!bundleData.recurringSchedule.dayOfWeek || bundleData.recurringSchedule.dayOfWeek < 1 || bundleData.recurringSchedule.dayOfWeek > 7)) {
+        validationErrors.push("Weekly schedule requires a valid day of the week (1-7)");
+      }
+      if (bundleData.recurringSchedule.frequency === 'monthly' && (!bundleData.recurringSchedule.dayOfMonth || bundleData.recurringSchedule.dayOfMonth < 1 || bundleData.recurringSchedule.dayOfMonth > 31)) {
+        validationErrors.push("Monthly schedule requires a valid day of the month (1-31)");
+      }
     }
 
     // Bundle category validation
@@ -271,31 +305,101 @@ const handleSubmit = async (e) => {
     }
 
     // Calculate savings amount
-    const savingsAmount = totalBundlePrice - bundleData.price;
-    const savingsPercentage = (savingsAmount / totalBundlePrice * 100).toFixed(1);
+    const savingsAmount = totalBundlePrice - (bundleData.price || totals.bundlePrice);
+    const savingsPercentage = totalBundlePrice > 0 ? (savingsAmount / totalBundlePrice * 100).toFixed(1) : 0;
 
     announceToScreenReader(`Bundle validation successful. Customers will save PKR ${savingsAmount.toFixed(2)} (${savingsPercentage}%)`, "polite");
 
     try {
       setLoading(true);
 
+      // Determine publication status based on scheduling
+      let visibility = "draft";
+      let workflowStatus = "draft";
+      
+      if (bundleData.scheduledPublishType !== "none") {
+        visibility = "scheduled";
+        workflowStatus = "scheduled";
+      } else if (scheduleForPublish) {
+        visibility = "published";
+        workflowStatus = "published";
+      }
+
       const newBundle = {
         ...bundleData,
         products: bundleComponents,
         totalPrice: totals.bundlePrice,
         originalPrice: totals.originalPrice,
-        savings: totals.savings
+        savings: totals.savings,
+        visibility,
+        workflowStatus,
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        // Enhanced scheduling fields
+        scheduledPublish: bundleData.scheduledPublish || null,
+        scheduledPublishType: bundleData.scheduledPublishType || "none",
+        publishImmediately: bundleData.publishImmediately || false,
+        recurringSchedule: bundleData.recurringSchedule || null,
+        scheduledAt: bundleData.scheduledPublish ? new Date().toISOString() : null,
+        autoPublishEnabled: Boolean(bundleData.scheduledPublish || bundleData.recurringSchedule),
+        auditLog: [{
+          action: bundleData.scheduledPublish ? 'scheduled' : 'created',
+          timestamp: new Date().toISOString(),
+          user: 'system',
+          details: bundleData.scheduledPublish ? 
+            `Bundle scheduled for publication on ${new Date(bundleData.scheduledPublish).toLocaleString()}` : 
+            'Bundle created successfully',
+          validation: 'passed',
+          schedulingInfo: bundleData.scheduledPublish ? {
+            type: bundleData.scheduledPublishType || "date",
+            scheduledTime: bundleData.scheduledPublish,
+            recurring: bundleData.recurringSchedule || null
+          } : null
+        }]
       };
 
       await RecipeBundleService.create(newBundle);
-      showToast.success("Recipe bundle created successfully!");
-      navigate("/admin/recipe-bundles");
+      
+      let successMessage = "Recipe bundle created successfully!";
+      if (bundleData.scheduledPublish) {
+        const scheduleDate = new Date(bundleData.scheduledPublish);
+        successMessage = `Recipe bundle scheduled for publication on ${scheduleDate.toLocaleDateString()} at ${scheduleDate.toLocaleTimeString()}`;
+      } else if (bundleData.scheduledPublishType === 'recurring') {
+        successMessage = `Recipe bundle set up with recurring publication schedule`;
+      } else if (scheduleForPublish) {
+        successMessage = "Recipe bundle published successfully!";
+      }
+      
+      showToast.success(successMessage);
+      
+      // Navigate after showing success message
+      setTimeout(() => {
+        navigate("/admin/recipe-bundles");
+      }, bundleData.scheduledPublish ? 2000 : 1000);
+      
     } catch (error) {
       console.error("Error creating bundle:", error);
       showToast.error("Failed to create recipe bundle");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle scheduling-specific submission
+  const handleScheduledSubmit = (e) => {
+    e.preventDefault();
+    
+    if (bundleData.scheduledPublishType === 'date' && !bundleData.scheduledPublish) {
+      showToast.warning("Please set a scheduled publication date first");
+      return;
+    }
+    
+    if (bundleData.scheduledPublishType === 'recurring' && !bundleData.recurringSchedule.time) {
+      showToast.warning("Please set a time for recurring publication");
+      return;
+    }
+    
+    handleSubmit(e, false);
   };
 
   return (
