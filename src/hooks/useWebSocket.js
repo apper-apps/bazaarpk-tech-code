@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { webSocketService } from '@/services/api/WebSocketService';
-import { useToast } from '@/hooks/useToast';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useToast } from "@/hooks/useToast";
+import webSocketService from "@/services/api/WebSocketService";
 
 export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
@@ -150,7 +150,7 @@ default:
   }, []);
 
   // Setup connection status listener
-  useEffect(() => {
+useEffect(() => {
     const unsubscribe = webSocketService.on('connection', (data) => {
       setConnectionStatus(data.status);
       
@@ -166,15 +166,17 @@ default:
             }
             onDisconnect?.(data);
             break;
-case 'error':
-            // Streamlined error message processing
+          case 'error':
+            // Enhanced error message processing with multiple validation layers
             let errorMessage = 'Connection error occurred';
             let toastType = 'error';
             
-            // Extract safe error message
-            if (data?.code) {
-              switch (data.code) {
+            // First attempt: Extract safe error message based on error code
+            if (data?.code && typeof data.code === 'string') {
+              const safeCode = String(data.code).replace(/\[object \w+\]/g, '').trim();
+              switch (safeCode) {
                 case 'CONNECTION_CLOSED':
+                case 'CONNECTION_CLOSED_ERROR':
                   errorMessage = 'Connection unexpectedly closed';
                   toastType = 'warning';
                   break;
@@ -187,35 +189,87 @@ case 'error':
                   toastType = 'warning';
                   break;
                 case 'ERROR_PARSE_FAILED':
+                case 'SANITIZED_ERROR':
                   errorMessage = 'Connection problem - please try again';
                   toastType = 'warning';
                   break;
+                case 'OBJECT_ERROR':
+                case 'TOSTRING_ERROR':
+                  errorMessage = 'Connection encountered an issue';
+                  toastType = 'warning';
+                  break;
                 default:
-                  if (data.error && 
-                      typeof data.error === 'string' && 
-                      !data.error.includes('[object') &&
-                      data.error.trim()) {
-                    errorMessage = data.error;
+                  // Try to use the error message if it's safe
+                  if (data.error && typeof data.error === 'string') {
+                    const safeError = String(data.error).replace(/\[object \w+\]/g, '').trim();
+                    if (safeError && safeError.length > 0 && !safeError.includes('[object')) {
+                      errorMessage = safeError;
+                    }
                   }
               }
-            } else if (data?.error && 
-                       typeof data.error === 'string' && 
-                       !data.error.includes('[object') &&
-                       data.error.trim()) {
-              errorMessage = data.error;
+            } 
+            // Second attempt: Direct error message extraction with sanitization
+            else if (data?.error && typeof data.error === 'string') {
+              const sanitizedError = String(data.error)
+                .replace(/\[object \w+\]/g, '')
+                .replace(/WebSocket error:\s*\[object \w+\]/gi, 'WebSocket connection failed')
+                .trim();
+              
+              if (sanitizedError && sanitizedError.length > 2 && !sanitizedError.includes('[object')) {
+                errorMessage = sanitizedError;
+              }
+            }
+            // Third attempt: Check for nested error properties
+            else if (data?.error && typeof data.error === 'object' && data.error !== null) {
+              try {
+                if (data.error.message && typeof data.error.message === 'string') {
+                  const safeMessage = String(data.error.message).replace(/\[object \w+\]/g, '').trim();
+                  if (safeMessage && !safeMessage.includes('[object')) {
+                    errorMessage = safeMessage;
+                  }
+                } else if (data.error.code && typeof data.error.code === 'string') {
+                  errorMessage = `Connection error (${data.error.code})`;
+                }
+              } catch (nestedError) {
+                console.warn('Error extracting nested error properties:', nestedError);
+              }
             }
             
-            // Final safety check
+            // Multiple safety validation layers
             if (!errorMessage || 
                 typeof errorMessage !== 'string' || 
                 errorMessage.includes('[object') ||
-                errorMessage.trim() === '') {
+                errorMessage.trim() === '' ||
+                errorMessage.length < 3) {
               errorMessage = 'Connection error - please check your network';
               toastType = 'warning';
             }
             
+            // Final sanitization pass to catch any remaining issues
+            errorMessage = String(errorMessage)
+              .replace(/\[object \w+\]/g, 'connection issue')
+              .replace(/WebSocket error:\s*connection issue/gi, 'Connection failed')
+              .trim();
+            
+            // Ultimate fallback validation
+            if (!errorMessage || errorMessage.includes('[object') || errorMessage.length < 3) {
+              errorMessage = 'Unable to connect - please try again';
+              toastType = 'warning';
+            }
+            
+            // Ensure we have a clean, user-friendly message
             showToast(errorMessage, toastType);
-            onError?.(data);
+            
+            // Create safe data object for callback
+            const safeCallbackData = {
+              ...data,
+error: errorMessage,
+              // Preserve original data for debugging in development
+              ...(typeof process !== 'undefined' && process.env?.NODE_ENV === 'development' && {
+                originalData: data
+              })
+            };
+            onError?.(safeCallbackData);
             break;
         }
       }
