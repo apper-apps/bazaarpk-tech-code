@@ -12,7 +12,7 @@ import { formatPrice } from "@/utils/currency";
 
 const ProductManagementCard = ({
   product,
-viewMode = 'grid',
+  viewMode = 'grid',
   selected = false,
   onSelect,
   onToggleVisibility,
@@ -21,11 +21,22 @@ viewMode = 'grid',
   onView,
   onDelete,
   loading = false,
-  currentUser
+  currentUser,
+  showApprovalStatus = false
 }) => {
   const isVisible = product.visibility === 'published';
   const isFeatured = product.featured;
   const isLowStock = product.stock < 10;
+  
+  // Enhanced status handling
+  const approvalStatus = product.status || 'pending';
+  const isApproved = approvalStatus === 'approved';
+  const isPending = approvalStatus === 'pending' || !product.status;
+  const isRejected = approvalStatus === 'rejected';
+  
+  // Product can only be visible if approved
+  const isActuallyVisible = isVisible && isApproved;
+const needsApproval = isPending && !isVisible;
   const isOutOfStock = product.stock === 0;
   const adminRating = product.adminRating || 0;
 
@@ -106,15 +117,33 @@ if (viewMode === 'list') {
               
               {/* Status Badges - Responsive */}
               <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-2 sm:mt-0 sm:ml-4">
+{/* Approval Status Badge */}
+                {showApprovalStatus && (
+                  <Badge
+                    variant={isApproved ? "success" : isPending ? "warning" : "error"}
+                    size="sm"
+                    className="flex items-center text-xs"
+                  >
+                    <ApperIcon 
+                      name={isApproved ? "CheckCircle" : isPending ? "Clock" : "XCircle"} 
+                      className="w-3 h-3 mr-1" 
+                    />
+                    {isApproved ? "Approved" : isPending ? "Pending" : "Rejected"}
+                  </Badge>
+                )}
+                
+                {/* Visibility Badge */}
                 <Badge
-                  variant={isVisible ? "success" : "outline"}
+                  variant={isActuallyVisible ? "success" : "outline"}
                   size="sm"
                   className="flex items-center text-xs"
                 >
-                  <ApperIcon name={isVisible ? "Eye" : "EyeOff"} className="w-3 h-3 mr-1" />
-                  {isVisible ? "Published" : "Draft"}
+                  <ApperIcon name={isActuallyVisible ? "Eye" : "EyeOff"} className="w-3 h-3 mr-1" />
+                  {isActuallyVisible ? "Live" : isVisible ? "Published*" : "Draft"}
                 </Badge>
-                {product.featured && (
+                
+                {/* Featured Badge */}
+                {product.featured && isActuallyVisible && (
                   <Badge variant="accent" size="sm" className="flex items-center text-xs">
                     <ApperIcon name="Star" className="w-3 h-3 mr-1" />
                     Featured
@@ -140,20 +169,40 @@ if (viewMode === 'list') {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onToggleVisibility(product.Id)}
-                disabled={loading}
-                title={isVisible ? "Hide product" : "Publish product"}
-                className="p-2"
+onClick={() => onToggleVisibility(product.Id)}
+                disabled={loading || (isVisible && !isApproved)}
+                title={
+                  needsApproval ? "Approve and publish product" :
+                  isActuallyVisible ? "Hide product from customers" : 
+                  isVisible ? "Product needs approval to be visible" :
+                  "Publish product"
+                }
+                className={cn(
+                  "p-2",
+                  needsApproval && "text-primary-600 bg-primary-50",
+                  isVisible && !isApproved && "text-orange-600 opacity-75"
+                )}
               >
-                <ApperIcon name={isVisible ? "EyeOff" : "Eye"} className="w-4 h-4" />
+                <ApperIcon name={
+                  needsApproval ? "CheckCircle" :
+                  isActuallyVisible ? "EyeOff" : "Eye"
+                } className="w-4 h-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onToggleFeatured(product.Id)}
-                disabled={loading}
-                title={isFeatured ? "Remove from featured" : "Mark as featured"}
-                className={cn("p-2", isFeatured && "text-yellow-600")}
+                disabled={loading || !isActuallyVisible}
+                title={
+                  !isActuallyVisible ? "Product must be approved and published to be featured" :
+                  isFeatured ? "Remove from featured section" : 
+                  "Feature on homepage"
+                }
+                className={cn(
+                  "p-2", 
+                  isFeatured && "text-yellow-600",
+                  !isActuallyVisible && "opacity-50"
+                )}
               >
                 <ApperIcon name="Star" className={cn("w-4 h-4", isFeatured && "fill-current")} />
               </Button>
@@ -193,15 +242,36 @@ if (viewMode === 'list') {
 
 // Grid view mode - Mobile responsive
 return (
-  <motion.div
+<motion.div
     className={cn(
       "bg-white rounded-lg shadow-soft border-2 p-3 sm:p-4 relative hover:shadow-lg transition-all duration-200",
-      selected ? "border-primary-500 bg-primary-50" : "border-gray-200"
+      selected ? "border-primary-500 bg-primary-50" : "border-gray-200",
+      needsApproval && "border-orange-200 bg-orange-50/30",
+      isRejected && "border-red-200 bg-red-50/30"
     )}
     layout
     whileHover={{ y: -2 }}
     transition={{ duration: 0.2 }}
   >
+    {/* Status Indicators */}
+    {needsApproval && (
+      <div className="absolute top-2 right-2 z-10">
+        <div className="bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center shadow-md">
+          <ApperIcon name="Clock" className="w-3 h-3 mr-1" />
+          NEEDS APPROVAL
+        </div>
+      </div>
+    )}
+    
+    {isRejected && (
+      <div className="absolute top-2 right-2 z-10">
+        <div className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center shadow-md">
+          <ApperIcon name="XCircle" className="w-3 h-3 mr-1" />
+          REJECTED
+        </div>
+      </div>
+    )}
+    
     {onSelect && (
       <div className="absolute top-3 sm:top-4 left-3 sm:left-4 z-10">
         <input
@@ -213,9 +283,9 @@ return (
       </div>
     )}
     
-    <div className="pl-7 sm:pl-8">
-{/* Featured Star Badge */}
-      {isFeatured && (
+<div className="pl-7 sm:pl-8">
+      {/* Featured Star Badge - only show for live products */}
+      {isFeatured && isActuallyVisible && (
         <div className="absolute top-2 left-2 z-10">
           <div className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center shadow-lg">
             <span className="mr-1">⭐</span>
@@ -264,17 +334,44 @@ return (
         </div>
         
         {/* Status Badges - Responsive wrapping */}
-        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+<div className="flex flex-wrap items-center gap-1 sm:gap-2">
+          {/* Approval Status Badge */}
+          {showApprovalStatus && (
+            <Badge
+              variant={isApproved ? "success" : isPending ? "warning" : "error"}
+              size="sm"
+              className="flex items-center text-xs"
+            >
+              <ApperIcon 
+                name={isApproved ? "CheckCircle" : isPending ? "Clock" : "XCircle"} 
+                className="w-3 h-3 mr-1" 
+              />
+              <span className="hidden sm:inline">
+                {isApproved ? "Approved" : isPending ? "Pending" : "Rejected"}
+              </span>
+              <span className="sm:hidden">
+                {isApproved ? "✓" : isPending ? "⏳" : "✗"}
+              </span>
+            </Badge>
+          )}
+          
+          {/* Visibility Badge */}
           <Badge
-            variant={isVisible ? "success" : "outline"}
+            variant={isActuallyVisible ? "success" : "outline"}
             size="sm"
             className="flex items-center text-xs"
           >
-            <ApperIcon name={isVisible ? "Eye" : "EyeOff"} className="w-3 h-3 mr-1" />
-            <span className="hidden sm:inline">{isVisible ? "Published" : "Draft"}</span>
-            <span className="sm:hidden">{isVisible ? "Pub" : "Draft"}</span>
+            <ApperIcon name={isActuallyVisible ? "Eye" : "EyeOff"} className="w-3 h-3 mr-1" />
+            <span className="hidden sm:inline">
+              {isActuallyVisible ? "Live" : isVisible ? "Published*" : "Draft"}
+            </span>
+            <span className="sm:hidden">
+              {isActuallyVisible ? "Live" : isVisible ? "Pub*" : "Draft"}
+            </span>
           </Badge>
-          {product.featured && (
+          
+          {/* Featured Badge - only for live products */}
+          {product.featured && isActuallyVisible && (
             <Badge variant="accent" size="sm" className="flex items-center text-xs">
               <ApperIcon name="Star" className="w-3 h-3 mr-1" />
               <span className="hidden sm:inline">Featured</span>
@@ -298,23 +395,43 @@ return (
         
         {/* Actions - Mobile optimized */}
         <div className="grid grid-cols-5 gap-1 pt-2 border-t border-gray-100">
-          <Button
+<Button
             variant="ghost"
             size="sm"
             onClick={() => onToggleVisibility(product.Id)}
-            disabled={loading}
-            title={isVisible ? "Hide product" : "Publish product"}
-            className="p-2 flex items-center justify-center"
+            disabled={loading || (isVisible && !isApproved)}
+            title={
+              needsApproval ? "Approve and publish product" :
+              isActuallyVisible ? "Hide product from customers" : 
+              isVisible ? "Product needs approval to be visible" :
+              "Publish product"
+            }
+            className={cn(
+              "p-2 flex items-center justify-center",
+              needsApproval && "text-primary-600 bg-primary-50",
+              isVisible && !isApproved && "text-orange-600 opacity-75"
+            )}
           >
-            <ApperIcon name={isVisible ? "EyeOff" : "Eye"} className="w-4 h-4" />
+            <ApperIcon name={
+              needsApproval ? "CheckCircle" :
+              isActuallyVisible ? "EyeOff" : "Eye"
+            } className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onToggleFeatured(product.Id)}
-            disabled={loading}
-            title={isFeatured ? "Remove from featured" : "Mark as featured"}
-            className={cn("p-2 flex items-center justify-center", isFeatured && "text-yellow-600")}
+            disabled={loading || !isActuallyVisible}
+            title={
+              !isActuallyVisible ? "Product must be approved and published to be featured" :
+              isFeatured ? "Remove from featured section" : 
+              "Feature on homepage"
+            }
+            className={cn(
+              "p-2 flex items-center justify-center", 
+              isFeatured && "text-yellow-600",
+              !isActuallyVisible && "opacity-50"
+            )}
           >
             <ApperIcon name="Star" className={cn("w-4 h-4", isFeatured && "fill-current")} />
           </Button>

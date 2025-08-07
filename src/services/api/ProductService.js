@@ -303,7 +303,7 @@ create: async (product) => {
     }
     
 // Enhanced data processing with comprehensive validation
-    const processedProduct = {
+const processedProduct = {
       ...product,
       Id: newId,
       
@@ -394,12 +394,22 @@ create: async (product) => {
       modifiedBy: product.modifiedBy || 'system',
       version: 1,
       
-      // Status and visibility with workflow and scheduling support
-      visibility: product.visibility || "draft",
-      workflowStatus: product.workflowStatus || "draft",
-      requiresApproval: product.requiresApproval || false,
-      approvedAt: product.visibility === 'published' ? new Date().toISOString() : null,
-      approvedBy: product.visibility === 'published' ? (product.approvedBy || 'system') : null,
+      // Enhanced approval workflow fields
+      status: product.status || 'pending', // pending, approved, rejected
+      visibility: product.visibility || "draft", // draft, published
+      workflowStatus: product.workflowStatus || "draft", // draft, review, approved, published
+      requiresApproval: product.requiresApproval !== false, // default true for new products
+      
+      // Approval tracking
+      approvedAt: product.status === 'approved' ? new Date().toISOString() : null,
+      approvedBy: product.status === 'approved' ? (product.approvedBy || 'system') : null,
+      rejectedAt: product.status === 'rejected' ? new Date().toISOString() : null,
+      rejectedBy: product.status === 'rejected' ? (product.rejectedBy || 'system') : null,
+      rejectionReason: product.status === 'rejected' ? product.rejectionReason : null,
+      
+      // Publication tracking
+      publishedAt: product.visibility === 'published' && product.status === 'approved' ? new Date().toISOString() : null,
+      publishedBy: product.visibility === 'published' && product.status === 'approved' ? (product.publishedBy || 'system') : null,
       
       // Data integrity
       dataChecksum: generateProductChecksum({
@@ -413,15 +423,17 @@ create: async (product) => {
       validatedAt: new Date().toISOString(),
       validationVersion: '1.0',
       
-      // Enhanced audit trail with scheduling events
+      // Enhanced audit trail with approval workflow
       auditLog: [{
         action: product.scheduledPublish ? 'scheduled' : 'created',
         timestamp: new Date().toISOString(),
         user: product.createdBy || 'system',
         details: product.scheduledPublish ? 
           `Product scheduled for publication on ${new Date(product.scheduledPublish).toLocaleString()}` : 
-          'Product created successfully',
+          'Product created and pending approval',
         validation: 'passed',
+        workflowStep: 'creation',
+        approvalStatus: product.status || 'pending',
         schedulingInfo: product.scheduledPublish ? {
           type: product.scheduledPublishType || "date",
           scheduledTime: product.scheduledPublish,
@@ -432,7 +444,8 @@ create: async (product) => {
       // Legacy compatibility fields
       image: product.mainImage || "",
       oldPrice: validateAndFormatPrice(product.sellingPrice),
-      featured: Boolean(product.featured)
+      featured: Boolean(product.featured),
+      moderatorApproved: product.status === 'approved' // backward compatibility
     };
     
     // Final business logic validation
@@ -451,6 +464,9 @@ create: async (product) => {
         title: processedProduct.title,
         sku: processedProduct.sku,
         price: processedProduct.sellingPrice,
+        status: processedProduct.status,
+        visibility: processedProduct.visibility,
+        requiresApproval: processedProduct.requiresApproval,
         marketing: {
           tags: processedProduct.tags,
           badges: processedProduct.badges,
@@ -467,43 +483,140 @@ create: async (product) => {
     }
   },
 
-  // Toggle product visibility
-async toggleVisibility(id) {
+// Enhanced toggle product visibility with approval workflow
+  async toggleVisibility(id) {
     const product = productsData.find(p => p.Id === parseInt(id));
-    if (product) {
-      product.visibility = product.visibility === 'published' ? 'draft' : 'published';
-      product.lastModified = new Date().toISOString();
-      return product;
+    if (!product) {
+      throw new Error('Product not found');
     }
+    
+    const currentVisibility = product.visibility || 'draft';
+    const currentStatus = product.status || 'pending';
+    
+    // If making visible, ensure product is approved
+    if (currentVisibility === 'draft') {
+      if (currentStatus !== 'approved') {
+        throw new Error('Product must be approved before it can be published');
+      }
+      product.visibility = 'published';
+      product.publishedAt = new Date().toISOString();
+      product.publishedBy = 'system'; // Should be passed from caller
+    } else {
+      product.visibility = 'draft';
+      product.publishedAt = null;
+      product.publishedBy = null;
+    }
+    
+    product.lastModified = new Date().toISOString();
+    
+    // Add to audit log
+    product.auditLog = product.auditLog || [];
+    product.auditLog.push({
+      action: 'visibility_toggled',
+      timestamp: new Date().toISOString(),
+      user: 'system',
+      details: `Product ${product.visibility === 'published' ? 'published' : 'hidden'}`,
+      oldValue: currentVisibility,
+      newValue: product.visibility
+    });
+    
+    return product;
+  },
+
+// Enhanced toggle featured status with approval workflow
+  async toggleFeatured(id) {
+    const product = productsData.find(p => p.Id === parseInt(id));
+    if (!product) {
+      throw new Error('Product not found');
+    }
+    
+    // Only allow featuring approved, published products
+    if (product.status !== 'approved' || product.visibility !== 'published') {
+      throw new Error('Only approved and published products can be featured');
+    }
+    
+    const wasFeatured = product.featured;
+    product.featured = !product.featured;
+    product.priority = product.featured ? Date.now() : 0;
+    product.lastModified = new Date().toISOString();
+    
+    // Add to audit log
+    product.auditLog = product.auditLog || [];
+    product.auditLog.push({
+      action: 'featured_toggled',
+      timestamp: new Date().toISOString(),
+      user: 'system',
+      details: `Product ${product.featured ? 'marked as featured' : 'removed from featured'}`,
+      oldValue: wasFeatured,
+      newValue: product.featured
+    });
+    
+    return product;
     throw new Error('Product not found');
   },
 
-  // Toggle featured status
-async toggleFeatured(id) {
-    const product = productsData.find(p => p.Id === parseInt(id));
-    if (product) {
-      product.featured = !product.featured;
-      product.priority = product.featured ? Date.now() : 0;
-      product.lastModified = new Date().toISOString();
-      return product;
-    }
-    throw new Error('Product not found');
-  },
-
-  // Bulk update products
+// Enhanced bulk update products with approval workflow
   bulkUpdate: async (updates) => {
     const updatedProducts = [];
+    const errors = [];
     
     for (const update of updates) {
-      const product = productsData.find(p => p.Id === parseInt(update.id));
-      if (product) {
+      try {
+        const product = productsData.find(p => p.Id === parseInt(update.id));
+        if (!product) {
+          errors.push(`Product not found: ${update.id}`);
+          continue;
+        }
+        
+        // Validate workflow transitions
+        const oldStatus = product.status || 'pending';
+        const newStatus = update.data.status || oldStatus;
+        const oldVisibility = product.visibility || 'draft';
+        const newVisibility = update.data.visibility || oldVisibility;
+        
+        // Ensure published products are approved
+        if (newVisibility === 'published' && newStatus !== 'approved') {
+          update.data.status = 'approved';
+          update.data.approvedAt = new Date().toISOString();
+          update.data.approvedBy = update.data.modifiedBy || 'system';
+        }
+        
+        // Update product with workflow tracking
         Object.assign(product, update.data);
         product.lastModified = new Date().toISOString();
+        
+        // Add workflow history
+        if (oldStatus !== newStatus || oldVisibility !== newVisibility) {
+          product.auditLog = product.auditLog || [];
+          product.auditLog.push({
+            action: 'bulk_updated',
+            timestamp: new Date().toISOString(),
+            user: update.data.modifiedBy || 'system',
+            details: `Status: ${oldStatus} → ${newStatus}, Visibility: ${oldVisibility} → ${newVisibility}`,
+            workflowTransition: {
+              oldStatus,
+              newStatus,
+              oldVisibility,
+              newVisibility
+            }
+          });
+        }
+        
         updatedProducts.push(product);
+      } catch (error) {
+        errors.push(`Error updating product ${update.id}: ${error.message}`);
       }
     }
     
-    return updatedProducts;
+    return {
+      updatedProducts,
+      errors,
+      summary: {
+        total: updates.length,
+        successful: updatedProducts.length,
+        failed: errors.length
+      }
+    };
   },
 
   // Bulk price adjustment
@@ -640,6 +753,7 @@ delete: async (id) => {
     };
   },
 
+// Enhanced bulk update with comprehensive approval workflow
   bulkUpdate: async (updates) => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
@@ -686,7 +800,33 @@ delete: async (id) => {
           continue;
         }
         
-        // Apply updates with validation
+        // Enhanced approval workflow validation
+        const oldStatus = originalProduct.status || 'pending';
+        const newStatus = data.status || oldStatus;
+        const oldVisibility = originalProduct.visibility || 'draft';
+        const newVisibility = data.visibility || oldVisibility;
+        
+        // Auto-approve if publishing and user has permission
+        if (newVisibility === 'published' && newStatus === 'pending') {
+          data.status = 'approved';
+          data.approvedAt = timestamp;
+          data.approvedBy = data.modifiedBy || 'admin';
+        }
+        
+        // Auto-set publication fields when approved + published
+        if (data.status === 'approved' && data.visibility === 'published') {
+          data.publishedAt = timestamp;
+          data.publishedBy = data.modifiedBy || 'admin';
+          data.moderatorApproved = true; // backward compatibility
+        }
+        
+        // Clear publication fields when draft
+        if (data.visibility === 'draft') {
+          data.publishedAt = null;
+          data.publishedBy = null;
+        }
+        
+        // Apply updates with enhanced workflow tracking
         const updatedData = {
           ...originalProduct,
           ...data,
@@ -704,7 +844,15 @@ delete: async (id) => {
               timestamp,
               user: data.modifiedBy || 'admin',
               changes: Object.keys(data).filter(key => data[key] !== originalProduct[key]),
-              details: 'Product updated via bulk operation'
+              details: 'Product updated via bulk operation',
+              workflowTransition: (oldStatus !== newStatus || oldVisibility !== newVisibility) ? {
+                oldStatus,
+                newStatus,
+                oldVisibility,
+                newVisibility,
+                autoApproved: data.status === 'approved' && originalProduct.status !== 'approved',
+                autoPublished: data.visibility === 'published' && originalProduct.visibility !== 'published'
+              } : null
             }
           ]
         };
@@ -720,7 +868,10 @@ delete: async (id) => {
         productsData[productIndex] = updatedData;
         updatedProducts.push({ ...updatedData });
         
-        console.log(`✏️ Product updated: ${updatedData.title} (ID: ${numericId})`);
+        // Enhanced logging
+        const workflowInfo = (oldStatus !== newStatus || oldVisibility !== newVisibility) ? 
+          ` [${oldStatus}→${newStatus}, ${oldVisibility}→${newVisibility}]` : '';
+        console.log(`✏️ Product updated: ${updatedData.title} (ID: ${numericId})${workflowInfo}`);
         
       } catch (error) {
         console.error(`Error updating product ${update.id}:`, error);
@@ -728,11 +879,16 @@ delete: async (id) => {
       }
     }
     
-    // Log bulk operation results
-    console.log(`📊 Bulk Update Results:`, {
+    // Enhanced logging with workflow metrics
+    const workflowChanges = updatedProducts.filter(p => 
+      p.auditLog?.[p.auditLog.length - 1]?.workflowTransition
+    ).length;
+    
+    console.log(`📊 Enhanced Bulk Update Results:`, {
       requested: updates.length,
       successful: updatedProducts.length,
       failed: errors.length,
+      workflowChanges,
       errors: errors.slice(0, 5)
     });
     
@@ -742,13 +898,14 @@ delete: async (id) => {
       summary: {
         total: updates.length,
         successful: updatedProducts.length,
-        failed: errors.length
+        failed: errors.length,
+        workflowChanges
       }
     };
   },
 
   // Enhanced bulk price adjustment with comprehensive validation
-  bulkPriceAdjustment: async (ids, adjustment) => {
+bulkPriceAdjustment: async (ids, adjustment) => {
     await new Promise(resolve => setTimeout(resolve, 400));
     
     const updatedProducts = [];
@@ -840,7 +997,7 @@ delete: async (id) => {
           continue;
         }
         
-        // Update product with price history
+        // Update product with price history and workflow considerations
         const updatedProduct = {
           ...product,
           price: newPrice,
@@ -848,6 +1005,9 @@ delete: async (id) => {
           lastModified: timestamp,
           modifiedBy: 'admin',
           version: (product.version || 0) + 1,
+          
+          // If price change is significant, may need re-approval
+          requiresReapproval: product.status === 'approved' && Math.abs((newPrice - oldPrice) / oldPrice) > 0.5,
           
           // Enhanced price history tracking
           priceHistory: [
@@ -861,7 +1021,8 @@ delete: async (id) => {
               adjustmentType: adjustment.type,
               adjustmentReason: adjustment.reason || 'bulk_price_adjustment',
               date: timestamp,
-              appliedBy: 'admin'
+              appliedBy: 'admin',
+              requiresReapproval: product.status === 'approved' && Math.abs((newPrice - oldPrice) / oldPrice) > 0.5
             }
           ],
           
@@ -874,7 +1035,9 @@ delete: async (id) => {
               user: 'admin',
               details: `Price adjusted: ${adjustment.type} ${adjustmentValue}${adjustment.type === 'percentage' ? '%' : ' PKR'}`,
               oldValues: { price: oldPrice, sellingPrice: oldSellingPrice },
-              newValues: { price: newPrice, sellingPrice: newSellingPrice }
+              newValues: { price: newPrice, sellingPrice: newSellingPrice },
+              workflowImpact: product.status === 'approved' && Math.abs((newPrice - oldPrice) / oldPrice) > 0.5 ? 
+                'significant_price_change_requires_reapproval' : 'minor_change'
             }
           ]
         };
@@ -915,44 +1078,152 @@ delete: async (id) => {
   },
 
 // Admin-specific methods
+// Enhanced async toggleVisibility with approval workflow
   toggleVisibility: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
-    if (index !== -1) {
-      const currentVisibility = productsData[index].visibility || 'published';
-      productsData[index].visibility = currentVisibility === 'published' ? 'draft' : 'published';
-      productsData[index].lastModified = new Date().toISOString();
-      return { ...productsData[index] };
+    if (index === -1) {
+      return null;
     }
-    return null;
+    
+    const product = productsData[index];
+    const currentVisibility = product.visibility || 'draft';
+    const currentStatus = product.status || 'pending';
+    
+    // Enhanced workflow validation
+    if (currentVisibility === 'draft' && currentStatus !== 'approved') {
+      throw new Error('Product must be approved before it can be published');
+    }
+    
+    // Toggle visibility with workflow tracking
+    const newVisibility = currentVisibility === 'published' ? 'draft' : 'published';
+    const timestamp = new Date().toISOString();
+    
+    productsData[index] = {
+      ...product,
+      visibility: newVisibility,
+      lastModified: timestamp,
+      publishedAt: newVisibility === 'published' ? timestamp : null,
+      publishedBy: newVisibility === 'published' ? 'system' : null,
+      
+      // Update audit log
+      auditLog: [
+        ...(product.auditLog || []),
+        {
+          action: 'visibility_toggled',
+          timestamp,
+          user: 'system',
+          details: `Product ${newVisibility === 'published' ? 'published' : 'hidden'}`,
+          oldValue: currentVisibility,
+          newValue: newVisibility,
+          workflowCompliant: currentStatus === 'approved'
+        }
+      ]
+    };
+    
+    return { ...productsData[index] };
   },
-toggleFeatured: async (id) => {
+// Enhanced async toggleFeatured with approval workflow
+  toggleFeatured: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
-    if (index !== -1) {
-      productsData[index].featured = !productsData[index].featured;
-      productsData[index].lastModified = new Date().toISOString();
-      return { ...productsData[index] };
+    if (index === -1) {
+      return null;
     }
-    return null;
+    
+    const product = productsData[index];
+    
+    // Only allow featuring approved, published products
+    if (product.status !== 'approved' || product.visibility !== 'published') {
+      throw new Error('Only approved and published products can be featured');
+    }
+    
+    const wasFeatured = product.featured;
+    const timestamp = new Date().toISOString();
+    
+    productsData[index] = {
+      ...product,
+      featured: !product.featured,
+      priority: !product.featured ? Date.now() : 0,
+      lastModified: timestamp,
+      
+      // Update audit log
+      auditLog: [
+        ...(product.auditLog || []),
+        {
+          action: 'featured_toggled',
+          timestamp,
+          user: 'system',
+          details: `Product ${!product.featured ? 'marked as featured' : 'removed from featured'}`,
+          oldValue: wasFeatured,
+          newValue: !product.featured,
+          workflowCompliant: product.status === 'approved' && product.visibility === 'published'
+        }
+      ]
+    };
+    
+    return { ...productsData[index] };
   },
 
+// Enhanced status update with workflow validation
   updateStatus: async (id, status) => {
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
-    if (index !== -1) {
-      productsData[index].status = status;
-      productsData[index].lastModified = new Date().toISOString();
-      return { ...productsData[index] };
+    if (index === -1) {
+      return null;
     }
-    return null;
+    
+    const product = productsData[index];
+    const oldStatus = product.status || 'pending';
+    const timestamp = new Date().toISOString();
+    
+    // Status-specific updates
+    const statusUpdates = {
+      status,
+      lastModified: timestamp
+    };
+    
+    if (status === 'approved') {
+      statusUpdates.approvedAt = timestamp;
+      statusUpdates.approvedBy = 'system';
+      statusUpdates.moderatorApproved = true; // backward compatibility
+    } else if (status === 'rejected') {
+      statusUpdates.rejectedAt = timestamp;
+      statusUpdates.rejectedBy = 'system';
+      statusUpdates.visibility = 'draft'; // Hide rejected products
+    }
+    
+    productsData[index] = {
+      ...product,
+      ...statusUpdates,
+      
+      // Update audit log
+      auditLog: [
+        ...(product.auditLog || []),
+        {
+          action: 'status_updated',
+          timestamp,
+          user: 'system',
+          details: `Product status changed from ${oldStatus} to ${status}`,
+          oldValue: oldStatus,
+          newValue: status,
+          workflowStep: status
+        }
+      ]
+    };
+    
+    return { ...productsData[index] };
   },
 
-  // Get featured products for homepage
+// Enhanced get featured products with approval workflow
   getFeaturedProducts: async () => {
     await new Promise(resolve => setTimeout(resolve, 300));
     return productsData
-      .filter(product => product.featured && product.visibility === 'published')
+      .filter(product => 
+        product.featured && 
+        product.visibility === 'published' && 
+        (product.status === 'approved' || !product.status) // backward compatibility
+      )
       .sort((a, b) => (b.priority || 0) - (a.priority || 0))
       .slice(0, 8)
       .map(product => ({ ...product }));
@@ -1064,8 +1335,24 @@ filterProducts: async (filters) => {
       }
     }
 
+// Enhanced status filtering with approval workflow
     if (filters.status && filters.status !== 'all') {
-      filtered = filtered.filter(p => (p.visibility || 'published') === filters.status);
+      if (filters.status === 'published') {
+        filtered = filtered.filter(p => 
+          p.visibility === 'published' && (p.status === 'approved' || !p.status)
+        );
+      } else if (filters.status === 'draft') {
+        filtered = filtered.filter(p => 
+          p.visibility === 'draft' || p.status === 'pending' || p.status === 'rejected'
+        );
+      } else {
+        filtered = filtered.filter(p => (p.visibility || 'published') === filters.status);
+      }
+    }
+    
+    // Additional approval status filter
+    if (filters.approvalStatus && filters.approvalStatus !== 'all') {
+      filtered = filtered.filter(p => (p.status || 'pending') === filters.approvalStatus);
     }
 
     // Advanced search filtering
@@ -1100,7 +1387,7 @@ filterProducts: async (filters) => {
     return Array.from(allTags).sort();
   },
 
-  // Enhanced method for getting featured products with better scoring
+// Enhanced method for getting featured products with approval workflow
   getFeaturedProductsAdvanced: async (options = {}) => {
     await new Promise(resolve => setTimeout(resolve, 300));
     const { limit = 8, category = null, excludeIds = [] } = options;
@@ -1108,11 +1395,15 @@ filterProducts: async (filters) => {
     const scoredProducts = productsData
       .filter(product => 
         product.visibility === 'published' && 
+        (product.status === 'approved' || !product.status) && // ensure approved
         !excludeIds.includes(product.Id) &&
         (category ? product.category.toLowerCase() === category.toLowerCase() : true)
       )
       .map(product => {
         let score = 0;
+        
+        // Approval status scoring
+        if (product.status === 'approved') score += 25;
         
         // Featured status scoring
         if (product.featured) score += 20;

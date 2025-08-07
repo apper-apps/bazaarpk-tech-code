@@ -44,6 +44,7 @@ const [products, setProducts] = useState([]);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [featuredFilter, setFeaturedFilter] = useState('all'); // all, featured, not-featured
 const [visibilityFilter, setVisibilityFilter] = useState('all'); // all, published, draft
+const [statusFilter, setStatusFilter] = useState('all'); // all, pending, approved, rejected
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   // Admin role and permissions
   const [currentUser] = useState({
@@ -158,7 +159,7 @@ const logActivity = (action, details) => {
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
     let filtered = [...products];
 
     // Apply search filter
@@ -223,50 +224,38 @@ const logActivity = (action, details) => {
       });
     }
 
-    // Apply status filter
-if (visibilityFilter !== 'all') {
+    // Apply approval status filter
+    if (statusFilter !== 'all') {
       filtered = filtered.filter(product => {
-        switch (visibilityFilter) {
-          case 'published':
-            return product.visibility === 'published';
-          case 'draft':
-            return product.visibility === 'draft' || !product.visibility;
+        const productStatus = product.status || 'pending';
+        switch (statusFilter) {
+          case 'approved':
+            return productStatus === 'approved';
+          case 'pending':
+            return productStatus === 'pending' || productStatus === 'draft';
+          case 'rejected':
+            return productStatus === 'rejected';
           default:
             return true;
         }
-});
+      });
     }
 
-// Apply sorting - remove async call from useEffect
-    switch (sortBy) {
-      case 'name-asc':
-        filtered.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case 'name-desc':
-        filtered.sort((a, b) => b.title.localeCompare(a.title));
-        break;
-      case 'newest':
-        filtered.sort((a, b) => (b.Id || 0) - (a.Id || 0));
-        break;
-      case 'oldest':
-        filtered.sort((a, b) => (a.Id || 0) - (b.Id || 0));
-        break;
-      case 'price-asc':
-        filtered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
-        break;
-      case 'price-desc':
-        filtered.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
-        break;
-      case 'stock-desc':
-        filtered.sort((a, b) => (parseInt(b.stock) || 0) - (parseInt(a.stock) || 0));
-        break;
-      case 'last-updated':
-        filtered.sort((a, b) => new Date(b.lastModified || 0) - new Date(a.lastModified || 0));
-        break;
-      default:
-        break;
+    // Apply visibility filter
+    if (visibilityFilter !== 'all') {
+      filtered = filtered.filter(product => {
+        switch (visibilityFilter) {
+          case 'published':
+            return product.visibility === 'published' && (product.status === 'approved' || !product.status);
+          case 'draft':
+            return product.visibility === 'draft' || !product.visibility || product.status === 'pending';
+          default:
+            return true;
+        }
+      });
     }
-    // Apply role-based filtering for moderators
+
+// Apply role-based filtering for moderators
     if (currentUser.role === 'moderator') {
       // Moderators might see only certain categories or approved products
       filtered = filtered.filter(product => 
@@ -282,26 +271,35 @@ if (visibilityFilter !== 'all') {
       case 'name-desc':
         filtered.sort((a, b) => b.title.localeCompare(a.title));
         break;
+      case 'price-asc':
+        filtered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+        break;
+      case 'price-desc':
+        filtered.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
+        break;
       case 'price-high':
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
         break;
       case 'price-low':
-        filtered.sort((a, b) => a.price - b.price);
+        filtered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
         break;
       case 'stock-high':
-        filtered.sort((a, b) => b.stock - a.stock);
+        filtered.sort((a, b) => (parseInt(b.stock) || 0) - (parseInt(a.stock) || 0));
         break;
       case 'stock-low':
-        filtered.sort((a, b) => a.stock - b.stock);
+        filtered.sort((a, b) => (parseInt(a.stock) || 0) - (parseInt(b.stock) || 0));
+        break;
+      case 'stock-desc':
+        filtered.sort((a, b) => (parseInt(b.stock) || 0) - (parseInt(a.stock) || 0));
         break;
       case 'most-popular':
         filtered.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
-break;
+        break;
       case 'newest':
-        filtered.sort((a, b) => b.Id - a.Id);
+        filtered.sort((a, b) => (b.Id || 0) - (a.Id || 0));
         break;
       case 'oldest':
-        filtered.sort((a, b) => a.Id - b.Id);
+        filtered.sort((a, b) => (a.Id || 0) - (b.Id || 0));
         break;
       case 'last-updated':
         filtered.sort((a, b) => 
@@ -309,8 +307,8 @@ break;
         );
         break;
       case 'pending-approval':
-if (currentUser.role === 'admin' || currentUser.role === 'moderator') {
-          filtered = filtered.filter(p => p.status === 'pending' || p.moderatorApproved === false);
+        if (currentUser.role === 'admin' || currentUser.role === 'moderator') {
+          filtered = filtered.filter(p => (p.status === 'pending' || !p.status) && p.visibility !== 'published');
         }
         break;
       default:
@@ -318,9 +316,8 @@ if (currentUser.role === 'admin' || currentUser.role === 'moderator') {
     }
 
     setFilteredProducts(filtered);
-}, [products, searchQuery, selectedCategory, sortBy, priceRange, stockFilter, tagFilter, featuredFilter, visibilityFilter, currentUser.role]);
-
-// Bulk selection handlers
+}, [products, searchQuery, selectedCategory, sortBy, priceRange, stockFilter, tagFilter, featuredFilter, visibilityFilter, statusFilter, currentUser.role]);
+  // Bulk selection handlers
   const handleSelectAll = () => {
     if (selectedProducts.size === filteredProducts.length) {
       setSelectedProducts(new Set());
@@ -458,26 +455,55 @@ const handleBulkApprove = async () => {
         initiatedAt: new Date().toISOString()
       });
       
-const updates = selectedIds.map(id => ({
+      // Enhanced approval data with proper status and visibility handling
+      const updates = selectedIds.map(id => ({
         id,
         data: { 
-          moderatorApproved: true, 
+          // Approval workflow fields
           status: 'approved',
-          visibility: 'published',
+          moderatorApproved: true,
           approvedAt: new Date().toISOString(),
           approvedBy: currentUser.id || currentUser.role,
-          lastModified: new Date().toISOString()
+          
+          // Publication fields - auto-publish approved products
+          visibility: 'published',
+          publishedAt: new Date().toISOString(),
+          publishedBy: currentUser.id || currentUser.role,
+          
+          // Audit fields
+          lastModified: new Date().toISOString(),
+          modifiedBy: currentUser.id || currentUser.role,
+          
+          // Workflow history
+          workflowHistory: [{
+            action: 'approved_and_published',
+            timestamp: new Date().toISOString(),
+            user: currentUser.id || currentUser.role,
+            previousStatus: 'pending',
+            newStatus: 'approved',
+            autoPublished: true
+          }]
         }
       }));
       
-      // Execute bulk update with performance tracking
+      // Execute bulk update with enhanced error handling
       const updatePromises = updates.map(async (update, index) => {
         try {
           const result = await ProductService.bulkUpdate([update]);
-          return { id: update.id, success: true, index };
+          return { 
+            id: update.id, 
+            success: true, 
+            index,
+            data: result.updatedProducts?.[0] || update.data
+          };
         } catch (error) {
           console.error(`Failed to approve product ${update.id}:`, error);
-          return { id: update.id, success: false, error: error.message, index };
+          return { 
+            id: update.id, 
+            success: false, 
+            error: error.message, 
+            index 
+          };
         }
       });
       
@@ -485,17 +511,31 @@ const updates = selectedIds.map(id => ({
       const successful = results.filter(r => r.status === 'fulfilled' && r.value.success);
       const failed = results.filter(r => r.status === 'rejected' || !r.value?.success);
       
-      // Update products list
+      // Update products list with comprehensive state management
       if (successful.length > 0) {
         const successfulIds = successful.map(r => r.value.id);
         setProducts(prev => prev.map(p => 
           successfulIds.includes(p.Id) 
             ? { 
                 ...p, 
+                // Approval status
+                status: 'approved',
                 moderatorApproved: true, 
-                status: 'approved', 
+                approvedAt: new Date().toISOString(),
+                approvedBy: currentUser.id || currentUser.role,
+                
+                // Publication status
                 visibility: 'published',
-                approvedAt: new Date().toISOString()
+                publishedAt: new Date().toISOString(),
+                publishedBy: currentUser.id || currentUser.role,
+                
+                // Audit trail
+                lastModified: new Date().toISOString(),
+                modifiedBy: currentUser.id || currentUser.role,
+                
+                // Clear any pending flags
+                requiresApproval: false,
+                pendingChanges: null
               }
             : p
         ));
@@ -511,25 +551,23 @@ const updates = selectedIds.map(id => ({
         successfulCount: successful.length,
         failedCount: failed.length,
         duration: Math.round(duration),
-        approvedBy: currentUser.role
+        approvedBy: currentUser.role,
+        autoPublished: successful.length
       });
       
-      // Track approval performance
-      if (typeof window !== 'undefined' && window.gtag) {
-        window.gtag('event', 'bulk_approve_performance', {
-          product_count: selectedIds.length,
-          duration_ms: Math.round(duration),
-          success_rate: (successful.length / selectedIds.length) * 100,
-          approver_role: currentUser.role
-        });
-      }
-      
+      // Enhanced success messaging
       if (failed.length === 0) {
-        showToast(`${successful.length} products approved successfully`, 'success');
+        showToast(
+          `${successful.length} products approved and published successfully! They are now visible to customers.`, 
+          'success'
+        );
       } else if (successful.length > 0) {
-        showToast(`${successful.length} products approved, ${failed.length} failed`, 'warning');
+        showToast(
+          `${successful.length} products approved and published, ${failed.length} failed. Check logs for details.`, 
+          'warning'
+        );
       } else {
-        showToast('Failed to approve products', 'error');
+        showToast('Failed to approve products. Please try again or check individual product settings.', 'error');
       }
       
     } catch (error) {
@@ -588,11 +626,24 @@ const handleBulkEdit = async () => {
 
       // Handle other bulk updates
       const otherUpdates = [];
-      if (bulkEditData.category) {
+if (bulkEditData.category) {
         otherUpdates.push({ field: 'category', value: bulkEditData.category });
       }
       if (bulkEditData.status) {
-        otherUpdates.push({ field: 'visibility', value: bulkEditData.status });
+        // Handle status changes with proper workflow
+        if (bulkEditData.status === 'published') {
+          otherUpdates.push(
+            { field: 'visibility', value: 'published' },
+            { field: 'status', value: 'approved' },
+            { field: 'publishedAt', value: new Date().toISOString() },
+            { field: 'publishedBy', value: currentUser.id || currentUser.role }
+          );
+        } else if (bulkEditData.status === 'draft') {
+          otherUpdates.push(
+            { field: 'visibility', value: 'draft' },
+            { field: 'status', value: 'pending' }
+          );
+        }
       }
 
       if (otherUpdates.length > 0) {
@@ -641,11 +692,22 @@ const handleBulkEdit = async () => {
       }
       
       // Update products list with successful updates
-      if (updatedProducts.length > 0) {
+if (updatedProducts.length > 0) {
         setProducts(prev => prev.map(p => {
           const updated = updatedProducts.find(u => u.Id === p.Id);
-          return updated || p;
+          return updated ? { ...p, ...updated } : p;
         }));
+        
+        // Show enhanced success message based on what was updated
+        const statusChanges = updatedProducts.filter(p => p.visibility === 'published').length;
+        if (statusChanges > 0) {
+          showToast(
+            `${updatedProducts.length} products updated. ${statusChanges} products are now published and visible to customers.`, 
+            'success'
+          );
+        } else {
+          showToast(`${updatedProducts.length} products updated successfully`, 'success');
+        }
       }
       
       setSelectedProducts(new Set());
@@ -696,24 +758,61 @@ const handleBulkEdit = async () => {
     }
   };
 
-  // Product actions
-const handleToggleVisibility = async (productId) => {
+// Product actions with enhanced approval workflow
+  const handleToggleVisibility = async (productId) => {
     const startTime = performance.now();
     try {
       setActionLoading(true);
       const product = products.find(p => p.Id === productId);
       
+      // Check if product needs approval before publishing
+      const currentStatus = product?.status || 'pending';
+      const currentVisibility = product?.visibility || 'draft';
+      
       logActivity('visibility_toggle_initiated', {
         productId,
         productTitle: product?.title || 'Unknown',
-        currentVisibility: product?.visibility || 'unknown'
+        currentVisibility,
+        currentStatus
       });
       
+      // If trying to publish but not approved, handle accordingly
+      if (currentVisibility === 'draft' && currentStatus !== 'approved') {
+        if (currentUser.role === 'admin' || currentUser.role === 'moderator') {
+          // Auto-approve and publish for admins
+          const updatedProduct = await ProductService.bulkUpdate([{
+            id: productId,
+            data: {
+              status: 'approved',
+              visibility: 'published',
+              approvedAt: new Date().toISOString(),
+              approvedBy: currentUser.id || currentUser.role,
+              publishedAt: new Date().toISOString(),
+              publishedBy: currentUser.id || currentUser.role,
+              lastModified: new Date().toISOString()
+            }
+          }]);
+          
+          if (updatedProduct?.updatedProducts?.[0]) {
+            const updated = updatedProduct.updatedProducts[0];
+            setProducts(prev => prev.map(p => 
+              p.Id === productId ? { ...p, ...updated } : p
+            ));
+            showToast('Product approved and published successfully!', 'success');
+          }
+        } else {
+          showToast('Product must be approved before publishing. Contact an administrator.', 'warning');
+        }
+        return;
+      }
+      
+      // Regular visibility toggle for approved products
       const updatedProduct = await ProductService.toggleVisibility(productId);
       
       if (updatedProduct) {
         setProducts(prev => prev.map(p => 
-p.Id === productId ? {
+          p.Id === productId ? {
+            ...p,
             ...updatedProduct,
             lastModified: new Date().toISOString(),
             modifiedBy: currentUser.id || currentUser.role,
@@ -728,21 +827,15 @@ p.Id === productId ? {
           productId,
           productTitle: updatedProduct.title,
           newVisibility: updatedProduct.visibility,
+          newStatus: updatedProduct.status,
           duration: Math.round(duration)
         });
         
+        const isPublished = updatedProduct.visibility === 'published';
         showToast(
-          `Product ${updatedProduct.visibility === 'published' ? 'published' : 'hidden'}`,
+          `Product ${isPublished ? 'published and visible to customers' : 'hidden from customers'}`,
           'success'
         );
-        
-        // Track visibility toggle performance
-        if (typeof window !== 'undefined' && window.gtag) {
-          window.gtag('event', 'visibility_toggle', {
-            new_visibility: updatedProduct.visibility,
-            duration_ms: Math.round(duration)
-          });
-        }
       }
     } catch (error) {
       console.error('Error toggling visibility:', error);
@@ -760,16 +853,24 @@ p.Id === productId ? {
     }
   };
 
-  const handleToggleFeatured = async (productId) => {
+const handleToggleFeatured = async (productId) => {
     const startTime = performance.now();
     try {
       setActionLoading(true);
       const product = products.find(p => p.Id === productId);
       
+      // Only allow featuring of approved, published products
+      if (product?.status !== 'approved' || product?.visibility !== 'published') {
+        showToast('Only approved and published products can be featured', 'warning');
+        return;
+      }
+      
       logActivity('featured_toggle_initiated', {
         productId,
         productTitle: product?.title || 'Unknown',
-        currentFeatured: product?.featured || false
+        currentFeatured: product?.featured || false,
+        productStatus: product?.status,
+        productVisibility: product?.visibility
       });
       
       const updatedProduct = await ProductService.toggleFeatured(productId);
@@ -777,8 +878,9 @@ p.Id === productId ? {
       if (updatedProduct) {
         setProducts(prev => prev.map(p => 
           p.Id === productId ? {
+            ...p,
             ...updatedProduct,
-lastModified: new Date().toISOString(),
+            lastModified: new Date().toISOString(),
             modifiedBy: currentUser.id || currentUser.role,
             featuredChangedAt: new Date().toISOString()
           } : p
@@ -795,17 +897,9 @@ lastModified: new Date().toISOString(),
         });
         
         showToast(
-          `Product ${updatedProduct.featured ? 'marked as featured' : 'removed from featured'}`,
+          `Product ${updatedProduct.featured ? 'marked as featured and will appear on homepage' : 'removed from featured section'}`,
           'success'
         );
-        
-        // Track featured toggle performance
-        if (typeof window !== 'undefined' && window.gtag) {
-          window.gtag('event', 'featured_toggle', {
-            new_featured: updatedProduct.featured,
-            duration_ms: Math.round(duration)
-          });
-        }
       }
     } catch (error) {
       console.error('Error toggling featured status:', error);
@@ -958,8 +1052,9 @@ const handleDeleteConfirm = async () => {
     });
     setShowDeleteDialog(false);
     setProductToDelete(null);
-  };
-  // Clear filters
+};
+
+  // Clear filters function
   const clearAllFilters = () => {
     setSearchQuery('');
     setSelectedCategory('all');
@@ -968,8 +1063,9 @@ const handleDeleteConfirm = async () => {
     setTagFilter('all');
     setDateRange({ start: '', end: '' });
     setFeaturedFilter('all');
-setVisibilityFilter('all');
-    setSortBy('name-asc');
+    setVisibilityFilter('all');
+    setStatusFilter('all');
+    setSortBy('newest');
   };
 
   // Get unique tags from all products
@@ -1243,8 +1339,27 @@ return (
                     aria-label="Filter products by visibility status"
                   >
                     <option value="all">All Products</option>
-                    <option value="published">Published</option>
-                    <option value="draft">Draft</option>
+                    <option value="published">Published (Live)</option>
+                    <option value="draft">Draft (Hidden)</option>
+                  </select>
+                </div>
+                
+                {/* Approval Status Filter */}
+                <div>
+                  <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                    Approval Status
+                  </label>
+                  <select
+                    id="status-filter"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    aria-label="Filter products by approval status"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="pending">Pending Approval</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
                   </select>
                 </div>
               )}
@@ -1403,8 +1518,27 @@ return (
                     aria-label="Filter by publication status"
                   >
                     <option value="all">All Products</option>
-                    <option value="published">Published</option>
-                    <option value="draft">Draft</option>
+                    <option value="published">Published (Live)</option>
+                    <option value="draft">Draft (Hidden)</option>
+                  </select>
+                </div>
+                
+                {/* Approval Status Filter */}
+                <div>
+                  <label htmlFor="status-filter-mobile" className="block text-sm font-medium text-gray-700 mb-1">
+                    Approval Status
+                  </label>
+                  <select
+                    id="status-filter-mobile"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    aria-label="Filter by approval status"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="pending">Pending Approval</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
                   </select>
                 </div>
 
@@ -1490,7 +1624,13 @@ return (
             </div>
             <div className="bg-white p-4 rounded-lg border border-gray-200">
               <div className="text-2xl font-bold text-green-600">
-                {filteredProducts.filter(p => p.visibility === 'published').length}
+{filteredProducts.filter(p => p.visibility === 'published' && (p.status === 'approved' || !p.status)).length}
+              </div>
+              
+              {/* Pending Approval Count */}
+              <div className="text-xs text-gray-500 mt-1">
+                <ApperIcon name="Clock" className="w-3 h-3 inline mr-1" />
+                {filteredProducts.filter(p => (p.status === 'pending' || !p.status) && p.visibility !== 'published').length} pending approval
               </div>
               <div className="text-sm text-gray-600">Published</div>
             </div>
@@ -1523,7 +1663,7 @@ return (
                     transition={{ duration: 0.2 }}
                     className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200"
                   >
-                    <ProductManagementCard
+<ProductManagementCard
                       product={product}
                       viewMode={viewMode}
                       selected={selectedProducts.has(product.Id)}
@@ -1535,6 +1675,7 @@ return (
                       onDelete={handleDeleteClick}
                       loading={actionLoading}
                       currentUser={currentUser}
+                      showApprovalStatus={true}
                     />
                   </motion.div>
                 ))}
@@ -1555,7 +1696,7 @@ return (
                   >
                     <ProductManagementCard
                       product={product}
-                      viewMode={viewMode}
+viewMode={viewMode}
                       selected={selectedProducts.has(product.Id)}
                       onSelect={handleSelectProduct}
                       onToggleVisibility={handleToggleVisibility}
@@ -1565,6 +1706,7 @@ return (
                       onDelete={handleDeleteClick}
                       loading={actionLoading}
                       currentUser={currentUser}
+                      showApprovalStatus={true}
                     />
                   </motion.div>
                 ))}
@@ -1697,10 +1839,10 @@ return (
                     </select>
                   </div>
 
-                  {/* Status Change */}
+{/* Status Change */}
                   <div>
                     <label htmlFor="bulk-status-select" className="block text-sm font-medium text-gray-700 mb-3">
-                      👁️ Change Visibility
+                      👁️ Change Visibility & Status
                     </label>
                     <select
                       id="bulk-status-select"
@@ -1710,9 +1852,12 @@ return (
                       aria-label="New publication status for selected products"
                     >
                       <option value="">Keep Current Status</option>
-                      <option value="published">✅ Published (Visible to customers)</option>
-                      <option value="draft">📝 Draft (Hidden from customers)</option>
+                      <option value="published">✅ Publish (Approve + Make Visible)</option>
+                      <option value="draft">📝 Set to Draft (Hide from customers)</option>
                     </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Publishing will auto-approve products and make them visible to customers
+                    </p>
                   </div>
 
                   {/* Preview Changes */}
