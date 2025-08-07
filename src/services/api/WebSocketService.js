@@ -192,14 +192,15 @@ class WebSocketService {
             errorDetails.parseError = parseError.message;
           }
           
-          // Ensure we never serialize Event objects or other problematic types
+// Ensure we never serialize Event objects or other problematic types
           const safeErrorData = {
             error: errorMessage,
             code: errorCode,
-details: errorDetails,
+            details: errorDetails,
             timestamp: Date.now(),
             readyState: readyState
           };
+          
           // Emit the safe error data
           this.emit('connection', { 
             status: 'error', 
