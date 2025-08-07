@@ -1327,41 +1327,43 @@ return (
                 </select>
               </div>
 
-              {/* Approval Status Filter for Moderators */}
+{/* Approval Status Filter for Moderators */}
               {(currentUser.role === 'admin' || currentUser.role === 'moderator') && (
-                <div>
-                  <label htmlFor="status-filter" className="sr-only">Filter by approval status</label>
-<select
-                    id="visibility-filter"
-                    value={visibilityFilter}
-                    onChange={(e) => setVisibilityFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    aria-label="Filter products by visibility status"
-                  >
-                    <option value="all">All Products</option>
-                    <option value="published">Published (Live)</option>
-                    <option value="draft">Draft (Hidden)</option>
-                  </select>
-                </div>
-                
-                {/* Approval Status Filter */}
-                <div>
-                  <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                    Approval Status
-                  </label>
-                  <select
-                    id="status-filter"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    aria-label="Filter products by approval status"
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="pending">Pending Approval</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
+                <>
+                  <div>
+                    <label htmlFor="visibility-filter" className="sr-only">Filter by visibility status</label>
+                    <select
+                      id="visibility-filter"
+                      value={visibilityFilter}
+                      onChange={(e) => setVisibilityFilter(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      aria-label="Filter products by visibility status"
+                    >
+                      <option value="all">All Products</option>
+                      <option value="published">Published (Live)</option>
+                      <option value="draft">Draft (Hidden)</option>
+                    </select>
+                  </div>
+                  
+                  {/* Approval Status Filter */}
+                  <div>
+                    <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                      Approval Status
+                    </label>
+                    <select
+                      id="status-filter"
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      aria-label="Filter products by approval status"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="pending">Pending Approval</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+                </>
               )}
 
               {/* Advanced Filters Toggle */}

@@ -550,9 +550,7 @@ const processedProduct = {
       oldValue: wasFeatured,
       newValue: product.featured
     });
-    
-    return product;
-    throw new Error('Product not found');
+return product;
   },
 
 // Enhanced bulk update products with approval workflow
