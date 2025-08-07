@@ -93,11 +93,13 @@ this.socket.onerror = (error) => {
           let errorMessage = 'WebSocket connection error';
           let errorDetails = {};
           let errorCode = 'WEBSOCKET_ERROR';
+          // Initialize readyState in function scope to prevent reference errors
+          let readyState = 3; // Default to CLOSED state
           
           if (error instanceof Event) {
             // Handle WebSocket Event objects with enhanced information extraction
             const target = error.target;
-            const readyState = target?.readyState;
+            readyState = target?.readyState ?? 3; // Use nullish coalescing for safety
             
             // Map WebSocket readyState to meaningful messages
             const readyStateMessages = {
