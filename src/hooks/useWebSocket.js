@@ -107,12 +107,25 @@ try {
             userMessage = 'Connection error - please try again';
             toastType = 'error';
             break;
-          default:
+default:
             // Use the enhanced error message if available and safe
-            if (safeError.message && safeError.message !== '[object Object]' && safeError.message !== '[object Event]') {
+            if (safeError.message && 
+                typeof safeError.message === 'string' &&
+                safeError.message !== '[object Object]' && 
+                safeError.message !== '[object Event]' &&
+                safeError.message.trim() !== '') {
               userMessage = safeError.message;
             }
         }
+      }
+      
+      // Final safety check before showing toast
+      if (typeof userMessage !== 'string' || 
+          userMessage === '[object Event]' || 
+          userMessage === '[object Object]' ||
+          userMessage.trim() === '') {
+        userMessage = 'Connection error - please try again';
+        toastType = 'warning';
       }
       
       if (showConnectionToasts) {
@@ -203,7 +216,16 @@ case 'error':
               // Ultimate fallback if error processing fails
               errorMessage = 'Connection error - please check your network';
               toastType = 'warning';
-              console.warn('Error message parsing failed:', parseError);
+console.warn('Error message parsing failed:', parseError);
+            }
+            
+            // Ultimate safety check before displaying error message
+            if (typeof errorMessage !== 'string' || 
+                errorMessage === '[object Event]' || 
+                errorMessage === '[object Object]' ||
+                errorMessage.trim() === '') {
+              errorMessage = 'Connection error - please check your network';
+              toastType = 'warning';
             }
             
             showToast(errorMessage, toastType);

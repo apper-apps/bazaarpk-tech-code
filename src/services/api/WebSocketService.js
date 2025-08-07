@@ -192,7 +192,7 @@ class WebSocketService {
             errorDetails.parseError = parseError.message;
           }
           
-// Ensure we never serialize Event objects or other problematic types
+// Ultimate safeguard: Ensure we never serialize Event objects or other problematic types
           const safeErrorData = {
             error: errorMessage,
             code: errorCode,
@@ -201,16 +201,26 @@ class WebSocketService {
             readyState: readyState
           };
           
-          // Emit the safe error data
+          // Final validation: Ensure error message is a safe string
+          let finalErrorMessage = errorMessage;
+          if (!finalErrorMessage || 
+              typeof finalErrorMessage !== 'string' || 
+              finalErrorMessage === '[object Event]' || 
+              finalErrorMessage === '[object Object]' ||
+              finalErrorMessage.trim() === '') {
+            finalErrorMessage = 'WebSocket connection error occurred';
+          }
+          
+          // Emit the safe error data with validated message
           this.emit('connection', { 
             status: 'error', 
-            error: errorMessage,
+            error: finalErrorMessage,
             code: errorCode,
             details: errorDetails,
             timestamp: new Date().toISOString()
           });
           
-          reject(new Error(errorMessage));
+          reject(new Error(finalErrorMessage));
         };
 
       } catch (error) {
