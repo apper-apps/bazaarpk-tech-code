@@ -4,8 +4,8 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/useToast";
 import { CategoryService } from "@/services/api/CategoryService";
 import { ProductService } from "@/services/api/ProductService";
-import { announceToScreenReader, getCSRFToken, initializeCSRF, sanitizeInput, sanitizeNumericInput, sanitizeURL, validateFormData } from "@/utils/security";
 import ApperIcon from "@/components/ApperIcon";
+import Error from "@/components/ui/Error";
 import Home from "@/components/pages/Home";
 import Category from "@/components/pages/Category";
 import Badge from "@/components/atoms/Badge";
@@ -14,6 +14,7 @@ import Button from "@/components/atoms/Button";
 import Card from "@/components/atoms/Card";
 import { cn } from "@/utils/cn";
 import { formatPrice } from "@/utils/currency";
+import { announceToScreenReader, getCSRFToken, initializeCSRF, sanitizeInput, sanitizeNumericInput, sanitizeURL, validateFormData } from "@/utils/security";
 
 const AddProduct = () => {
   const navigate = useNavigate();
@@ -207,9 +208,10 @@ const tabs = [
     { id: "seo", label: "SEO Settings", icon: "Search" },
     { id: "approval", label: "Approval Settings", icon: "Shield" }
   ];
-const handleInputChange = (field, value) => {
-    // Input sanitization based on field type
+const handleInputChange = (field, value, validationInfo = {}) => {
+    // Input sanitization based on field type with enhanced validation
     let sanitizedValue = value;
+    let fieldError = null;
     
     if (typeof value === 'string') {
       switch (field) {
@@ -222,6 +224,13 @@ const handleInputChange = (field, value) => {
             allowNumbers: true, 
             allowSpecialChars: false 
           });
+          // Enhanced validation
+          if (field === 'title' && sanitizedValue.length < 3) {
+            fieldError = "Product name must be at least 3 characters long";
+          }
+          if (field === 'brand' && sanitizedValue && sanitizedValue.length < 2) {
+            fieldError = "Brand name must be at least 2 characters long";
+          }
           break;
         case 'description':
         case 'shortDescription':
@@ -230,6 +239,13 @@ const handleInputChange = (field, value) => {
             allowNumbers: true, 
             allowSpecialChars: true 
           });
+          // Enhanced validation for descriptions
+          if (field === 'description' && sanitizedValue && sanitizedValue.length < 20) {
+            fieldError = "Product description should be at least 20 characters for better customer understanding";
+          }
+          if (field === 'shortDescription' && sanitizedValue && sanitizedValue.length < 10) {
+            fieldError = "Short description should be at least 10 characters";
+          }
           break;
         case 'sku':
         case 'barcode':
@@ -238,11 +254,35 @@ const handleInputChange = (field, value) => {
             allowNumbers: true, 
             allowSpecialChars: false 
           }).toUpperCase();
+          // Enhanced SKU/Barcode validation
+          if (field === 'sku' && sanitizedValue && sanitizedValue.length < 3) {
+            fieldError = "SKU must be at least 3 characters long";
+          }
+          if (field === 'barcode' && sanitizedValue && (sanitizedValue.length < 8 || sanitizedValue.length > 18)) {
+            fieldError = "Barcode should be between 8-18 characters";
+          }
           break;
         case 'sellingPrice':
         case 'buyingPrice':
         case 'discountedPrice':
         case 'discountAmount':
+          sanitizedValue = sanitizeNumericInput(value, { 
+            min: 0, 
+            allowDecimals: true,
+            maxDecimalPlaces: 2
+          });
+          // Enhanced price validation
+          const numValue = parseFloat(sanitizedValue);
+          if (sanitizedValue && (isNaN(numValue) || numValue < 0)) {
+            fieldError = "Price must be a valid positive number";
+          }
+          if (field === 'sellingPrice' && numValue === 0) {
+            fieldError = "Selling price must be greater than 0";
+          }
+          if (field === 'buyingPrice' && numValue >= parseFloat(formData.sellingPrice || 0)) {
+            fieldError = "Cost price should be less than selling price for profitability";
+          }
+          break;
         case 'stockQuantity':
         case 'lowStockThreshold':
         case 'minimumOrderQuantity':
@@ -250,8 +290,19 @@ const handleInputChange = (field, value) => {
         case 'reorderLevel':
           sanitizedValue = sanitizeNumericInput(value, { 
             min: 0, 
-            allowDecimals: ['sellingPrice', 'buyingPrice', 'discountedPrice', 'discountAmount'].includes(field) 
+            allowDecimals: false
           });
+          // Enhanced inventory validation
+          const intValue = parseInt(sanitizedValue);
+          if (sanitizedValue && (isNaN(intValue) || intValue < 0)) {
+            fieldError = "Quantity must be a valid positive number";
+          }
+          if (field === 'minimumOrderQuantity' && intValue < 1) {
+            fieldError = "Minimum order quantity must be at least 1";
+          }
+          if (field === 'maximumOrderQuantity' && intValue < parseInt(formData.minimumOrderQuantity || 1)) {
+            fieldError = "Maximum order quantity must be greater than minimum";
+          }
           break;
         case 'mainImageAltText':
           sanitizedValue = sanitizeInput(value, { 
@@ -259,9 +310,16 @@ const handleInputChange = (field, value) => {
             allowNumbers: true, 
             allowSpecialChars: true 
           });
+          if (sanitizedValue && sanitizedValue.length < 5) {
+            fieldError = "Alt text should be at least 5 characters for accessibility";
+          }
           break;
         case 'videoUrl':
           sanitizedValue = sanitizeURL(value);
+          // Enhanced URL validation
+          if (sanitizedValue && !isValidURL(sanitizedValue)) {
+            fieldError = "Please enter a valid URL (e.g., https://example.com)";
+          }
           break;
         case 'metaTitle':
           sanitizedValue = sanitizeInput(value, { 
@@ -269,6 +327,9 @@ const handleInputChange = (field, value) => {
             allowNumbers: true, 
             allowSpecialChars: true 
           });
+          if (sanitizedValue && sanitizedValue.length > 60) {
+            fieldError = "Meta title should not exceed 60 characters for SEO";
+          }
           break;
         case 'metaDescription':
           sanitizedValue = sanitizeInput(value, { 
@@ -276,6 +337,9 @@ const handleInputChange = (field, value) => {
             allowNumbers: true, 
             allowSpecialChars: true 
           });
+          if (sanitizedValue && sanitizedValue.length > 160) {
+            fieldError = "Meta description should not exceed 160 characters for SEO";
+          }
           break;
         case 'supplierInfo':
         case 'location':
@@ -287,36 +351,53 @@ const handleInputChange = (field, value) => {
           });
           break;
         default:
-          sanitizedValue = sanitizeInput(value);
+          sanitizedValue = sanitizeInput(value, {
+            maxLength: 1000,
+            allowNumbers: true,
+            allowSpecialChars: true
+          });
       }
     }
 
+    // Update form data
     setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
     setUnsavedChanges(true);
     
+    // Update field-specific error
+    if (fieldError) {
+      setErrors(prev => ({ ...prev, [field]: fieldError }));
+    } else if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: "" }));
+    }
+
+    // Auto-generation and calculation logic with validation
+    
     // Auto-generate SKU if title changes
-    if (field === 'title' && sanitizedValue) {
+    if (field === 'title' && sanitizedValue && sanitizedValue.length >= 3) {
       const autoSku = `${formData.category?.substring(0,3).toUpperCase() || 'PRD'}-${sanitizedValue.substring(0,3).toUpperCase()}-${Date.now().toString().slice(-3)}`;
       if (!formData.sku) {
         setFormData(prev => ({ ...prev, sku: autoSku }));
+        showToast("SKU auto-generated", "info");
       }
     }
     
     // Auto-generate meta fields if not set
-    if (field === 'title' && sanitizedValue && !formData.metaTitle) {
-      setFormData(prev => ({ ...prev, metaTitle: sanitizedValue }));
+    if (field === 'title' && sanitizedValue && sanitizedValue.length >= 3 && !formData.metaTitle) {
+      setFormData(prev => ({ ...prev, metaTitle: sanitizedValue.substring(0, 60) }));
+      showToast("Meta title auto-generated", "info");
     }
     
-    if (field === 'shortDescription' && sanitizedValue && !formData.metaDescription) {
-      setFormData(prev => ({ ...prev, metaDescription: sanitizedValue }));
+    if (field === 'shortDescription' && sanitizedValue && sanitizedValue.length >= 10 && !formData.metaDescription) {
+      setFormData(prev => ({ ...prev, metaDescription: sanitizedValue.substring(0, 160) }));
+      showToast("Meta description auto-generated", "info");
     }
     
     // Auto-update main image alt text if not set
-    if (field === 'title' && sanitizedValue && !formData.mainImageAltText) {
+    if (field === 'title' && sanitizedValue && sanitizedValue.length >= 3 && !formData.mainImageAltText) {
       setFormData(prev => ({ ...prev, mainImageAltText: `${sanitizedValue} - Product Image` }));
     }
     
-    // Auto-calculate discount price when discount amount changes
+    // Enhanced discount calculations with validation
     if (field === 'discountAmount' && sanitizedValue) {
       const discountVal = parseFloat(sanitizedValue) || 0;
       const selling = parseFloat(formData.sellingPrice) || 0;
@@ -324,15 +405,25 @@ const handleInputChange = (field, value) => {
       if (selling > 0) {
         let newDiscountedPrice = 0;
         if (formData.discountType === "percentage") {
+          if (discountVal > 100) {
+            setErrors(prev => ({ ...prev, discountAmount: "Discount percentage cannot exceed 100%" }));
+            return;
+          }
           newDiscountedPrice = selling * (1 - discountVal / 100);
         } else {
+          if (discountVal >= selling) {
+            setErrors(prev => ({ ...prev, discountAmount: "Discount amount cannot be greater than or equal to selling price" }));
+            return;
+          }
           newDiscountedPrice = Math.max(0, selling - discountVal);
         }
+        
         setFormData(prev => ({ 
           ...prev, 
           [field]: sanitizedValue, 
           discountedPrice: newDiscountedPrice.toFixed(2) 
         }));
+        showToast("Discount price calculated", "success");
       }
     }
     
@@ -351,24 +442,56 @@ const handleInputChange = (field, value) => {
             ? discountPct.toFixed(1) 
             : discountAmt.toFixed(2)
         }));
+        showToast("Discount amount calculated", "success");
+      } else if (discountedVal >= selling) {
+        setErrors(prev => ({ ...prev, discountedPrice: "Sale price must be less than selling price" }));
       }
     }
     
-    // Auto-set stock status based on quantity
+    // Auto-set stock status based on quantity with enhanced logic
     if (field === 'stockQuantity' && sanitizedValue) {
       const quantity = parseInt(sanitizedValue) || 0;
       const threshold = parseInt(formData.lowStockThreshold) || 10;
       let status = "In Stock";
+      let statusColor = "green";
       
-      if (quantity === 0) status = "Out of Stock";
-      else if (quantity <= threshold) status = "Low Stock";
+      if (quantity === 0) {
+        status = "Out of Stock";
+        statusColor = "red";
+      } else if (quantity <= threshold) {
+        status = "Low Stock";
+        statusColor = "orange";
+      }
       
       setFormData(prev => ({ ...prev, stockStatus: status }));
+      showToast(`Stock status: ${status}`, statusColor === "green" ? "success" : statusColor === "red" ? "error" : "warning");
     }
     
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
+    // Profit margin calculation
+    if ((field === 'sellingPrice' || field === 'buyingPrice') && sanitizedValue) {
+      const selling = parseFloat(field === 'sellingPrice' ? sanitizedValue : formData.sellingPrice) || 0;
+      const buying = parseFloat(field === 'buyingPrice' ? sanitizedValue : formData.buyingPrice) || 0;
+      
+      if (selling > 0 && buying > 0) {
+        const margin = ((selling - buying) / selling * 100).toFixed(1);
+        setFormData(prev => ({ ...prev, profitMargin: margin }));
+      }
+    }
+
+    // Real-time validation feedback
+    announceToScreenReader(
+      fieldError ? `Validation error in ${field}: ${fieldError}` : `${field} updated successfully`,
+      fieldError ? 'assertive' : 'polite'
+    );
+  };
+
+  // Helper function for URL validation
+  const isValidURL = (string) => {
+    try {
+      new URL(string);
+      return true;
+    } catch (_) {
+      return false;
     }
   };
 
@@ -441,139 +564,407 @@ const requiredFields = ['title', 'category', 'description', 'sellingPrice', 'sto
 
 const validateForm = () => {
     const newErrors = {};
+    const warnings = {};
     
-    // Basic Information validation
-    if (!formData.title.trim()) newErrors.title = "Product name is required";
-    if (formData.title && formData.title.length < 3) newErrors.title = "Product name must be at least 3 characters";
-    if (!formData.category) newErrors.category = "Category is required";
-    if (!formData.description.trim()) newErrors.description = "Description is required";
-    if (formData.description && formData.description.length < 20) {
-      newErrors.description = "Description should be at least 20 characters for better customer understanding";
+    // Enhanced Basic Information validation
+    if (!formData.title?.trim()) {
+      newErrors.title = "Product name is required and cannot be empty";
+    } else if (formData.title.length < 3) {
+      newErrors.title = "Product name must be at least 3 characters for searchability";
+    } else if (formData.title.length > 100) {
+      newErrors.title = "Product name cannot exceed 100 characters";
+    } else if (!/^[a-zA-Z0-9\s\-&.()]+$/.test(formData.title)) {
+      newErrors.title = "Product name contains invalid characters. Use only letters, numbers, spaces, and basic punctuation";
     }
     
-    // Pricing validation
+    if (!formData.category) {
+      newErrors.category = "Category selection is required for proper product classification";
+    }
+    
+    if (!formData.description?.trim()) {
+      newErrors.description = "Product description is required to help customers understand your product";
+    } else if (formData.description.length < 20) {
+      newErrors.description = "Description should be at least 20 characters to provide meaningful information to customers";
+    } else if (formData.description.length > 2000) {
+      newErrors.description = "Description cannot exceed 2000 characters";
+    }
+    
+    if (formData.shortDescription && formData.shortDescription.length < 10) {
+      newErrors.shortDescription = "Short description should be at least 10 characters if provided";
+    }
+    
+    // Enhanced Pricing validation with profitability checks
+    const sellingPrice = parseFloat(formData.sellingPrice) || 0;
+    const buyingPrice = parseFloat(formData.buyingPrice) || 0;
+    const discountAmount = parseFloat(formData.discountAmount) || 0;
+    const finalPrice = parseFloat(formData.discountedPrice) || sellingPrice;
+    
     if (!formData.sellingPrice || sellingPrice <= 0) {
-      newErrors.sellingPrice = "Selling price must be greater than 0";
+      newErrors.sellingPrice = "Selling price is required and must be greater than 0";
+    } else if (sellingPrice < 1) {
+      warnings.sellingPrice = "Very low selling price - please verify this is correct";
+    } else if (sellingPrice > 1000000) {
+      warnings.sellingPrice = "Very high selling price - please verify this is correct";
     }
-    if (formData.buyingPrice && buyingPrice >= sellingPrice) {
-      newErrors.buyingPrice = "Cost price must be less than selling price";
-    }
-    if (formData.buyingPrice && buyingPrice < 0) {
-      newErrors.buyingPrice = "Cost price cannot be negative";
+    
+    if (formData.buyingPrice) {
+      if (buyingPrice < 0) {
+        newErrors.buyingPrice = "Cost price cannot be negative";
+      } else if (buyingPrice >= sellingPrice) {
+        newErrors.buyingPrice = "Cost price should be less than selling price for profitability";
+      } else if (buyingPrice > sellingPrice * 0.9) {
+        warnings.buyingPrice = "Low profit margin detected - consider reviewing pricing strategy";
+      }
     }
     
     // Enhanced discount validation
-    if (formData.discountedPrice && (finalPrice <= 0 || finalPrice >= sellingPrice)) {
-      newErrors.discountedPrice = "Sale price must be between 0 and selling price";
+    if (formData.discountedPrice) {
+      if (finalPrice <= 0) {
+        newErrors.discountedPrice = "Sale price must be greater than 0";
+      } else if (finalPrice >= sellingPrice) {
+        newErrors.discountedPrice = "Sale price must be less than original selling price";
+      }
     }
-    if (formData.discountAmount && formData.discountType === "percentage" && discountAmount > 100) {
-      newErrors.discountAmount = "Discount percentage cannot exceed 100%";
-    }
-    if (formData.discountAmount && formData.discountType === "fixed" && discountAmount >= sellingPrice) {
-      newErrors.discountAmount = "Discount amount cannot be greater than or equal to selling price";
+    
+    if (formData.discountAmount) {
+      if (formData.discountType === "percentage") {
+        if (discountAmount <= 0) {
+          newErrors.discountAmount = "Discount percentage must be greater than 0";
+        } else if (discountAmount > 100) {
+          newErrors.discountAmount = "Discount percentage cannot exceed 100%";
+        } else if (discountAmount > 50) {
+          warnings.discountAmount = "High discount percentage - ensure this is intentional";
+        }
+      } else if (formData.discountType === "fixed") {
+        if (discountAmount <= 0) {
+          newErrors.discountAmount = "Discount amount must be greater than 0";
+        } else if (discountAmount >= sellingPrice) {
+          newErrors.discountAmount = "Discount amount cannot be greater than or equal to selling price";
+        }
+      }
     }
     
     // Enhanced inventory validation
-    if (!formData.stockQuantity || parseInt(formData.stockQuantity) < 0) {
-      newErrors.stockQuantity = "Stock quantity must be 0 or greater";
+    const stockQuantity = parseInt(formData.stockQuantity);
+    if (formData.stockQuantity === undefined || formData.stockQuantity === null || formData.stockQuantity === '') {
+      newErrors.stockQuantity = "Stock quantity is required for inventory management";
+    } else if (isNaN(stockQuantity) || stockQuantity < 0) {
+      newErrors.stockQuantity = "Stock quantity must be a valid number (0 or greater)";
+    } else if (stockQuantity > 100000) {
+      warnings.stockQuantity = "Very high stock quantity - please verify this is correct";
     }
-    if (!formData.sku.trim()) {
-      newErrors.sku = "SKU is required for inventory tracking";
+    
+    // Enhanced SKU validation
+    if (!formData.sku?.trim()) {
+      newErrors.sku = "SKU (Stock Keeping Unit) is required for inventory tracking and management";
+    } else if (formData.sku.length < 3) {
+      newErrors.sku = "SKU must be at least 3 characters for uniqueness";
+    } else if (formData.sku.length > 50) {
+      newErrors.sku = "SKU cannot exceed 50 characters";
+    } else if (!/^[A-Z0-9\-_]+$/.test(formData.sku)) {
+      newErrors.sku = "SKU should contain only uppercase letters, numbers, hyphens, and underscores";
     }
-    if (formData.sku && formData.sku.length < 3) {
-      newErrors.sku = "SKU must be at least 3 characters";
+    
+    // Inventory thresholds validation
+    const lowStockThreshold = parseInt(formData.lowStockThreshold);
+    const minOrderQty = parseInt(formData.minimumOrderQuantity);
+    const maxOrderQty = parseInt(formData.maximumOrderQuantity);
+    
+    if (formData.lowStockThreshold && (isNaN(lowStockThreshold) || lowStockThreshold < 0)) {
+      newErrors.lowStockThreshold = "Low stock threshold must be 0 or greater";
+    } else if (lowStockThreshold > stockQuantity) {
+      warnings.lowStockThreshold = "Low stock threshold is higher than current stock quantity";
     }
-    if (formData.lowStockThreshold && parseInt(formData.lowStockThreshold) < 0) {
-      newErrors.lowStockThreshold = "Low stock threshold cannot be negative";
-    }
-    if (formData.minimumOrderQuantity && parseInt(formData.minimumOrderQuantity) < 1) {
+    
+    if (formData.minimumOrderQuantity && (isNaN(minOrderQty) || minOrderQty < 1)) {
       newErrors.minimumOrderQuantity = "Minimum order quantity must be at least 1";
     }
-    if (formData.maximumOrderQuantity && formData.minimumOrderQuantity && 
-        parseInt(formData.maximumOrderQuantity) < parseInt(formData.minimumOrderQuantity)) {
-      newErrors.maximumOrderQuantity = "Maximum order quantity must be greater than minimum";
+    
+    if (formData.maximumOrderQuantity && (isNaN(maxOrderQty) || maxOrderQty < 1)) {
+      newErrors.maximumOrderQuantity = "Maximum order quantity must be at least 1";
+    }
+    
+    if (minOrderQty && maxOrderQty && maxOrderQty < minOrderQty) {
+      newErrors.maximumOrderQuantity = "Maximum order quantity must be greater than or equal to minimum order quantity";
     }
     
     // Brand validation
-    if (formData.brand && formData.brand.length < 2) {
-      newErrors.brand = "Brand name must be at least 2 characters";
+    if (formData.brand) {
+      if (formData.brand.length < 2) {
+        newErrors.brand = "Brand name must be at least 2 characters if provided";
+      } else if (formData.brand.length > 100) {
+        newErrors.brand = "Brand name cannot exceed 100 characters";
+      }
     }
     
-    // Barcode validation
-    if (formData.barcode && (formData.barcode.length < 8 || formData.barcode.length > 18)) {
-      newErrors.barcode = "Barcode should be between 8-18 characters";
+    // Enhanced barcode validation
+    if (formData.barcode) {
+      if (formData.barcode.length < 8 || formData.barcode.length > 18) {
+        newErrors.barcode = "Barcode should be between 8-18 characters (standard barcode formats)";
+      } else if (!/^[0-9]+$/.test(formData.barcode)) {
+        newErrors.barcode = "Barcode should contain only numbers";
+      }
     }
     
-    // Shipping validation for bundles
-    if (formData.bundleComponents.length > 0) {
+    // Image validation
+    if (!formData.mainImage) {
+      warnings.mainImage = "Adding a main product image will improve customer engagement";
+    }
+    
+    if (formData.mainImageAltText) {
+      if (formData.mainImageAltText.length < 5) {
+        newErrors.mainImageAltText = "Alt text should be at least 5 characters for accessibility compliance";
+      } else if (formData.mainImageAltText.length > 125) {
+        newErrors.mainImageAltText = "Alt text should not exceed 125 characters for optimal accessibility";
+      }
+    } else if (formData.mainImage) {
+      warnings.mainImageAltText = "Alt text is recommended for accessibility and SEO benefits";
+    }
+    
+    // Bundle validation
+    if (formData.bundleComponents?.length > 0) {
       if (!formData.bundleSavings) {
-        newErrors.bundleSavings = "Bundle savings amount is required for bundles";
+        newErrors.bundleSavings = "Bundle savings amount is required when creating product bundles";
       }
       if (!formData.preparationTime) {
-        newErrors.preparationTime = "Preparation time is required for bundles";
+        newErrors.preparationTime = "Preparation time is required for bundled products";
       }
     }
     
-    // SEO validation
-    if (formData.metaTitle && formData.metaTitle.length > 60) {
-      newErrors.metaTitle = "Meta title should not exceed 60 characters";
-    }
-    if (formData.metaDescription && formData.metaDescription.length > 160) {
-      newErrors.metaDescription = "Meta description should not exceed 160 characters";
+    // Enhanced SEO validation
+    if (formData.metaTitle) {
+      if (formData.metaTitle.length > 60) {
+        newErrors.metaTitle = "Meta title should not exceed 60 characters for optimal SEO performance";
+      } else if (formData.metaTitle.length < 10) {
+        warnings.metaTitle = "Meta title is quite short - consider adding more descriptive keywords";
+      }
+    } else if (formData.title) {
+      warnings.metaTitle = "Meta title will be auto-generated from product name, but custom titles often perform better";
     }
     
+    if (formData.metaDescription) {
+      if (formData.metaDescription.length > 160) {
+        newErrors.metaDescription = "Meta description should not exceed 160 characters for optimal search engine display";
+      } else if (formData.metaDescription.length < 50) {
+        warnings.metaDescription = "Meta description is quite short - consider adding more detail";
+      }
+    }
+    
+    // URL validation
+    if (formData.videoUrl && !isValidURL(formData.videoUrl)) {
+      newErrors.videoUrl = "Please enter a valid video URL (e.g., https://youtube.com/watch?v=...)";
+    }
+    
+    // Set errors and warnings
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    
+    // Announce validation results for accessibility
+    const errorCount = Object.keys(newErrors).length;
+    const warningCount = Object.keys(warnings).length;
+    
+    if (errorCount > 0) {
+      announceToScreenReader(
+        `Form validation failed with ${errorCount} error${errorCount > 1 ? 's' : ''}. Please review and correct the highlighted fields.`, 
+        'assertive'
+      );
+      showToast(`${errorCount} validation error${errorCount > 1 ? 's' : ''} found. Please review the form.`, "error");
+    } else if (warningCount > 0) {
+      showToast(`Form is valid with ${warningCount} suggestion${warningCount > 1 ? 's' : ''} for improvement.`, "warning");
+    } else {
+      announceToScreenReader("Form validation successful. All required fields are properly filled.", 'polite');
+    }
+    
+    return errorCount === 0;
+  };
+
+  // Helper function for URL validation
+  const isValidURL = (string) => {
+    try {
+      new URL(string);
+      return true;
+    } catch (_) {
+      return false;
+    }
   };
 
 const handleSave = async (publish = false, silent = false, schedule = null) => {
-    // Get CSRF token for security
+    // Enhanced security validation
     const csrfToken = getCSRFToken();
     if (!csrfToken) {
-      showToast("Security token expired. Please refresh the page.", "error");
+      showToast("Security session expired. Please refresh the page to continue.", "error");
+      announceToScreenReader("Security session expired. Page refresh required.", "assertive");
       return;
     }
 
+    // Pre-save validation with comprehensive checks
     if (!validateForm() && !silent) {
-      showToast("Please fix the errors before saving", "error");
-      announceToScreenReader("Form contains errors. Please check all fields.", "assertive");
+      showToast("Please fix the validation errors before saving", "error");
+      announceToScreenReader("Form contains validation errors. Please review all highlighted fields.", "assertive");
+      
+      // Scroll to first error
+      const firstErrorElement = document.querySelector('.border-red-500, [aria-invalid="true"]');
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstErrorElement.focus();
+      }
+      return;
+    }
+
+    // Frontend-Backend consistency validation
+    const consistencyCheck = await validateDataConsistency(formData);
+    if (!consistencyCheck.isValid) {
+      showToast(`Data consistency error: ${consistencyCheck.error}`, "error");
+      announceToScreenReader(`Data validation failed: ${consistencyCheck.error}`, "assertive");
       return;
     }
 
     setLoading(true);
     
     try {
+      // Enhanced visibility and approval logic
       let visibility = 'draft';
       let requiresApproval = formData.requiresApproval;
+      let workflowStatus = 'draft';
       
       if (publish) {
         if (currentUser.permissions.canBypassApproval || currentUser.role === 'admin') {
           visibility = 'published';
           requiresApproval = false;
+          workflowStatus = 'published';
         } else {
           visibility = 'pending';
           requiresApproval = true;
+          workflowStatus = 'pending_approval';
         }
       }
 
-      // Additional input validation and sanitization before submission
+      // Comprehensive data sanitization and validation
       const sanitizedData = {
         ...formData,
-        // Re-sanitize critical fields
-        title: sanitizeInput(formData.title, { maxLength: 100 }),
-        description: sanitizeInput(formData.description, { maxLength: 2000 }),
-        brand: sanitizeInput(formData.brand, { maxLength: 50 }),
-        sku: sanitizeInput(formData.sku, { maxLength: 50 }).toUpperCase(),
-        barcode: sanitizeInput(formData.barcode, { maxLength: 20 }),
-        metaTitle: sanitizeInput(formData.metaTitle, { maxLength: 60 }),
-        metaDescription: sanitizeInput(formData.metaDescription, { maxLength: 160 }),
+        // Enhanced field sanitization with validation
+        title: sanitizeInput(formData.title, { 
+          maxLength: 100, 
+          allowNumbers: true, 
+          allowSpecialChars: false 
+        }),
+        description: sanitizeInput(formData.description, { 
+          maxLength: 2000, 
+          allowNumbers: true, 
+          allowSpecialChars: true 
+        }),
+        shortDescription: sanitizeInput(formData.shortDescription, { 
+          maxLength: 200, 
+          allowNumbers: true, 
+          allowSpecialChars: true 
+        }),
+        brand: sanitizeInput(formData.brand, { 
+          maxLength: 100, 
+          allowNumbers: true, 
+          allowSpecialChars: false 
+        }),
+        sku: sanitizeInput(formData.sku, { 
+          maxLength: 50, 
+          allowNumbers: true, 
+          allowSpecialChars: false 
+        }).toUpperCase(),
+        barcode: sanitizeInput(formData.barcode, { 
+          maxLength: 20, 
+          allowNumbers: true, 
+          allowSpecialChars: false 
+        }),
+        metaTitle: sanitizeInput(formData.metaTitle, { 
+          maxLength: 60, 
+          allowNumbers: true, 
+          allowSpecialChars: true 
+        }),
+        metaDescription: sanitizeInput(formData.metaDescription, { 
+          maxLength: 160, 
+          allowNumbers: true, 
+          allowSpecialChars: true 
+        }),
+        mainImageAltText: sanitizeInput(formData.mainImageAltText, { 
+          maxLength: 125, 
+          allowNumbers: true, 
+          allowSpecialChars: true 
+        }),
         videoUrl: sanitizeURL(formData.videoUrl),
-        // Ensure numeric fields are properly sanitized
-        sellingPrice: sanitizeNumericInput(formData.sellingPrice, { min: 0 }),
-        buyingPrice: sanitizeNumericInput(formData.buyingPrice, { min: 0 }),
-        stockQuantity: sanitizeNumericInput(formData.stockQuantity, { min: 0, allowDecimals: false }),
-        lowStockThreshold: sanitizeNumericInput(formData.lowStockThreshold || "10", { min: 0, allowDecimals: false })
+        
+        // Enhanced numeric field sanitization
+        sellingPrice: sanitizeNumericInput(formData.sellingPrice, { 
+          min: 0, 
+          max: 10000000,
+          allowDecimals: true 
+        }),
+        buyingPrice: sanitizeNumericInput(formData.buyingPrice, { 
+          min: 0, 
+          max: 10000000,
+          allowDecimals: true 
+        }),
+        discountedPrice: sanitizeNumericInput(formData.discountedPrice, { 
+          min: 0, 
+          allowDecimals: true 
+        }),
+        discountAmount: sanitizeNumericInput(formData.discountAmount, { 
+          min: 0, 
+          allowDecimals: true 
+        }),
+        stockQuantity: sanitizeNumericInput(formData.stockQuantity, { 
+          min: 0, 
+          max: 1000000,
+          allowDecimals: false 
+        }),
+        lowStockThreshold: sanitizeNumericInput(formData.lowStockThreshold || "10", { 
+          min: 0, 
+          max: 10000,
+          allowDecimals: false 
+        }),
+        minimumOrderQuantity: sanitizeNumericInput(formData.minimumOrderQuantity || "1", { 
+          min: 1, 
+          max: 1000,
+          allowDecimals: false 
+        }),
+        maximumOrderQuantity: sanitizeNumericInput(formData.maximumOrderQuantity, { 
+          min: 1, 
+          allowDecimals: false 
+        }),
+        
+        // System fields with validation
+        visibility,
+        workflowStatus,
+        requiresApproval,
+        lastModified: new Date().toISOString(),
+        modifiedBy: currentUser.id || currentUser.email || 'system',
+        version: (formData.version || 0) + 1,
+        
+        // Data integrity fields
+        dataChecksum: generateDataChecksum(formData),
+        validationTimestamp: new Date().toISOString(),
+        
+        // Audit trail
+        auditLog: [
+          ...(formData.auditLog || []),
+          {
+            action: publish ? 'publish_attempt' : 'save',
+            timestamp: new Date().toISOString(),
+            user: currentUser.id || currentUser.email || 'system',
+            changes: getFormChanges(formData, originalFormData),
+            validation: 'passed'
+          }
+        ]
       };
+
+      // Final validation before submission
+      const finalValidation = validateFormData(sanitizedData, {
+        title: { required: true, minLength: 3, maxLength: 100 },
+        description: { required: true, minLength: 20, maxLength: 2000 },
+        category: { required: true },
+        sellingPrice: { required: true, validator: (v) => parseFloat(v) > 0 ? null : 'Must be greater than 0' },
+        sku: { required: true, minLength: 3, maxLength: 50 }
+      });
+
+      if (!finalValidation.isValid) {
+        throw new Error(`Final validation failed: ${Object.values(finalValidation.errors).join(', ')}`);
+      }
 
       const productData = {
         ...sanitizedData,
@@ -1036,19 +1427,34 @@ const renderBasicInfo = () => (
       </div>
 
 <div>
-          <Input
+<Input
             label="Product Name"
             type="text"
             placeholder="e.g., Premium Organic Basmati Rice 5kg Pack"
             value={formData.title}
-            onChange={(e) => handleInputChange("title", e.target.value)}
+            onChange={(e) => handleInputChange("title", e.target.value, e.target.validationInfo)}
             error={errors.title}
             required={true}
             maxLength={100}
             description="Use descriptive names with brand, type, size, and key features. This will be used for SEO and search."
+            tooltip="Product names should be descriptive and include key details like brand, type, size, and main features. This helps customers find your product and improves search engine visibility. Avoid using special characters or excessive punctuation."
+            helpText="Include brand, type, size, and key features for better discoverability"
             sanitize={true}
-            sanitizeOptions={{ maxLength: 100, allowNumbers: true, allowSpecialChars: false }}
-            ariaLabel="Product name, required field"
+            sanitizeOptions={{ 
+              maxLength: 100, 
+              allowNumbers: true, 
+              allowSpecialChars: false 
+            }}
+            validationRules={{
+              required: true,
+              minLength: 3,
+              maxLength: 100,
+              pattern: /^[a-zA-Z0-9\s\-&.()]+$/,
+              patternError: "Use only letters, numbers, spaces, and basic punctuation"
+            }}
+            realTimeValidation={true}
+            showValidationIcon={true}
+            ariaLabel="Product name, required field for customer display and search"
           />
         </div>
 
@@ -1264,19 +1670,82 @@ const renderPricing = () => (
                 Rs
               </span>
               <Input
-                type="number"
+type="number"
                 placeholder="0.00"
                 value={formData.sellingPrice}
-                onChange={(e) => handleInputChange("sellingPrice", e.target.value)}
-                className={cn(errors.sellingPrice && "border-red-500", "pl-8 text-lg font-semibold")}
+                onChange={(e) => handleInputChange("sellingPrice", e.target.value, e.target.validationInfo)}
+                className={cn(
+                  errors.sellingPrice && "border-red-500", 
+                  "pl-8 text-lg font-semibold pr-10 focus:ring-2 focus:ring-primary-500/20"
+                )}
                 min="0"
                 step="0.01"
+                max="10000000"
+                tooltip="Set the price customers will pay. This should cover your costs plus desired profit margin. Consider market rates and competitor pricing."
+                validationRules={{
+                  required: true,
+                  min: 0.01,
+                  max: 10000000,
+                  validator: (v) => {
+                    const num = parseFloat(v);
+                    if (isNaN(num)) return "Please enter a valid price";
+                    if (num <= 0) return "Price must be greater than 0";
+                    if (num > 1000000) return "Please verify this high price is correct";
+                    return null;
+                  }
+                }}
+                realTimeValidation={true}
+                showValidationIcon={true}
+                ariaLabel="Product selling price in PKR, required for customer purchases"
               />
-              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+              
+              {/* Price indicators */}
+              <div className="absolute right-8 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
+                {formData.sellingPrice && formData.buyingPrice && (
+                  <span className={cn(
+                    "text-xs px-1 py-0.5 rounded text-white font-medium",
+                    parseFloat(formData.sellingPrice) > parseFloat(formData.buyingPrice) * 1.2 ? "bg-green-500" : 
+                    parseFloat(formData.sellingPrice) > parseFloat(formData.buyingPrice) ? "bg-yellow-500" : "bg-red-500"
+                  )}>
+                    {((parseFloat(formData.sellingPrice) - parseFloat(formData.buyingPrice)) / parseFloat(formData.sellingPrice) * 100).toFixed(0)}%
+                  </span>
+                )}
                 <ApperIcon name="Tag" className="w-4 h-4 text-gray-400" />
               </div>
             </div>
-            {errors.sellingPrice && <p className="text-red-500 text-sm mt-1">{errors.sellingPrice}</p>}
+            
+            {/* Enhanced error display */}
+            {errors.sellingPrice && (
+              <div className="mt-2 flex items-start space-x-2">
+                <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-red-600">{errors.sellingPrice}</p>
+              </div>
+            )}
+            
+            {/* Pricing guidance */}
+            {formData.sellingPrice && !errors.sellingPrice && (
+              <div className="mt-2 text-xs text-gray-500 space-y-1">
+                {formData.buyingPrice && (
+                  <div className="flex justify-between">
+                    <span>Profit Margin:</span>
+                    <span className={cn(
+                      "font-medium",
+                      parseFloat(formData.sellingPrice) > parseFloat(formData.buyingPrice) * 1.2 ? "text-green-600" : 
+                      parseFloat(formData.sellingPrice) > parseFloat(formData.buyingPrice) ? "text-yellow-600" : "text-red-600"
+                    )}>
+                      PKR {(parseFloat(formData.sellingPrice) - parseFloat(formData.buyingPrice)).toFixed(2)}
+                      ({((parseFloat(formData.sellingPrice) - parseFloat(formData.buyingPrice)) / parseFloat(formData.sellingPrice) * 100).toFixed(1)}%)
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>With Tax (17%):</span>
+                  <span className="font-medium">PKR {(parseFloat(formData.sellingPrice) * 1.17).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

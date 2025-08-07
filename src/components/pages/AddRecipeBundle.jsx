@@ -1,19 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import Card from "@/components/atoms/Card";
-import Button from "@/components/atoms/Button";
-import Input from "@/components/atoms/Input";
+import { ProductService } from "@/services/api/ProductService";
+import { RecipeBundleService } from "@/services/api/RecipeBundleService";
+import { useToast } from "@/hooks/useToast";
 import ApperIcon from "@/components/ApperIcon";
 import SearchBar from "@/components/molecules/SearchBar";
 import PriceDisplay from "@/components/molecules/PriceDisplay";
 import QuantitySelector from "@/components/molecules/QuantitySelector";
 import Loading from "@/components/ui/Loading";
-import { ProductService } from "@/services/api/ProductService";
-import { RecipeBundleService } from "@/services/api/RecipeBundleService";
-import { useToast } from "@/hooks/useToast";
+import Category from "@/components/pages/Category";
+import Input from "@/components/atoms/Input";
+import Button from "@/components/atoms/Button";
+import Card from "@/components/atoms/Card";
 import { cn } from "@/utils/cn";
-import { formatPrice, calculateSavings } from "@/utils/currency";
+import { calculateSavings, formatPrice } from "@/utils/currency";
+import { announceToScreenReader } from "@/utils/security";
 
 const AddRecipeBundle = () => {
   const navigate = useNavigate();
@@ -160,23 +162,119 @@ const AddRecipeBundle = () => {
   const totals = calculateBundleTotals();
 
   // Handle form submission
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Enhanced bundle validation with comprehensive checks
+    const validationErrors = [];
+    
     if (!isBundleEnabled) {
-      showToast.error("Bundle option is disabled");
+      showToast.error("Bundle creation is currently disabled in system settings");
+      announceToScreenReader("Bundle creation is disabled", "assertive");
       return;
     }
 
-    if (!bundleData.name.trim()) {
-      showToast.error("Bundle name is required");
-      return;
+    // Bundle name validation
+    if (!bundleData.name?.trim()) {
+      validationErrors.push("Bundle name is required and cannot be empty");
+    } else if (bundleData.name.trim().length < 3) {
+      validationErrors.push("Bundle name must be at least 3 characters long");
+    } else if (bundleData.name.length > 100) {
+      validationErrors.push("Bundle name cannot exceed 100 characters");
     }
 
+    // Bundle description validation
+    if (!bundleData.description?.trim()) {
+      validationErrors.push("Bundle description is required to help customers understand the bundle");
+    } else if (bundleData.description.length < 20) {
+      validationErrors.push("Bundle description should be at least 20 characters for clarity");
+    }
+
+    // Bundle components validation
     if (bundleComponents.length === 0) {
-      showToast.error("Add at least one product to the bundle");
+      validationErrors.push("Add at least one product to create a bundle");
+    } else if (bundleComponents.length < 2) {
+      validationErrors.push("A bundle should contain at least 2 different products");
+    } else if (bundleComponents.length > 20) {
+      validationErrors.push("Bundle cannot contain more than 20 products for practical purposes");
+    }
+
+    // Individual component validation
+    bundleComponents.forEach((component, index) => {
+      if (!component.product) {
+        validationErrors.push(`Product ${index + 1} is missing product information`);
+      }
+      if (!component.quantity || component.quantity < 1) {
+        validationErrors.push(`Product ${index + 1} must have a quantity of at least 1`);
+      }
+      if (component.quantity > 100) {
+        validationErrors.push(`Product ${index + 1} quantity seems excessive (max 100 per item)`);
+      }
+      if (!component.unit) {
+        validationErrors.push(`Product ${index + 1} is missing unit specification`);
+      }
+    });
+
+    // Bundle pricing validation
+    const totalBundlePrice = bundleComponents.reduce((total, component) => {
+      return total + (component.product.price * component.quantity);
+    }, 0);
+
+    if (!bundleData.price || bundleData.price <= 0) {
+      validationErrors.push("Bundle price must be greater than 0");
+    } else if (bundleData.price >= totalBundlePrice) {
+      validationErrors.push("Bundle price should be less than individual item total to provide customer value");
+    }
+
+    // Bundle category validation
+    if (!bundleData.category) {
+      validationErrors.push("Bundle category is required for proper classification");
+    }
+
+    // Bundle image validation
+    if (!bundleData.image) {
+      validationErrors.push("Bundle image is required for customer appeal");
+    }
+
+    // Difficulty and time validation
+    if (!bundleData.difficulty) {
+      validationErrors.push("Difficulty level is required for customer guidance");
+    }
+
+    if (!bundleData.cookTime || bundleData.cookTime < 1) {
+      validationErrors.push("Cooking/preparation time must be specified (minimum 1 minute)");
+    } else if (bundleData.cookTime > 480) { // 8 hours
+      validationErrors.push("Cooking time seems excessive (maximum 8 hours)");
+    }
+
+    // Servings validation
+    if (!bundleData.servings || bundleData.servings < 1) {
+      validationErrors.push("Number of servings must be at least 1");
+    } else if (bundleData.servings > 50) {
+      validationErrors.push("Number of servings seems excessive (maximum 50)");
+    }
+
+    // Display validation errors
+    if (validationErrors.length > 0) {
+      const errorMessage = `Bundle validation failed:\n• ${validationErrors.join('\n• ')}`;
+      showToast.error(`${validationErrors.length} validation error${validationErrors.length > 1 ? 's' : ''} found`);
+      announceToScreenReader(`Bundle validation failed with ${validationErrors.length} errors`, "assertive");
+      
+      // Log detailed errors for debugging
+      console.group('🎯 Bundle Validation Errors');
+      validationErrors.forEach((error, index) => {
+        console.error(`${index + 1}. ${error}`);
+      });
+      console.groupEnd();
+      
       return;
     }
+
+    // Calculate savings amount
+    const savingsAmount = totalBundlePrice - bundleData.price;
+    const savingsPercentage = (savingsAmount / totalBundlePrice * 100).toFixed(1);
+
+    announceToScreenReader(`Bundle validation successful. Customers will save PKR ${savingsAmount.toFixed(2)} (${savingsPercentage}%)`, "polite");
 
     try {
       setLoading(true);
