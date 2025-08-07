@@ -672,7 +672,7 @@ delete: async (id) => {
     const timestamp = new Date().toISOString();
     
     // Validate input
-    if (!Array.isArray(ids) || ids.length === 0) {
+if (!Array.isArray(ids) || ids.length === 0) {
       throw new Error('Invalid product IDs provided for bulk delete');
     }
     
@@ -764,8 +764,19 @@ delete: async (id) => {
       throw new Error('Invalid updates data provided for bulk update');
     }
     
-    if (updates.length > 100) {
+if (updates.length > 100) {
       throw new Error('Cannot update more than 100 products at once');
+    }
+    
+    // Edge case validation for bulk updates
+    const validationResults = await validateBulkUpdateEdgeCases(updates);
+    if (validationResults.criticalErrors.length > 0) {
+      throw new Error(`Critical validation errors: ${validationResults.criticalErrors.join(', ')}`);
+    }
+    
+    // Log warnings for non-critical issues
+    if (validationResults.warnings.length > 0) {
+      console.warn('Bulk update warnings:', validationResults.warnings);
     }
     
     for (const update of updates) {
@@ -811,17 +822,46 @@ delete: async (id) => {
           data.approvedBy = data.modifiedBy || 'admin';
         }
         
-        // Auto-set publication fields when approved + published
+// Auto-set publication fields when approved + published
         if (data.status === 'approved' && data.visibility === 'published') {
           data.publishedAt = timestamp;
           data.publishedBy = data.modifiedBy || 'admin';
           data.moderatorApproved = true; // backward compatibility
+          
+          // Visibility monitoring - ensure proper publication
+          if (!data.publishedAt || !data.publishedBy) {
+            console.warn('Publication fields missing for approved product:', update.id);
+          }
         }
         
         // Clear publication fields when draft
         if (data.visibility === 'draft') {
           data.publishedAt = null;
           data.publishedBy = null;
+        }
+        
+        // Edge case handling - validate critical fields during approval
+        if (data.status === 'approved') {
+          const product = mockProducts.find(p => p.Id === update.id);
+          if (product) {
+            // Check for missing images
+            if (!product.image && (!product.images || product.images.length === 0)) {
+              data.approvalWarnings = data.approvalWarnings || [];
+              data.approvalWarnings.push('missing_images');
+            }
+            
+            // Check for negative stock
+            if (product.stock < 0 || product.stockCount < 0) {
+              data.approvalWarnings = data.approvalWarnings || [];
+              data.approvalWarnings.push('negative_stock');
+            }
+            
+            // Check for invalid pricing
+            if (!product.price || product.price <= 0 || isNaN(product.price)) {
+              data.approvalWarnings = data.approvalWarnings || [];
+              data.approvalWarnings.push('invalid_pricing');
+            }
+          }
         }
         
         // Apply updates with enhanced workflow tracking
@@ -937,9 +977,82 @@ bulkPriceAdjustment: async (ids, adjustment) => {
     
     // Validate IDs
     if (!Array.isArray(ids) || ids.length === 0) {
-      throw new Error('Invalid product IDs provided');
+throw new Error('Invalid product IDs provided');
     }
     
+    // Monitoring implementation - Check for visibility issues
+    const checkVisibilityIssues = () => {
+      const approvedButHidden = mockProducts.filter(p => 
+        p.status === 'approved' && 
+        p.moderatorApproved === true &&
+        (p.visibility !== 'published' || !p.publishedAt)
+      );
+      
+      if (approvedButHidden.length > 0) {
+        console.warn('⚠️ Visibility Alert: Approved products not visible:', {
+          count: approvedButHidden.length,
+          products: approvedButHidden.map(p => ({
+            id: p.Id,
+            name: p.name,
+            status: p.status,
+            visibility: p.visibility,
+            approvedAt: p.approvedAt
+          }))
+        });
+        
+        return {
+          alertTriggered: true,
+          count: approvedButHidden.length,
+          products: approvedButHidden
+        };
+      }
+      
+      return { alertTriggered: false, count: 0 };
+    };
+    
+    // Edge case validation function
+    const validateBulkUpdateEdgeCases = async (updates) => {
+      const criticalErrors = [];
+      const warnings = [];
+      
+      for (const update of updates) {
+        const product = mockProducts.find(p => p.Id === update.id);
+        if (!product) {
+          criticalErrors.push(`Product ${update.id} not found`);
+          continue;
+        }
+        
+        // Edge case: Approve product without images
+        if (update.data.status === 'approved') {
+          if (!product.image && (!product.images || product.images.length === 0)) {
+            warnings.push(`Product ${update.id} (${product.name}) approved without images`);
+          }
+          
+          // Edge case: Approve product with negative stock
+          if (product.stock < 0 || product.stockCount < 0) {
+            warnings.push(`Product ${update.id} (${product.name}) approved with negative stock: ${product.stock}`);
+          }
+          
+          // Edge case: Approve product with invalid pricing
+          if (!product.price || product.price <= 0 || isNaN(product.price)) {
+            warnings.push(`Product ${update.id} (${product.name}) approved with invalid pricing: ${product.price}`);
+          }
+        }
+        
+        // Edge case: Approve then immediately reject (rapid status changes)
+        if (update.data.status && product.lastModified) {
+          const lastModified = new Date(product.lastModified);
+          const now = new Date();
+          const timeDiff = now - lastModified;
+          
+          if (timeDiff < 60000) { // Less than 1 minute
+            warnings.push(`Product ${update.id} status changed rapidly (${timeDiff}ms ago)`);
+          }
+        }
+      }
+      
+      return { criticalErrors, warnings };
+    };
     if (ids.length > 100) {
       throw new Error('Cannot adjust prices for more than 100 products at once');
     }

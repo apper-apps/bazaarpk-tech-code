@@ -447,44 +447,119 @@ const handleBulkApprove = async () => {
     try {
       setActionLoading(true);
       const selectedIds = Array.from(selectedProducts);
+      const selectedProductData = products.filter(p => selectedIds.includes(p.Id));
+      
+      // Edge Case Validation - Check for products without images
+      const productsWithoutImages = selectedProductData.filter(p => 
+        !p.image || p.image === '' || (Array.isArray(p.images) && p.images.length === 0)
+      );
+      
+      // Edge Case Validation - Check for products with negative stock
+      const productsWithNegativeStock = selectedProductData.filter(p => 
+        p.stock < 0 || p.stockCount < 0
+      );
+      
+      // Edge Case Validation - Check for products with invalid pricing
+      const productsWithInvalidPricing = selectedProductData.filter(p => 
+        !p.price || p.price <= 0 || isNaN(p.price)
+      );
+      
+      // Collect all validation issues
+      const validationIssues = [];
+      if (productsWithoutImages.length > 0) {
+        validationIssues.push(`${productsWithoutImages.length} products missing images`);
+      }
+      if (productsWithNegativeStock.length > 0) {
+        validationIssues.push(`${productsWithNegativeStock.length} products with negative stock`);
+      }
+      if (productsWithInvalidPricing.length > 0) {
+        validationIssues.push(`${productsWithInvalidPricing.length} products with invalid pricing`);
+      }
+      
+      // Show validation warning but allow approval to continue
+      if (validationIssues.length > 0) {
+        console.warn('Edge case validation warnings:', {
+          productsWithoutImages: productsWithoutImages.map(p => ({ id: p.Id, name: p.name })),
+          productsWithNegativeStock: productsWithNegativeStock.map(p => ({ id: p.Id, name: p.name, stock: p.stock })),
+          productsWithInvalidPricing: productsWithInvalidPricing.map(p => ({ id: p.Id, name: p.name, price: p.price }))
+        });
+        
+        showToast(
+          `Warning: ${validationIssues.join(', ')}. Proceeding with approval but these issues should be addressed.`, 
+          'warning'
+        );
+      }
       
       logActivity('bulk_approve_initiated', {
         productCount: selectedIds.length,
         productIds: selectedIds,
         approvedBy: currentUser.role,
-        initiatedAt: new Date().toISOString()
+        initiatedAt: new Date().toISOString(),
+        edgeCaseWarnings: validationIssues
       });
       
+      // Analytics tracking for approval actions
+      try {
+        const analyticsData = {
+          action: 'products_approved',
+          count: selectedIds.length,
+          user: currentUser.id || currentUser.role,
+          timestamp: new Date().toISOString(),
+          edgeCases: {
+            missingImages: productsWithoutImages.length,
+            negativeStock: productsWithNegativeStock.length,
+            invalidPricing: productsWithInvalidPricing.length
+          }
+        };
+        
+        // Store analytics data (simulated)
+        localStorage.setItem('analytics_approval_' + Date.now(), JSON.stringify(analyticsData));
+        console.log('📊 Analytics tracked:', analyticsData);
+      } catch (analyticsError) {
+        console.warn('Analytics tracking failed:', analyticsError);
+      }
+      
       // Enhanced approval data with proper status and visibility handling
-      const updates = selectedIds.map(id => ({
-        id,
-        data: { 
-          // Approval workflow fields
-          status: 'approved',
-          moderatorApproved: true,
-          approvedAt: new Date().toISOString(),
-          approvedBy: currentUser.id || currentUser.role,
-          
-          // Publication fields - auto-publish approved products
-          visibility: 'published',
-          publishedAt: new Date().toISOString(),
-          publishedBy: currentUser.id || currentUser.role,
-          
-          // Audit fields
-          lastModified: new Date().toISOString(),
-          modifiedBy: currentUser.id || currentUser.role,
-          
-          // Workflow history
-          workflowHistory: [{
-            action: 'approved_and_published',
-            timestamp: new Date().toISOString(),
-            user: currentUser.id || currentUser.role,
-            previousStatus: 'pending',
-            newStatus: 'approved',
-            autoPublished: true
-          }]
-        }
-      }));
+      const updates = selectedIds.map(id => {
+        const product = selectedProductData.find(p => p.Id === id);
+        return {
+          id,
+          data: { 
+            // Approval workflow fields
+            status: 'approved',
+            moderatorApproved: true,
+            approvedAt: new Date().toISOString(),
+            approvedBy: currentUser.id || currentUser.role,
+            
+            // Publication fields - auto-publish approved products
+            visibility: 'published',
+            publishedAt: new Date().toISOString(),
+            publishedBy: currentUser.id || currentUser.role,
+            
+            // Edge case handling - flag products with issues
+            approvalWarnings: [
+              ...((!product?.image && !product?.images?.length) ? ['missing_images'] : []),
+              ...((product?.stock < 0 || product?.stockCount < 0) ? ['negative_stock'] : []),
+              ...((!product?.price || product?.price <= 0) ? ['invalid_pricing'] : [])
+            ],
+            
+            // Audit fields
+            lastModified: new Date().toISOString(),
+            modifiedBy: currentUser.id || currentUser.role,
+            
+            // Workflow history
+            workflowHistory: [{
+              action: 'approved_and_published',
+              timestamp: new Date().toISOString(),
+              user: currentUser.id || currentUser.role,
+              previousStatus: 'pending',
+              newStatus: 'approved',
+              autoPublished: true,
+              edgeCaseWarnings: validationIssues
+            }]
+          }
+        };
+      });
       
       // Execute bulk update with enhanced error handling
       const updatePromises = updates.map(async (update, index) => {
@@ -540,6 +615,34 @@ const handleBulkApprove = async () => {
             : p
         ));
         
+        // Visibility monitoring - Check for approved but potentially hidden products
+        setTimeout(async () => {
+          try {
+            const approvedProducts = products.filter(p => 
+              successfulIds.includes(p.Id) && 
+              p.status === 'approved' &&
+              (p.visibility !== 'published' || !p.publishedAt)
+            );
+            
+            if (approvedProducts.length > 0) {
+              console.warn('⚠️ Visibility Alert: Approved products may not be visible:', approvedProducts);
+              showToast(
+                `Alert: ${approvedProducts.length} approved products may not be visible to customers. Check visibility settings.`, 
+                'warning'
+              );
+              
+              // Log visibility alert
+              logActivity('visibility_alert_triggered', {
+                approvedButHiddenCount: approvedProducts.length,
+                productIds: approvedProducts.map(p => p.Id),
+                timestamp: new Date().toISOString()
+              });
+            }
+          } catch (monitoringError) {
+            console.error('Visibility monitoring failed:', monitoringError);
+          }
+        }, 2000); // Check after 2 seconds to allow state updates
+        
         // Cache invalidation middleware equivalent
         // Clear homepage and store product caches after successful approval
         try {
@@ -568,14 +671,16 @@ const handleBulkApprove = async () => {
         duration: Math.round(duration),
         approvedBy: currentUser.role,
         autoPublished: successful.length,
-        cacheInvalidated: successful.length > 0
+        cacheInvalidated: successful.length > 0,
+        edgeCaseWarnings: validationIssues
       });
       
-      // Enhanced success messaging
+      // Enhanced success messaging with edge case awareness
       if (failed.length === 0) {
+        const warningText = validationIssues.length > 0 ? ` (Note: ${validationIssues.join(', ')})` : '';
         showToast(
-          `${successful.length} products approved and published successfully! They are now visible to customers.`, 
-          'success'
+          `${successful.length} products approved and published successfully! They are now visible to customers.${warningText}`, 
+          validationIssues.length > 0 ? 'warning' : 'success'
         );
       } else if (successful.length > 0) {
         showToast(
