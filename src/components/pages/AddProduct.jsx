@@ -73,8 +73,9 @@ barcode: "",
     moderatorApproved: false,
     requiresApproval: true,
     scheduledPublish: "",
-    metaTitle: "",
+metaTitle: "",
     metaDescription: "",
+    urlSlug: "",
     seoKeywords: [],
     relatedProducts: [],
     // Inventory management fields
@@ -314,7 +315,7 @@ const handleInputChange = (field, value, validationInfo = {}) => {
             fieldError = "Alt text should be at least 5 characters for accessibility";
           }
           break;
-        case 'videoUrl':
+case 'videoUrl':
           sanitizedValue = sanitizeURL(value);
           // Enhanced URL validation
           if (sanitizedValue && !isValidURL(sanitizedValue)) {
@@ -339,6 +340,24 @@ const handleInputChange = (field, value, validationInfo = {}) => {
           });
           if (sanitizedValue && sanitizedValue.length > 160) {
             fieldError = "Meta description should not exceed 160 characters for SEO";
+          }
+          break;
+        case 'urlSlug':
+          // Generate SEO-friendly URL slug
+          sanitizedValue = value.toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+            .replace(/\s+/g, '-') // Replace spaces with hyphens
+            .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+            .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+            .substring(0, 100); // Limit length for SEO
+          
+          if (sanitizedValue && sanitizedValue.length < 3) {
+            fieldError = "URL slug should be at least 3 characters long";
+          }
+          
+          // Check for valid slug format
+          if (sanitizedValue && !/^[a-z0-9-]+$/.test(sanitizedValue)) {
+            fieldError = "URL slug can only contain lowercase letters, numbers, and hyphens";
           }
           break;
         case 'bannerText':
@@ -392,7 +411,7 @@ const handleInputChange = (field, value, validationInfo = {}) => {
     }
     
     // Auto-generate meta fields if not set
-    if (field === 'title' && sanitizedValue && sanitizedValue.length >= 3 && !formData.metaTitle) {
+if (field === 'title' && sanitizedValue && sanitizedValue.length >= 3 && !formData.metaTitle) {
       setFormData(prev => ({ ...prev, metaTitle: sanitizedValue.substring(0, 60) }));
       showToast("Meta title auto-generated", "info");
     }
@@ -400,6 +419,21 @@ const handleInputChange = (field, value, validationInfo = {}) => {
     if (field === 'shortDescription' && sanitizedValue && sanitizedValue.length >= 10 && !formData.metaDescription) {
       setFormData(prev => ({ ...prev, metaDescription: sanitizedValue.substring(0, 160) }));
       showToast("Meta description auto-generated", "info");
+    }
+    
+    // Auto-generate URL slug from title
+    if (field === 'title' && sanitizedValue && sanitizedValue.length >= 3 && !formData.urlSlug) {
+      const autoSlug = sanitizedValue.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .substring(0, 100);
+      
+      if (autoSlug.length >= 3) {
+        setFormData(prev => ({ ...prev, urlSlug: autoSlug }));
+        showToast("URL slug auto-generated", "info");
+      }
     }
     
     // Auto-update main image alt text if not set
@@ -760,7 +794,8 @@ const validateForm = () => {
       }
     }
     
-    // URL validation
+// URL validation
+    // URL slug validation
     if (formData.videoUrl && !isValidURL(formData.videoUrl)) {
       newErrors.videoUrl = "Please enter a valid video URL (e.g., https://youtube.com/watch?v=...)";
     }
@@ -870,7 +905,7 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
           allowNumbers: true, 
           allowSpecialChars: false 
         }),
-        metaTitle: sanitizeInput(formData.metaTitle, { 
+metaTitle: sanitizeInput(formData.metaTitle, { 
           maxLength: 60, 
           allowNumbers: true, 
           allowSpecialChars: true 
@@ -880,6 +915,12 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
           allowNumbers: true, 
           allowSpecialChars: true 
         }),
+        urlSlug: formData.urlSlug.toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .substring(0, 100),
         mainImageAltText: sanitizeInput(formData.mainImageAltText, { 
           maxLength: 125, 
           allowNumbers: true, 
@@ -1013,9 +1054,10 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
           preparationTime: sanitizeInput(sanitizedData.preparationTime, { maxLength: 50 }),
           servings: sanitizeInput(sanitizedData.servings, { maxLength: 20 })
         } : null,
-        seo: {
+seo: {
           metaTitle: sanitizedData.metaTitle || sanitizedData.title,
           metaDescription: sanitizedData.metaDescription || sanitizedData.shortDescription,
+          urlSlug: sanitizedData.urlSlug || sanitizedData.title?.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 100),
           keywords: Array.isArray(sanitizedData.seoKeywords) ? sanitizedData.seoKeywords : [],
           relatedProducts: Array.isArray(sanitizedData.relatedProducts) ? sanitizedData.relatedProducts : []
         },
@@ -1101,7 +1143,8 @@ userAgent: navigator.userAgent,
           requiresApproval: true,
           scheduledPublish: "",
           metaTitle: "",
-          metaDescription: "",
+metaDescription: "",
+          urlSlug: "",
           seoKeywords: [],
           relatedProducts: [],
           unitOfMeasurement: "piece",
@@ -1204,6 +1247,59 @@ userAgent: navigator.userAgent,
           )}
         </div>
         {errors.metaDescription && <p className="text-red-500 text-sm mt-1">{errors.metaDescription}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          URL Slug
+          <span className="text-xs text-gray-500 ml-1">(SEO-friendly URL)</span>
+        </label>
+        <div className="space-y-2">
+          <Input
+            value={formData.urlSlug}
+            onChange={(e) => handleInputChange('urlSlug', e.target.value)}
+            placeholder="product-name-url-slug"
+            maxLength={100}
+            className={cn(errors.urlSlug && "border-red-500")}
+          />
+          <div className="flex justify-between items-start mt-1">
+            <div className="text-xs text-gray-500">
+              <p>{formData.urlSlug.length}/100 characters</p>
+              {formData.urlSlug && (
+                <p className="mt-1">
+                  <span className="font-medium">Preview URL:</span>{' '}
+                  <span className="text-primary-600 font-mono">
+                    /products/{formData.urlSlug}
+                  </span>
+                </p>
+              )}
+            </div>
+            {!formData.urlSlug && formData.title && (
+              <button
+                type="button"
+                onClick={() => {
+                  const autoSlug = formData.title.toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '')
+                    .substring(0, 100);
+                  handleInputChange('urlSlug', autoSlug);
+                }}
+                className="text-xs text-primary-600 hover:text-primary-700 whitespace-nowrap"
+              >
+                Generate from title
+              </button>
+            )}
+          </div>
+        </div>
+        {errors.urlSlug && <p className="text-red-500 text-sm mt-1">{errors.urlSlug}</p>}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-2">
+          <p className="text-xs text-yellow-800">
+            <strong>Tips:</strong> Use lowercase letters, numbers, and hyphens only. 
+            Keep it short and descriptive for better SEO.
+          </p>
+        </div>
       </div>
 
       <div>
