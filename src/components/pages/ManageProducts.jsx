@@ -15,7 +15,7 @@ import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
 import { cn } from "@/utils/cn";
 import { formatPrice } from "@/utils/currency";
-
+import { useWebSocket } from '@/hooks/useWebSocket';
 const ManageProducts = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -74,12 +74,25 @@ const [statusFilter, setStatusFilter] = useState('all'); // all, pending, approv
 
   // Activity logging state
   const [activityLog, setActivityLog] = useState([]);
+// WebSocket integration for real-time updates
+  const { 
+    connectionStatus, 
+    isConnected, 
+    subscribe, 
+    sendMessage 
+  } = useWebSocket('ws://localhost:8080', {
+    showConnectionToasts: true,
+    onMessage: (data) => {
+      logActivity('WebSocket Message Received', { type: data.type, data });
+    }
+  });
+
   // Load data
   useEffect(() => {
     loadData();
   }, []);
 
-const loadData = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       const [productsData, categoriesData] = await Promise.all([
@@ -89,6 +102,15 @@ const loadData = async () => {
       
       setProducts(productsData);
       setCategories(categoriesData);
+      
+      // Notify WebSocket about data load
+      if (isConnected) {
+        sendMessage({
+          type: 'productsLoaded',
+          count: productsData.length,
+          timestamp: new Date().toISOString()
+        });
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       showToast('Failed to load products', 'error');
@@ -97,9 +119,55 @@ const loadData = async () => {
     }
   };
 
+  // WebSocket real-time update listeners
+  useEffect(() => {
+    const unsubscribers = [];
+
+    // Listen for product updates
+    unsubscribers.push(
+      subscribe('productUpdate', (data) => {
+        if (data.data && Array.isArray(data.data)) {
+          setProducts(data.data);
+          showToast('Products updated in real-time', 'info');
+          logActivity('Real-time Product Update', { count: data.data.length });
+        }
+      })
+    );
+
+    // Listen for product approval events
+    unsubscribers.push(
+      subscribe('productApproved', (data) => {
+        if (data.productIds) {
+          loadData(); // Refresh all data
+          showToast(`${data.productIds.length} product(s) approved`, 'success');
+          logActivity('Product Approved via WebSocket', { productIds: data.productIds });
+        }
+      })
+    );
+
+    // Listen for inventory changes
+    unsubscribers.push(
+      subscribe('inventoryUpdate', (data) => {
+        if (data.productId && data.newStock !== undefined) {
+          setProducts(prev => prev.map(product => 
+            product.Id === data.productId 
+              ? { ...product, stock: data.newStock }
+              : product
+          ));
+          showToast(`Stock updated for product ${data.productId}`, 'info');
+          logActivity('Inventory Update via WebSocket', data);
+        }
+      })
+    );
+
+    return () => {
+      unsubscribers.forEach(unsubscribe => unsubscribe());
+    };
+  }, [subscribe, showToast, logActivity]);
+
   // Filter and sort products
-// Activity logging function
-const logActivity = (action, details) => {
+  // Activity logging function
+  const logActivity = (action, details) => {
     const logEntry = {
       id: Date.now(),
       timestamp: new Date(),
@@ -132,7 +200,11 @@ const logActivity = (action, details) => {
         effectiveType: navigator.connection.effectiveType,
         downlink: navigator.connection.downlink,
         rtt: navigator.connection.rtt
-      } : 'unknown'
+      } : 'unknown',
+      websocket: {
+        status: connectionStatus,
+        connected: isConnected
+      }
     });
     console.groupEnd();
     
