@@ -204,12 +204,73 @@ export const ProductService = {
     const product = productsData.find(p => p.Id === id);
     return product ? { ...product } : null;
   },
-
-  getByCategory: async (category) => {
+getByCategory: async (category) => {
     await new Promise(resolve => setTimeout(resolve, 250));
     return productsData.filter(p => 
       p.category.toLowerCase() === category.toLowerCase()
     ).map(p => ({ ...p }));
+  },
+
+  getRelatedProducts: async (productId, category, options = {}) => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const { priceRange = {}, badges = [], limit = 8 } = options;
+    
+    const allProducts = [...productsData];
+    const currentProduct = allProducts.find(p => p.Id === productId);
+    
+    if (!currentProduct) return [];
+    
+    // Score-based matching algorithm
+    const scoredProducts = allProducts
+      .filter(p => p.Id !== productId)
+      .map(product => {
+        let score = 0;
+        
+        // Category match (highest priority)
+        if (product.category.toLowerCase() === category.toLowerCase()) {
+          score += 100;
+        }
+        
+        // Price range similarity
+        if (priceRange.min !== undefined && priceRange.max !== undefined) {
+          if (product.price >= priceRange.min && product.price <= priceRange.max) {
+            score += 50;
+          }
+        }
+        
+        // Badge similarity
+        if (badges && badges.length > 0) {
+          const matchingBadges = product.badges?.filter(badge => badges.includes(badge)) || [];
+          score += matchingBadges.length * 15;
+        }
+        
+        // Stock availability bonus
+        if (product.stock > 0) {
+          score += 10;
+        }
+        
+        // Featured product bonus
+        if (product.featured) {
+          score += 5;
+        }
+        
+        // Price proximity bonus (closer prices get higher scores)
+        const priceDifference = Math.abs(product.price - currentProduct.price);
+        const maxPrice = Math.max(product.price, currentProduct.price);
+        const priceProximity = 1 - (priceDifference / maxPrice);
+        score += priceProximity * 20;
+        
+        return { ...product, relatedScore: score };
+      })
+      .sort((a, b) => b.relatedScore - a.relatedScore)
+      .slice(0, limit)
+      .map(p => {
+        // Remove the score before returning
+        const { relatedScore, ...productWithoutScore } = p;
+        return productWithoutScore;
+      });
+    
+    return scoredProducts;
   },
 
   search: async (query) => {

@@ -49,11 +49,12 @@ const [product, setProduct] = useState(null);
       setProduct(productData);
       setSelectedVariant(productData.variants?.[0] || null);
 
-      // Load related products from same category
-      const allProducts = await ProductService.getAll();
-      const related = allProducts
-        .filter(p => p.Id !== productData.Id && p.category === productData.category)
-        .slice(0, 8);
+// Load related products using enhanced matching
+      const related = await ProductService.getRelatedProducts(productData.Id, productData.category, {
+        priceRange: { min: productData.price * 0.3, max: productData.price * 2.5 },
+        badges: productData.badges,
+        limit: 8
+      });
       setRelatedProducts(related);
 
     } catch (err) {
@@ -372,14 +373,54 @@ const handleStatusToggle = () => {
         </div>
       </div>
 
-      {/* Related Products */}
+{/* Related Products Selector */}
       {relatedProducts.length > 0 && (
-        <ProductGrid 
-          products={relatedProducts}
-          title="Related Products"
-          showLoadMore={false}
-          initialCount={8}
-        />
+        <div className="mt-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-display font-bold text-gray-900">You Might Also Like</h2>
+              <p className="text-gray-600 mt-1">Products similar to {product.title}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const moreRelated = await ProductService.getRelatedProducts(product.Id, product.category, {
+                  priceRange: { min: 0, max: Infinity },
+                  badges: product.badges,
+                  limit: 16
+                });
+                setRelatedProducts(moreRelated);
+                showToast(`Found ${moreRelated.length} related products`, 'success');
+              }}
+              className="flex items-center space-x-2"
+            >
+              <ApperIcon name="RefreshCw" className="w-4 h-4" />
+              <span>Show More</span>
+            </Button>
+          </div>
+          
+          <ProductGrid 
+            products={relatedProducts}
+            title=""
+            showLoadMore={false}
+            initialCount={8}
+            className="related-products-grid"
+          />
+          
+          {relatedProducts.length >= 8 && (
+            <div className="text-center mt-6">
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/category/${product.category}`)}
+                className="flex items-center space-x-2 mx-auto"
+              >
+                <ApperIcon name="Grid" className="w-4 h-4" />
+                <span>View All {product.category} Products</span>
+              </Button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
