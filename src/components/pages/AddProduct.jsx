@@ -341,6 +341,16 @@ const handleInputChange = (field, value, validationInfo = {}) => {
             fieldError = "Meta description should not exceed 160 characters for SEO";
           }
           break;
+        case 'bannerText':
+          sanitizedValue = sanitizeInput(value, { 
+            maxLength: 100, 
+            allowNumbers: true, 
+            allowSpecialChars: true 
+          });
+          if (sanitizedValue && sanitizedValue.length > 100) {
+            fieldError = "Banner text should not exceed 100 characters for better display";
+          }
+          break;
         case 'supplierInfo':
         case 'location':
         case 'notes':
@@ -2534,9 +2544,10 @@ const renderMarketing = () => (
         </label>
       </div>
 
+      {/* Marketing Tags Selector */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
-          Tags/Labels
+          🏷️ Marketing Tags
         </label>
         
         {/* Selected Tags */}
@@ -2545,13 +2556,18 @@ const renderMarketing = () => (
             {formData.tags.map((tag, index) => (
               <span
                 key={index}
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                  tag === 'FLASH' ? 'bg-red-100 text-red-800' :
+                  tag === 'FRESH' ? 'bg-green-100 text-green-800' :
+                  tag === 'PREMIUM' ? 'bg-purple-100 text-purple-800' :
+                  'bg-primary-100 text-primary-800'
+                }`}
               >
                 {tag}
                 <button
                   type="button"
                   onClick={() => handleInputChange("tags", formData.tags.filter((_, i) => i !== index))}
-                  className="ml-2 text-primary-600 hover:text-primary-800"
+                  className="ml-2 text-current hover:text-opacity-80"
                 >
                   <ApperIcon name="X" className="w-3 h-3" />
                 </button>
@@ -2567,7 +2583,12 @@ const renderMarketing = () => (
               key={tag}
               type="button"
               onClick={() => handleInputChange("tags", [...formData.tags, tag])}
-              className="px-3 py-2 text-xs border border-gray-300 rounded-md hover:bg-primary-50 hover:border-primary-300 text-left"
+              className={`px-3 py-2 text-xs border rounded-md text-left transition-colors ${
+                tag === 'FLASH' ? 'border-red-300 hover:bg-red-50 hover:border-red-400 text-red-700' :
+                tag === 'FRESH' ? 'border-green-300 hover:bg-green-50 hover:border-green-400 text-green-700' :
+                tag === 'PREMIUM' ? 'border-purple-300 hover:bg-purple-50 hover:border-purple-400 text-purple-700' :
+                'border-gray-300 hover:bg-primary-50 hover:border-primary-300'
+              }`}
             >
               {tag}
             </button>
@@ -2578,7 +2599,7 @@ const renderMarketing = () => (
         <div className="flex space-x-2">
           <Input
             type="text"
-            placeholder="Add new tag"
+            placeholder="Add custom tag"
             value={newTag}
             onChange={(e) => setNewTag(e.target.value)}
             className="flex-1"
@@ -2607,11 +2628,12 @@ const renderMarketing = () => (
         </div>
       </div>
 
+      {/* Deal of the Day with Timer */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
-          Special Offers
+          ⚡ Deal of the Day
         </label>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <label className="flex items-center">
             <input
               type="checkbox"
@@ -2626,7 +2648,138 @@ const renderMarketing = () => (
               </div>
             </div>
           </label>
+          
+          {/* Countdown Timer Settings */}
+          {formData.includeInDeals && (
+            <div className="ml-6 space-y-3 p-4 bg-accent-50 rounded-lg border border-accent-200">
+              <h4 className="font-medium text-accent-800">Flash Sale Timer Settings</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Hours</label>
+                  <Input
+                    type="number"
+                    placeholder="24"
+                    min="0"
+                    max="48"
+                    value={formData.countdownHours || ''}
+                    onChange={(e) => handleInputChange("countdownHours", e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Minutes</label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    min="0"
+                    max="59"
+                    value={formData.countdownMinutes || ''}
+                    onChange={(e) => handleInputChange("countdownMinutes", e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Seconds</label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    min="0"
+                    max="59"
+                    value={formData.countdownSeconds || ''}
+                    onChange={(e) => handleInputChange("countdownSeconds", e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center text-xs text-accent-700">
+                <ApperIcon name="Info" className="w-4 h-4 mr-1" />
+                Timer will start when product goes live. Leave empty for default 24-hour countdown.
+              </div>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Banner Text Editor */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          📢 Promotional Banner Text
+        </label>
+        <Input
+          type="text"
+          placeholder="e.g., Limited Time Offer! Get 50% Off Today Only!"
+          value={formData.bannerText || ''}
+          onChange={(e) => handleInputChange("bannerText", e.target.value)}
+          className="w-full"
+        />
+        <div className="flex justify-between items-center mt-2">
+          <p className="text-xs text-gray-500">
+            This text will appear as a promotional banner on the product card
+          </p>
+          <span className="text-xs text-gray-400">
+            {(formData.bannerText || '').length}/100
+          </span>
+        </div>
+      </div>
+
+      {/* Badge Selector */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          🏅 Product Badges
+        </label>
+        
+        {/* Selected Badges */}
+        {formData.badges && formData.badges.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3 p-3 bg-gray-50 rounded-md">
+            {formData.badges.map((badge, index) => (
+              <span
+                key={index}
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                  badge === 'BESTSELLER' ? 'bg-yellow-100 text-yellow-800' :
+                  badge === 'NEW' ? 'bg-blue-100 text-blue-800' :
+                  badge === 'LIMITED' ? 'bg-red-100 text-red-800' :
+                  badge === 'TRENDING' ? 'bg-pink-100 text-pink-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}
+              >
+                {badge}
+                <button
+                  type="button"
+                  onClick={() => handleInputChange("badges", formData.badges.filter((_, i) => i !== index))}
+                  className="ml-2 text-current hover:text-opacity-80"
+                >
+                  <ApperIcon name="X" className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Available Badges */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          {['BESTSELLER', 'NEW', 'LIMITED', 'TRENDING', 'EXCLUSIVE', 'SEASONAL'].filter(badge => !(formData.badges || []).includes(badge)).map((badge) => (
+            <button
+              key={badge}
+              type="button"
+              onClick={() => handleInputChange("badges", [...(formData.badges || []), badge])}
+              className={`px-3 py-2 text-xs border rounded-md text-left transition-colors ${
+                badge === 'BESTSELLER' ? 'border-yellow-300 hover:bg-yellow-50 text-yellow-700' :
+                badge === 'NEW' ? 'border-blue-300 hover:bg-blue-50 text-blue-700' :
+                badge === 'LIMITED' ? 'border-red-300 hover:bg-red-50 text-red-700' :
+                badge === 'TRENDING' ? 'border-pink-300 hover:bg-pink-50 text-pink-700' :
+                'border-gray-300 hover:bg-gray-50 text-gray-700'
+              }`}
+            >
+              {badge}
+            </button>
+          ))}
+        </div>
+        
+        <p className="text-xs text-gray-500 mt-2">
+          Badges help highlight special qualities of your product to customers
+        </p>
       </div>
     </div>
   );

@@ -300,6 +300,14 @@ create: async (product) => {
       batchNumber: sanitizeAndValidateText(product.batchNumber, { maxLength: 50, required: false }),
       notes: sanitizeAndValidateText(product.notes, { maxLength: 300, required: false }),
       
+      // Enhanced marketing fields
+      bannerText: sanitizeAndValidateText(product.bannerText, { maxLength: 100, required: false }),
+      badges: Array.isArray(product.badges) ? product.badges.filter(badge => typeof badge === 'string') : [],
+      includeInDeals: Boolean(product.includeInDeals),
+      countdownHours: product.countdownHours ? parseInt(product.countdownHours) : null,
+      countdownMinutes: product.countdownMinutes ? parseInt(product.countdownMinutes) : null,
+      countdownSeconds: product.countdownSeconds ? parseInt(product.countdownSeconds) : null,
+      
       // SEO and marketing
       metaTitle: sanitizeAndValidateText(product.metaTitle, { maxLength: 60, required: false }),
       metaDescription: sanitizeAndValidateText(product.metaDescription, { maxLength: 160, required: false }),
@@ -343,7 +351,6 @@ create: async (product) => {
       // Legacy compatibility fields
       image: product.mainImage || "",
       oldPrice: validateAndFormatPrice(product.sellingPrice),
-      badges: product.badges || [],
       featured: Boolean(product.featured)
     };
     
@@ -362,7 +369,13 @@ create: async (product) => {
         id: newId,
         title: processedProduct.title,
         sku: processedProduct.sku,
-        price: processedProduct.sellingPrice
+        price: processedProduct.sellingPrice,
+        marketing: {
+          tags: processedProduct.tags,
+          badges: processedProduct.badges,
+          dealOfDay: processedProduct.includeInDeals,
+          bannerText: processedProduct.bannerText
+        }
       });
       
       return { ...processedProduct };
