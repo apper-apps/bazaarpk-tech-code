@@ -1,7 +1,8 @@
 import '@/index.css';
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { BrowserRouter, Route, Routes, useNavigate, Link } from "react-router-dom";
+import { BrowserRouter, Link, Route, Routes, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
+import { initializeSecurity } from "@/utils/security";
 import ApperIcon from "@/components/ApperIcon";
 import Header from "@/components/organisms/Header";
 import CartDrawer from "@/components/organisms/CartDrawer";
@@ -491,11 +492,13 @@ return (
                       <p className="text-xs sm:text-sm text-gray-600 mt-1">View reports and analytics</p>
                     </Link>
                   </div>
-                </div>
+</div>
               </div>
-}>
-              <Route index element={<ManageProducts />} />
-<Route path="products" element={<ManageProducts />} />
+            } />
+            <Route path="/admin/*" element={
+              <Routes>
+                <Route index element={<ManageProducts />} />
+                <Route path="products" element={<ManageProducts />} />
               <Route path="products/manage" element={<ManageProducts />} />
               <Route path="products/add" element={<AddProduct />} />
               <Route path="categories" element={<div className="p-6">
@@ -562,8 +565,9 @@ return (
               <Route path="users" element={<UserManagement />} />
               <Route path="marketing" element={<div className="p-6">Marketing Tools - Coming Soon</div>} />
               <Route path="reports" element={<ReportsAnalytics />} />
-              <Route path="settings" element={<div className="p-6">System Settings - Coming Soon</div>} />
-            </Route>
+<Route path="settings" element={<div className="p-6">System Settings - Coming Soon</div>} />
+              </Routes>
+            } />
             
             {/* Legacy admin routes for backward compatibility */}
             <Route path="/admin/add-product" element={<AddProduct />} />
@@ -661,6 +665,11 @@ return (
 }
 
 function App() {
+  // Initialize security features on app start
+  useEffect(() => {
+    initializeSecurity();
+  }, []);
+
   return (
     <BrowserRouter>
       <AppContent />

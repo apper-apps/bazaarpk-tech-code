@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/useToast";
 import { CategoryService } from "@/services/api/CategoryService";
 import { ProductService } from "@/services/api/ProductService";
+import { announceToScreenReader, getCSRFToken, initializeCSRF, sanitizeInput, sanitizeNumericInput, sanitizeURL, validateFormData } from "@/utils/security";
 import ApperIcon from "@/components/ApperIcon";
 import Home from "@/components/pages/Home";
 import Category from "@/components/pages/Category";
@@ -17,14 +18,19 @@ import { formatPrice } from "@/utils/currency";
 const AddProduct = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { showToast } = useToast();
-  const isInAdminDashboard = location.pathname.startsWith('/admin/');
+  const showToast = useToast();
   
-  // Tab state
-  const [activeTab, setActiveTab] = useState("basic");
+  // Check if we're in admin dashboard context
+  const isInAdminDashboard = location.pathname.includes('/admin') || 
+                           location.pathname.includes('/dashboard');
   
-  // Form state
-const [formData, setFormData] = useState({
+  // Initialize CSRF protection on component mount
+  useEffect(() => {
+    initializeCSRF();
+    announceToScreenReader("Add product form loaded. Fill in required fields marked with asterisk.", "polite");
+  }, []);
+
+  const [formData, setFormData] = useState({
     title: "",
     brand: "",
     category: "",
@@ -100,13 +106,13 @@ barcode: "",
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [activeTab, setActiveTab] = useState("basic");
   const [imagePreview, setImagePreview] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [lastSaved, setLastSaved] = useState(null);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
-
   // Available tags/labels
   const availableTags = [
     "FLASH", "FRESH", "PREMIUM", "BESTSELLER", "DESI", "VEGAN", 
@@ -202,34 +208,117 @@ const tabs = [
     { id: "approval", label: "Approval Settings", icon: "Shield" }
   ];
 const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Input sanitization based on field type
+    let sanitizedValue = value;
+    
+    if (typeof value === 'string') {
+      switch (field) {
+        case 'title':
+        case 'brand':
+        case 'category':
+        case 'subcategory':
+          sanitizedValue = sanitizeInput(value, { 
+            maxLength: 100, 
+            allowNumbers: true, 
+            allowSpecialChars: false 
+          });
+          break;
+        case 'description':
+        case 'shortDescription':
+          sanitizedValue = sanitizeInput(value, { 
+            maxLength: field === 'description' ? 2000 : 200, 
+            allowNumbers: true, 
+            allowSpecialChars: true 
+          });
+          break;
+        case 'sku':
+        case 'barcode':
+          sanitizedValue = sanitizeInput(value, { 
+            maxLength: 50, 
+            allowNumbers: true, 
+            allowSpecialChars: false 
+          }).toUpperCase();
+          break;
+        case 'sellingPrice':
+        case 'buyingPrice':
+        case 'discountedPrice':
+        case 'discountAmount':
+        case 'stockQuantity':
+        case 'lowStockThreshold':
+        case 'minimumOrderQuantity':
+        case 'maximumOrderQuantity':
+        case 'reorderLevel':
+          sanitizedValue = sanitizeNumericInput(value, { 
+            min: 0, 
+            allowDecimals: ['sellingPrice', 'buyingPrice', 'discountedPrice', 'discountAmount'].includes(field) 
+          });
+          break;
+        case 'mainImageAltText':
+          sanitizedValue = sanitizeInput(value, { 
+            maxLength: 125, 
+            allowNumbers: true, 
+            allowSpecialChars: true 
+          });
+          break;
+        case 'videoUrl':
+          sanitizedValue = sanitizeURL(value);
+          break;
+        case 'metaTitle':
+          sanitizedValue = sanitizeInput(value, { 
+            maxLength: 60, 
+            allowNumbers: true, 
+            allowSpecialChars: true 
+          });
+          break;
+        case 'metaDescription':
+          sanitizedValue = sanitizeInput(value, { 
+            maxLength: 160, 
+            allowNumbers: true, 
+            allowSpecialChars: true 
+          });
+          break;
+        case 'supplierInfo':
+        case 'location':
+        case 'notes':
+          sanitizedValue = sanitizeInput(value, { 
+            maxLength: field === 'notes' ? 300 : 100, 
+            allowNumbers: true, 
+            allowSpecialChars: true 
+          });
+          break;
+        default:
+          sanitizedValue = sanitizeInput(value);
+      }
+    }
+
+    setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
     setUnsavedChanges(true);
     
     // Auto-generate SKU if title changes
-    if (field === 'title' && value) {
-      const autoSku = `${formData.category?.substring(0,3).toUpperCase() || 'PRD'}-${value.substring(0,3).toUpperCase()}-${Date.now().toString().slice(-3)}`;
+    if (field === 'title' && sanitizedValue) {
+      const autoSku = `${formData.category?.substring(0,3).toUpperCase() || 'PRD'}-${sanitizedValue.substring(0,3).toUpperCase()}-${Date.now().toString().slice(-3)}`;
       if (!formData.sku) {
         setFormData(prev => ({ ...prev, sku: autoSku }));
       }
     }
     
     // Auto-generate meta fields if not set
-    if (field === 'title' && value && !formData.metaTitle) {
-      setFormData(prev => ({ ...prev, metaTitle: value }));
+    if (field === 'title' && sanitizedValue && !formData.metaTitle) {
+      setFormData(prev => ({ ...prev, metaTitle: sanitizedValue }));
     }
     
-    if (field === 'shortDescription' && value && !formData.metaDescription) {
-      setFormData(prev => ({ ...prev, metaDescription: value }));
+    if (field === 'shortDescription' && sanitizedValue && !formData.metaDescription) {
+      setFormData(prev => ({ ...prev, metaDescription: sanitizedValue }));
     }
     
     // Auto-update main image alt text if not set
-    if (field === 'title' && value && !formData.mainImageAltText) {
-      setFormData(prev => ({ ...prev, mainImageAltText: `${value} - Product Image` }));
+    if (field === 'title' && sanitizedValue && !formData.mainImageAltText) {
+      setFormData(prev => ({ ...prev, mainImageAltText: `${sanitizedValue} - Product Image` }));
     }
     
     // Auto-calculate discount price when discount amount changes
-    if (field === 'discountAmount' && value) {
-      const discountVal = parseFloat(value) || 0;
+    if (field === 'discountAmount' && sanitizedValue) {
+      const discountVal = parseFloat(sanitizedValue) || 0;
       const selling = parseFloat(formData.sellingPrice) || 0;
       
       if (selling > 0) {
@@ -241,15 +330,15 @@ const handleInputChange = (field, value) => {
         }
         setFormData(prev => ({ 
           ...prev, 
-          [field]: value, 
+          [field]: sanitizedValue, 
           discountedPrice: newDiscountedPrice.toFixed(2) 
         }));
       }
     }
     
     // Auto-calculate discount amount when discounted price changes
-    if (field === 'discountedPrice' && value) {
-      const discountedVal = parseFloat(value) || 0;
+    if (field === 'discountedPrice' && sanitizedValue) {
+      const discountedVal = parseFloat(sanitizedValue) || 0;
       const selling = parseFloat(formData.sellingPrice) || 0;
       
       if (selling > 0 && discountedVal < selling) {
@@ -257,7 +346,7 @@ const handleInputChange = (field, value) => {
         const discountPct = (discountAmt / selling) * 100;
         setFormData(prev => ({ 
           ...prev, 
-          [field]: value,
+          [field]: sanitizedValue,
           discountAmount: formData.discountType === "percentage" 
             ? discountPct.toFixed(1) 
             : discountAmt.toFixed(2)
@@ -266,8 +355,8 @@ const handleInputChange = (field, value) => {
     }
     
     // Auto-set stock status based on quantity
-    if (field === 'stockQuantity' && value) {
-      const quantity = parseInt(value) || 0;
+    if (field === 'stockQuantity' && sanitizedValue) {
+      const quantity = parseInt(sanitizedValue) || 0;
       const threshold = parseInt(formData.lowStockThreshold) || 10;
       let status = "In Stock";
       
@@ -438,12 +527,21 @@ const validateForm = () => {
   };
 
 const handleSave = async (publish = false, silent = false, schedule = null) => {
+    // Get CSRF token for security
+    const csrfToken = getCSRFToken();
+    if (!csrfToken) {
+      showToast("Security token expired. Please refresh the page.", "error");
+      return;
+    }
+
     if (!validateForm() && !silent) {
       showToast("Please fix the errors before saving", "error");
+      announceToScreenReader("Form contains errors. Please check all fields.", "assertive");
       return;
     }
 
     setLoading(true);
+    
     try {
       let visibility = 'draft';
       let requiresApproval = formData.requiresApproval;
@@ -458,64 +556,92 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
         }
       }
 
-      const productData = {
+      // Additional input validation and sanitization before submission
+      const sanitizedData = {
         ...formData,
+        // Re-sanitize critical fields
+        title: sanitizeInput(formData.title, { maxLength: 100 }),
+        description: sanitizeInput(formData.description, { maxLength: 2000 }),
+        brand: sanitizeInput(formData.brand, { maxLength: 50 }),
+        sku: sanitizeInput(formData.sku, { maxLength: 50 }).toUpperCase(),
+        barcode: sanitizeInput(formData.barcode, { maxLength: 20 }),
+        metaTitle: sanitizeInput(formData.metaTitle, { maxLength: 60 }),
+        metaDescription: sanitizeInput(formData.metaDescription, { maxLength: 160 }),
+        videoUrl: sanitizeURL(formData.videoUrl),
+        // Ensure numeric fields are properly sanitized
+        sellingPrice: sanitizeNumericInput(formData.sellingPrice, { min: 0 }),
+        buyingPrice: sanitizeNumericInput(formData.buyingPrice, { min: 0 }),
+        stockQuantity: sanitizeNumericInput(formData.stockQuantity, { min: 0, allowDecimals: false }),
+        lowStockThreshold: sanitizeNumericInput(formData.lowStockThreshold || "10", { min: 0, allowDecimals: false })
+      };
+
+      const productData = {
+        ...sanitizedData,
         visibility,
         requiresApproval,
         moderatorApproved: currentUser.permissions.canBypassApproval,
-        scheduledPublish: schedule || formData.scheduledPublish,
-        price: sellingPrice,
-        oldPrice: discountedPrice > 0 ? sellingPrice : null,
-        discountedPrice: discountedPrice > 0 ? discountedPrice : null,
-        stock: parseInt(formData.stockQuantity),
-lowStockThreshold: parseInt(formData.lowStockThreshold) || 10,
+        scheduledPublish: schedule || sanitizedData.scheduledPublish,
+        price: parseFloat(sanitizedData.sellingPrice) || 0,
+        oldPrice: parseFloat(sanitizedData.discountedPrice) > 0 ? parseFloat(sanitizedData.sellingPrice) : null,
+        discountedPrice: parseFloat(sanitizedData.discountedPrice) > 0 ? parseFloat(sanitizedData.discountedPrice) : null,
+        stock: parseInt(sanitizedData.stockQuantity) || 0,
+        lowStockThreshold: parseInt(sanitizedData.lowStockThreshold) || 10,
         images: [
-          ...(formData.mainImage ? [{ 
-            url: URL.createObjectURL(formData.mainImage), 
-            altText: formData.mainImageAltText || formData.title,
+          ...(sanitizedData.mainImage ? [{ 
+            url: URL.createObjectURL(sanitizedData.mainImage), 
+            altText: sanitizeInput(sanitizedData.mainImageAltText || sanitizedData.title, { maxLength: 125 }),
             isMain: true 
           }] : []),
-          ...formData.additionalImages.map(img => ({
+          ...sanitizedData.additionalImages.map(img => ({
             url: img.preview,
-            altText: img.altText || formData.title,
+            altText: sanitizeInput(img.altText || sanitizedData.title, { maxLength: 125 }),
             isMain: false
           }))
         ],
-        videoUrl: formData.videoUrl,
-        adminRating: parseInt(formData.adminRating) || 0,
-        badges: formData.tags,
-        variants: formData.variants || [],
-        barcode: formData.barcode,
-        returnPolicy: formData.returnPolicy,
-        includeInDeals: formData.includeInDeals,
-        dealOfTheDay: formData.dealOfTheDay,
-        countdownTimer: formData.countdownTimer,
-        bannerText: formData.bannerText,
-        badge: formData.badge,
+        videoUrl: sanitizedData.videoUrl,
+        adminRating: parseInt(sanitizedData.adminRating) || 0,
+        badges: Array.isArray(sanitizedData.tags) ? sanitizedData.tags.map(tag => sanitizeInput(tag, { maxLength: 20 })) : [],
+        variants: Array.isArray(sanitizedData.variants) ? sanitizedData.variants : [],
+        barcode: sanitizedData.barcode,
+        returnPolicy: sanitizedData.returnPolicy,
+        includeInDeals: Boolean(sanitizedData.includeInDeals),
+        dealOfTheDay: Boolean(sanitizedData.dealOfTheDay),
+        countdownTimer: sanitizeInput(sanitizedData.countdownTimer, { maxLength: 50 }),
+        bannerText: sanitizeInput(sanitizedData.bannerText, { maxLength: 100 }),
+        badge: sanitizeInput(sanitizedData.badge, { maxLength: 20 }),
         shipping: {
-          weight: formData.shippingWeight,
-          dimensions: formData.shippingDimensions,
-          freeThreshold: parseInt(formData.shippingFreeThreshold) || 1000
+          weight: sanitizeNumericInput(sanitizedData.shippingWeight, { min: 0 }),
+          dimensions: {
+            length: sanitizeNumericInput(sanitizedData.shippingDimensions?.length, { min: 0 }),
+            width: sanitizeNumericInput(sanitizedData.shippingDimensions?.width, { min: 0 }),
+            height: sanitizeNumericInput(sanitizedData.shippingDimensions?.height, { min: 0 })
+          },
+          freeThreshold: parseInt(sanitizedData.shippingFreeThreshold) || 1000
         },
-        bundle: formData.bundleComponents.length > 0 ? {
-          components: formData.bundleComponents,
-          savings: parseFloat(formData.bundleSavings) || 0,
-          preparationTime: formData.preparationTime,
-          servings: formData.servings
+        bundle: Array.isArray(sanitizedData.bundleComponents) && sanitizedData.bundleComponents.length > 0 ? {
+          components: sanitizedData.bundleComponents,
+          savings: parseFloat(sanitizedData.bundleSavings) || 0,
+          preparationTime: sanitizeInput(sanitizedData.preparationTime, { maxLength: 50 }),
+          servings: sanitizeInput(sanitizedData.servings, { maxLength: 20 })
         } : null,
         seo: {
-          metaTitle: formData.metaTitle || formData.title,
-          metaDescription: formData.metaDescription || formData.shortDescription,
-          keywords: formData.seoKeywords,
-          relatedProducts: formData.relatedProducts
+          metaTitle: sanitizedData.metaTitle || sanitizedData.title,
+          metaDescription: sanitizedData.metaDescription || sanitizedData.shortDescription,
+          keywords: Array.isArray(sanitizedData.seoKeywords) ? sanitizedData.seoKeywords : [],
+          relatedProducts: Array.isArray(sanitizedData.relatedProducts) ? sanitizedData.relatedProducts : []
         },
+        // Security and audit fields
         createdBy: currentUser.role,
-        createdAt: new Date(),
-        lastModified: new Date(),
-featured: formData.featured || false,
-        priority: formData.featured ? Date.now() : 0
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        csrfToken: csrfToken,
+        sessionId: sessionStorage.getItem('sessionId') || 'unknown',
+        userAgent: navigator.userAgent,
+        featured: Boolean(sanitizedData.featured),
+        priority: Boolean(sanitizedData.featured) ? Date.now() : 0
       };
 
+      // Submit with CSRF protection
       await ProductService.create(productData);
       
       if (!silent) {
@@ -532,6 +658,7 @@ featured: formData.featured || false,
         }
         
         showToast(message, "success");
+        announceToScreenReader(message, "polite");
       }
       
       setUnsavedChanges(false);
@@ -541,8 +668,8 @@ featured: formData.featured || false,
       if (publish && !requiresApproval) {
         navigate("/admin/products");
       } else if (!silent) {
-        // Reset form for another product
-        setFormData({
+        // Reset form for another product with sanitized defaults
+        const cleanFormData = {
           title: "",
           brand: "",
           category: "",
@@ -552,14 +679,16 @@ featured: formData.featured || false,
           sellingPrice: "",
           buyingPrice: "",
           discountedPrice: "",
+          discountAmount: "",
+          discountType: "percentage",
           stockStatus: "In Stock",
           stockQuantity: "",
           lowStockThreshold: "10",
           sku: "",
           barcode: "",
           mainImage: null,
-additionalImages: [],
           mainImageAltText: "",
+          additionalImages: [],
           videoUrl: "",
           tags: [],
           adminRating: 0,
@@ -570,7 +699,7 @@ additionalImages: [],
           countdownTimer: "",
           bannerText: "",
           badge: "",
-shippingWeight: "",
+          shippingWeight: "",
           shippingDimensions: { length: "", width: "", height: "" },
           shippingFreeThreshold: "1000",
           returnPolicy: "7-day",
@@ -585,15 +714,34 @@ shippingWeight: "",
           metaTitle: "",
           metaDescription: "",
           seoKeywords: [],
-          relatedProducts: []
-        });
+          relatedProducts: [],
+          unitOfMeasurement: "piece",
+          minimumOrderQuantity: "1",
+          maximumOrderQuantity: "",
+          reorderLevel: "",
+          supplierInfo: "",
+          costPerUnit: "",
+          lastRestocked: "",
+          expiryDate: "",
+          batchNumber: "",
+          location: "",
+          notes: ""
+        };
+        
+        setFormData(cleanFormData);
         setImagePreview(null);
         setActiveTab("basic");
+        setErrors({});
+        
+        announceToScreenReader("Form has been reset for new product entry", "polite");
       }
     } catch (error) {
       console.error("Error saving product:", error);
+      const errorMessage = error.message || "Failed to save product";
+      
       if (!silent) {
-        showToast("Failed to save product", "error");
+        showToast(errorMessage, "error");
+        announceToScreenReader(`Error: ${errorMessage}`, "assertive");
       }
     } finally {
       setLoading(false);
@@ -887,45 +1035,39 @@ const renderBasicInfo = () => (
         </p>
       </div>
 
-      <div>
-<label className="block text-sm font-medium text-gray-700 mb-2">
-          Product Name *
-          <span className="text-gray-500 text-xs ml-1">(Will be used for SEO and search)</span>
-        </label>
-        <Input
-          type="text"
-          placeholder="e.g., Premium Organic Basmati Rice 5kg Pack"
-          value={formData.title}
-          onChange={(e) => handleInputChange("title", e.target.value)}
-          className={cn(errors.title && "border-red-500")}
-          maxLength={100}
-        />
-        {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-        <div className="flex justify-between mt-1">
-          <p className="text-xs text-gray-500">
-            Use descriptive names with brand, type, size, and key features
-          </p>
-          <p className="text-xs text-gray-400">
-            {formData.title.length}/100
-          </p>
+<div>
+          <Input
+            label="Product Name"
+            type="text"
+            placeholder="e.g., Premium Organic Basmati Rice 5kg Pack"
+            value={formData.title}
+            onChange={(e) => handleInputChange("title", e.target.value)}
+            error={errors.title}
+            required={true}
+            maxLength={100}
+            description="Use descriptive names with brand, type, size, and key features. This will be used for SEO and search."
+            sanitize={true}
+            sanitizeOptions={{ maxLength: 100, allowNumbers: true, allowSpecialChars: false }}
+            ariaLabel="Product name, required field"
+          />
         </div>
-      </div>
 
       <div>
-<label className="block text-sm font-medium text-gray-700 mb-2">
-          Brand/Manufacturer
-          <span className="text-gray-500 text-xs ml-1">(Searchable by customers)</span>
-        </label>
-        <div className="relative">
+<div className="relative">
           <Input
+            label="Brand/Manufacturer"
             type="text"
             placeholder="Type to search or enter new brand: Shan, National, PureFood..."
             value={formData.brand}
             onChange={(e) => handleInputChange("brand", e.target.value)}
-            className={cn(errors.brand && "border-red-500", "pr-10")}
+            error={errors.brand}
             list="brand-suggestions"
+            description="Brand name builds trust, enables filtering, and helps with customer recognition. Searchable by customers."
+            sanitize={true}
+            sanitizeOptions={{ maxLength: 50, allowNumbers: true, allowSpecialChars: false }}
+            ariaLabel="Brand or manufacturer name"
+            autoComplete="organization"
           />
-          <ApperIcon name="Building2" className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <datalist id="brand-suggestions">
             <option value="Shan Foods" />
             <option value="National Foods" />
@@ -937,14 +1079,10 @@ const renderBasicInfo = () => (
             <option value="Green Mart" />
           </datalist>
         </div>
-        {errors.brand && <p className="text-red-500 text-sm mt-1">{errors.brand}</p>}
-        <p className="text-xs text-gray-500 mt-1">
-          Brand name builds trust, enables filtering, and helps with customer recognition
-        </p>
       </div>
 
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
           <ApperIcon name="FolderTree" className="w-5 h-5 mr-2 text-blue-600" />
           Category Classification
         </h4>
@@ -1013,8 +1151,8 @@ const renderBasicInfo = () => (
                 No subcategories available for this category
               </p>
             )}
-          </div>
 </div>
+        </div>
         <div className="mt-3 text-xs text-gray-500">
           <strong>Category helps with:</strong> Customer navigation, search filtering, and product organization
         </div>
@@ -1063,8 +1201,8 @@ Storage: Store in cool, dry place. Best before 12 months from packaging."
         </div>
       </div>
 
-      <div>
-<label className="block text-sm font-medium text-gray-700 mb-2">
+<div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Short Description
           <span className="text-gray-500 text-xs ml-1">(For product cards and listings)</span>
         </label>
@@ -2176,42 +2314,39 @@ const renderMedia = () => (
 {/* Main Image Alt Text */}
         {formData.mainImage && (
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Alt Text (for accessibility)
-            </label>
             <Input
+              label="Alt Text (for accessibility)"
               type="text"
               value={formData.mainImageAltText}
               onChange={(e) => handleInputChange("mainImageAltText", e.target.value)}
               placeholder="Describe the main image for screen readers"
-              className="w-full"
+              description="Improves SEO and accessibility. Describe what's shown in the image."
+              maxLength={125}
+              sanitize={true}
+              sanitizeOptions={{ maxLength: 125, allowNumbers: true, allowSpecialChars: true }}
+              ariaLabel="Alternative text for main product image"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Improves SEO and accessibility. Describe what's shown in the image.
-            </p>
           </div>
         )}
       </div>
 
-      {/* Video URL */}
+{/* Video URL */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          🎥 Product Video URL (Optional)
-        </label>
         <Input
+          label="🎥 Product Video URL (Optional)"
           type="url"
           value={formData.videoUrl}
           onChange={(e) => handleInputChange("videoUrl", e.target.value)}
           placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
-          className="w-full"
+          description="YouTube, Vimeo, or direct video URLs. Videos help increase conversion rates."
+          sanitize={true}
+          ariaLabel="Product video URL"
+          autoComplete="url"
         />
-        <p className="text-xs text-gray-500 mt-1">
-          YouTube, Vimeo, or direct video URLs. Videos help increase conversion rates.
-        </p>
         {formData.videoUrl && (
-          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg" role="status">
             <div className="flex items-center text-green-700">
-              <ApperIcon name="Video" className="w-4 h-4 mr-2" />
+              <ApperIcon name="Video" className="w-4 h-4 mr-2" aria-hidden="true" />
               <span className="text-sm font-medium">Video URL Added</span>
             </div>
             <p className="text-xs text-green-600 mt-1">
@@ -2289,7 +2424,7 @@ const renderMedia = () => (
                 </div>
                 
                 {/* Alt Text Input */}
-                <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-95 p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-all">
+<div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-95 p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-all">
                   <Input
                     type="text"
                     value={image.altText || ""}
@@ -2300,6 +2435,10 @@ const renderMedia = () => (
                     }}
                     placeholder="Alt text for this image"
                     className="text-xs h-6 text-gray-700"
+                    maxLength={125}
+                    sanitize={true}
+                    sanitizeOptions={{ maxLength: 125, allowNumbers: true, allowSpecialChars: true }}
+                    ariaLabel={`Alternative text for additional image ${index + 1}`}
                   />
                 </div>
               </div>

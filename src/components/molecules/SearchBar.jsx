@@ -10,58 +10,97 @@ const SearchBar = ({
   suggestions = [],
   ...props 
 }) => {
-  const [query, setQuery] = useState("");
+const [query, setQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
-    if (onSearch) {
-      onSearch(query);
-    }
+    if (!query.trim() || isSearching) return;
+
+    setIsSearching(true);
     setShowSuggestions(false);
+
+try {
+      const sanitizedQuery = query.trim();
+      
+      if (!sanitizedQuery) {
+        return;
+      }
+if (onSearch) {
+        await onSearch(sanitizedQuery);
+      }
+
+} catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  const handleInputChange = (e) => {
-    setQuery(e.target.value);
-    setShowSuggestions(e.target.value.length > 0);
+const handleInputChange = (e) => {
+    const value = e.target.value;
+    
+    setQuery(value);
+    setShowSuggestions(value.length > 2);
   };
 
-  const handleSuggestionClick = (suggestion) => {
+const handleSuggestionClick = (suggestion) => {
     setQuery(suggestion);
     setShowSuggestions(false);
-    if (onSearch) {
+    
+    if (onSearch && suggestion) {
       onSearch(suggestion);
     }
   };
 
   return (
-    <div className={cn("relative", className)} {...props}>
-      <form onSubmit={handleSearch} className="relative">
+<div className={cn("relative", className)} {...props}>
+      <form onSubmit={handleSearch} className="relative" role="search">
         <div className="relative">
           <ApperIcon 
             name="Search" 
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" 
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+            aria-hidden="true"
           />
           <Input
-            type="text"
+            type="search"
+            role="searchbox"
             placeholder={placeholder}
             value={query}
             onChange={handleInputChange}
-            onFocus={() => setShowSuggestions(query.length > 0)}
+            onFocus={() => setShowSuggestions(query.length > 2)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             className="pl-10 pr-10"
+            maxLength={100}
+            autoComplete="off"
+            spellCheck="false"
+            aria-label="Search products"
+            aria-describedby="search-help"
           />
-          {query && (
+          <div id="search-help" className="sr-only">
+            Type to search products. Use at least 3 characters for suggestions.
+          </div>
+          
+          {query && !isSearching && (
             <button
               type="button"
-              onClick={() => {
+onClick={() => {
                 setQuery("");
                 setShowSuggestions(false);
               }}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-0.5 hover:bg-gray-100 rounded-full"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 p-0.5 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500"
+              aria-label="Clear search"
+              title="Clear search"
             >
-              <ApperIcon name="X" className="h-4 w-4 text-gray-400" />
+              <ApperIcon name="X" className="h-4 w-4 text-gray-400" aria-hidden="true" />
             </button>
+          )}
+          
+          {isSearching && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div className="animate-spin h-4 w-4 border-2 border-primary-600 border-t-transparent rounded-full" aria-label="Searching" />
+            </div>
           )}
         </div>
       </form>
