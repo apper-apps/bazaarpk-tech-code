@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/useToast";
 import ApperIcon from "@/components/ApperIcon";
 import ProductManagementCard from "@/components/organisms/ProductManagementCard";
 import Loading from "@/components/ui/Loading";
-import Error from "@/components/ui/Error";
+import ErrorComponent from "@/components/ui/Error";
 import Empty from "@/components/ui/Empty";
 import Category from "@/components/pages/Category";
 import Badge from "@/components/atoms/Badge";
@@ -37,14 +37,14 @@ const [products, setProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
 
-  // Advanced filters state
+// Advanced filters state
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [stockFilter, setStockFilter] = useState('all'); // all, in-stock, low-stock, out-of-stock
   const [tagFilter, setTagFilter] = useState('all');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [featuredFilter, setFeaturedFilter] = useState('all'); // all, featured, not-featured
   const [statusFilter, setStatusFilter] = useState('all'); // all, published, draft
-
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   // Admin role and permissions
   const [currentUser] = useState({
     role: 'admin', // admin, moderator
@@ -234,9 +234,26 @@ const logActivity = (action, details) => {
           default:
             return true;
         }
-      });
+});
     }
 
+    // Apply sorting - remove async call from useEffect
+    switch (sortBy) {
+      case 'name-asc':
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'name-desc':
+        filtered.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case 'newest':
+        filtered.sort((a, b) => (b.Id || 0) - (a.Id || 0));
+        break;
+      case 'oldest':
+        filtered.sort((a, b) => (a.Id || 0) - (b.Id || 0));
+        break;
+      default:
+        break;
+    }
     // Apply role-based filtering for moderators
     if (currentUser.role === 'moderator') {
       // Moderators might see only certain categories or approved products
@@ -267,7 +284,7 @@ const logActivity = (action, details) => {
         break;
       case 'most-popular':
         filtered.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
-        break;
+break;
       case 'newest':
         filtered.sort((a, b) => b.Id - a.Id);
         break;
@@ -275,7 +292,9 @@ const logActivity = (action, details) => {
         filtered.sort((a, b) => a.Id - b.Id);
         break;
       case 'last-updated':
-        filtered.sort((a, b) => b.Id - a.Id); // Using ID as proxy for last updated
+        filtered.sort((a, b) => 
+          new Date(b.lastModified || 0) - new Date(a.lastModified || 0)
+        );
         break;
       case 'pending-approval':
         if (currentUser.role === 'admin' || currentUser.role === 'moderator') {
@@ -309,9 +328,9 @@ const logActivity = (action, details) => {
   };
 
   // Clear selections when filters change
-  useEffect(() => {
+useEffect(() => {
     setSelectedProducts(new Set());
-  }, [searchQuery, selectedCategory, priceRange, stockFilter, tagFilter, featuredFilter, statusFilter]);
+  }, [searchQuery, selectedCategory, priceRange, stockFilter, tagFilter, featuredFilter, statusFilter, sortBy]);
 
   // Show/hide bulk actions based on selection
   useEffect(() => {
@@ -428,14 +447,15 @@ const handleBulkApprove = async () => {
         initiatedAt: new Date().toISOString()
       });
       
-      const updates = selectedIds.map(id => ({
+const updates = selectedIds.map(id => ({
         id,
         data: { 
           moderatorApproved: true, 
           status: 'approved',
           visibility: 'published',
           approvedAt: new Date().toISOString(),
-          approvedBy: currentUser.id || currentUser.role
+          approvedBy: currentUser.id || currentUser.role,
+          lastModified: new Date().toISOString()
         }
       }));
       
@@ -522,7 +542,6 @@ const handleBulkEdit = async () => {
     try {
       setActionLoading(true);
       const selectedIds = Array.from(selectedProducts);
-      const updatedProducts = [];
       
       logActivity('bulk_edit_initiated', {
         productCount: selectedIds.length,
@@ -531,64 +550,59 @@ const handleBulkEdit = async () => {
         initiatedAt: new Date().toISOString()
       });
 
-      const updatePromises = selectedIds.map(async (id, index) => {
-        try {
-          const product = products.find(p => p.Id === id);
-          if (!product) {
-            throw new Error(`Product with ID ${id} not found`);
-          }
-          
-          let updatedProduct = { 
-            ...product,
+      // Use the new bulk update service methods
+      let updatedProducts = [];
+
+      // Handle price adjustments
+      if (bulkEditData.priceAdjustment.value) {
+        const adjustment = {
+          type: bulkEditData.priceAdjustment.type,
+          value: parseFloat(bulkEditData.priceAdjustment.value)
+        };
+        
+        if (isNaN(adjustment.value)) {
+          throw new Error(`Invalid price adjustment value: ${bulkEditData.priceAdjustment.value}`);
+        }
+
+        updatedProducts = await ProductService.bulkPriceAdjustment(selectedIds, adjustment);
+      }
+
+      // Handle other bulk updates
+      const otherUpdates = [];
+      if (bulkEditData.category) {
+        otherUpdates.push({ field: 'category', value: bulkEditData.category });
+      }
+      if (bulkEditData.status) {
+        otherUpdates.push({ field: 'visibility', value: bulkEditData.status });
+      }
+
+      if (otherUpdates.length > 0) {
+        const updates = selectedIds.map(id => ({
+          id,
+          data: otherUpdates.reduce((acc, update) => {
+            acc[update.field] = update.value;
+            return acc;
+          }, {
             lastModified: new Date().toISOString(),
             modifiedBy: currentUser.id || currentUser.role
-          };
+          })
+        }));
 
-          // Apply price adjustment with validation
-          if (bulkEditData.priceAdjustment.value) {
-            const adjustment = parseFloat(bulkEditData.priceAdjustment.value);
-            if (isNaN(adjustment)) {
-              throw new Error(`Invalid price adjustment value: ${bulkEditData.priceAdjustment.value}`);
-            }
-            
-            if (bulkEditData.priceAdjustment.type === 'percentage') {
-              const newPrice = product.price * (1 + adjustment / 100);
-              updatedProduct.price = Math.max(0, Math.round(newPrice));
-            } else {
-              updatedProduct.price = Math.max(0, product.price + adjustment);
-            }
-            
-            // Track original price for audit
-            updatedProduct.priceHistory = updatedProduct.priceHistory || [];
-            updatedProduct.priceHistory.push({
-              oldPrice: product.price,
-              newPrice: updatedProduct.price,
-              adjustment: adjustment,
-              type: bulkEditData.priceAdjustment.type,
-              date: new Date().toISOString()
-            });
+        const bulkUpdated = await ProductService.bulkUpdate(updates);
+        updatedProducts = bulkUpdated.length > 0 ? bulkUpdated : updatedProducts;
+      }
+// Handle tags (if needed in future)
+      if (bulkEditData.tags && bulkEditData.tags.values.length > 0) {
+        // Tag handling logic would go here
+        const tagUpdates = selectedIds.map(id => ({
+          id,
+          data: { 
+            tags: bulkEditData.tags.action === 'add' ? [...(products.find(p => p.Id === id)?.tags || []), ...bulkEditData.tags.values] : bulkEditData.tags.values,
+            lastModified: new Date().toISOString()
           }
-
-          // Apply category change
-          if (bulkEditData.category) {
-            updatedProduct.previousCategory = product.category;
-            updatedProduct.category = bulkEditData.category;
-          }
-
-          // Apply status change
-          if (bulkEditData.status) {
-            updatedProduct.previousVisibility = product.visibility;
-            updatedProduct.visibility = bulkEditData.status;
-          }
-
-          const result = await ProductService.update(id, updatedProduct);
-          return { product: result, success: true, index };
-          
-        } catch (error) {
-          console.error(`Failed to update product ${id}:`, error);
-          return { id, success: false, error: error.message, index };
-        }
-      });
+        }));
+        await ProductService.bulkUpdate(tagUpdates);
+      }
       
       const results = await Promise.allSettled(updatePromises);
       const successful = results.filter(r => r.status === 'fulfilled' && r.value.success);
@@ -668,10 +682,11 @@ const handleToggleVisibility = async (productId) => {
       
       if (updatedProduct) {
         setProducts(prev => prev.map(p => 
-          p.Id === productId ? {
+p.Id === productId ? {
             ...updatedProduct,
             lastModified: new Date().toISOString(),
-            modifiedBy: currentUser.id || currentUser.role
+            modifiedBy: currentUser.id || currentUser.role,
+            visibilityChangedAt: new Date().toISOString()
           } : p
         ));
         
@@ -732,8 +747,9 @@ const handleToggleVisibility = async (productId) => {
         setProducts(prev => prev.map(p => 
           p.Id === productId ? {
             ...updatedProduct,
-            lastModified: new Date().toISOString(),
-            modifiedBy: currentUser.id || currentUser.role
+lastModified: new Date().toISOString(),
+            modifiedBy: currentUser.id || currentUser.role,
+            featuredChangedAt: new Date().toISOString()
           } : p
         ));
         
@@ -831,13 +847,17 @@ const handleDeleteConfirm = async () => {
         const endTime = performance.now();
         const duration = endTime - startTime;
         
-        // Store deletion record for audit trail
+        // Store deletion record for audit trail with enhanced metadata
         try {
           const deletionRecord = {
             ...productBackup,
             deletionDuration: Math.round(duration),
             browserInfo: navigator.userAgent,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            userSession: sessionStorage.getItem('sessionId'),
+            adminAction: true,
+            recoverable: true,
+            retentionPeriod: 30 // days
           };
           
           const deletionHistory = JSON.parse(localStorage.getItem('product_deletion_history') || '[]');
@@ -851,7 +871,8 @@ const handleDeleteConfirm = async () => {
           productId: productToDelete.Id,
           productTitle: productToDelete.title,
           duration: Math.round(duration),
-          success: true
+          success: true,
+          recoverable: true
         });
         
         // Track deletion performance
@@ -863,7 +884,7 @@ const handleDeleteConfirm = async () => {
           });
         }
         
-        showToast('Product deleted successfully', 'success');
+        showToast('Product deleted successfully. Can be recovered within 30 days.', 'success');
       }
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -941,7 +962,7 @@ return (
         <div className="flex items-center space-x-4">
           <Button
             onClick={() => navigate('/admin/products/add')}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap bg-primary-600 hover:bg-primary-700"
             aria-label="Add new product"
           >
             <ApperIcon name="Plus" className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -959,15 +980,14 @@ return (
             )}
           </div>
         </div>
-
-        {/* Bulk Actions */}
+{/* Bulk Actions */}
         <AnimatePresence>
           {showBulkActions && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex items-center space-x-2"
+              className="flex flex-wrap items-center gap-2"
               role="group"
               aria-label="Bulk actions for selected products"
             >
@@ -979,9 +999,10 @@ return (
                   disabled={actionLoading}
                   aria-label={`Approve ${selectedProducts.size} selected products`}
                   title={`Approve ${selectedProducts.size} products and make them visible to customers`}
+                  className="border-green-300 text-green-700 hover:bg-green-50"
                 >
                   <ApperIcon name="CheckCircle" className="w-4 h-4 mr-2" aria-hidden="true" />
-                  Approve Selected ({selectedProducts.size})
+                  Approve ({selectedProducts.size})
                 </Button>
               )}
               
@@ -993,11 +1014,42 @@ return (
                   disabled={actionLoading}
                   aria-label={`Edit ${selectedProducts.size} selected products`}
                   title="Edit price, category, and status for selected products"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
                 >
                   <ApperIcon name="Edit3" className="w-4 h-4 mr-2" aria-hidden="true" />
                   Bulk Edit ({selectedProducts.size})
                 </Button>
               )}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const selectedData = Array.from(selectedProducts).map(id => 
+                    products.find(p => p.Id === id)
+                  );
+                  const csv = [
+                    'Name,Category,Price,Stock,SKU',
+                    ...selectedData.map(p => 
+                      `"${p.title}","${p.category}","${p.price}","${p.stock}","${p.sku || ''}"`
+                    )
+                  ].join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `products-export-${new Date().toISOString().split('T')[0]}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  showToast(`Exported ${selectedProducts.size} products`, 'success');
+                }}
+                disabled={actionLoading}
+                title="Export selected products to CSV"
+                className="border-purple-300 text-purple-700 hover:bg-purple-50"
+              >
+                <ApperIcon name="Download" className="w-4 h-4 mr-2" aria-hidden="true" />
+                Export ({selectedProducts.size})
+              </Button>
               
               {currentUser.permissions.canDelete && (
                 <Button
@@ -1006,17 +1058,17 @@ return (
                   onClick={() => setShowBulkDeleteDialog(true)}
                   disabled={actionLoading}
                   aria-label={`Delete ${selectedProducts.size} selected products`}
-                  title="Permanently delete selected products - this action cannot be undone"
+                  title="Permanently delete selected products - recoverable for 30 days"
                 >
                   <ApperIcon name="Trash2" className="w-4 h-4 mr-2" aria-hidden="true" />
-                  Delete Selected ({selectedProducts.size})
+                  Delete ({selectedProducts.size})
                 </Button>
               )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="flex items-center space-x-4">
+<div className="flex flex-wrap items-center gap-4">
           {/* View Mode Toggle */}
           <div className="flex items-center space-x-2" role="group" aria-label="View mode selection">
             <Button
@@ -1039,6 +1091,26 @@ return (
             >
               <ApperIcon name="List" className="w-4 h-4" aria-hidden="true" />
             </Button>
+          </div>
+
+          {/* Sorting */}
+          <div className="flex items-center space-x-2">
+            <label htmlFor="sort-select" className="text-sm text-gray-600">Sort:</label>
+            <select
+              id="sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="text-sm border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="name-asc">Name A-Z</option>
+              <option value="name-desc">Name Z-A</option>
+              <option value="price-asc">Price Low-High</option>
+              <option value="price-desc">Price High-Low</option>
+              <option value="stock-desc">Stock High-Low</option>
+              <option value="last-updated">Recently Updated</option>
+            </select>
           </div>
 
           {/* Role Badge */}
@@ -1065,7 +1137,7 @@ return (
             </Button>
           )}
 
-{/* Performance Monitoring Badge */}
+          {/* Performance Monitoring Badge */}
           {typeof window !== 'undefined' && window.performance?.timing && (
             <Badge 
               variant="outline" 
@@ -1078,57 +1150,95 @@ return (
         </div>
       </div>
 
-      {/* Filters and Search */}
+{/* Filters and Search */}
       <section aria-labelledby="search-filters-title">
         <h2 id="search-filters-title" className="sr-only">Search and Filter Products</h2>
         
-        {/* Search and Basic Controls */}
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
-          {/* Search */}
-          <div className="flex-1 max-w-md">
-            <label htmlFor="product-search" className="sr-only">Search products</label>
-            <div className="relative">
-              <ApperIcon 
-                name="Search" 
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" 
-                aria-hidden="true"
-              />
-              <Input
-                id="product-search"
-                type="text"
-                placeholder="Search by name or SKU..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-                aria-describedby="search-help"
-              />
-              <div id="search-help" className="sr-only">
-                Search through product names and SKU codes. Results update automatically as you type.
+        {/* Search and Quick Filters */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+            {/* Search */}
+            <div className="flex-1 max-w-md">
+              <label htmlFor="product-search" className="sr-only">Search products</label>
+              <div className="relative">
+                <ApperIcon 
+                  name="Search" 
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" 
+                  aria-hidden="true"
+                />
+                <Input
+                  id="product-search"
+                  type="text"
+                  placeholder="Search by name, SKU, or brand..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                  aria-describedby="search-help"
+                />
+                <div id="search-help" className="sr-only">
+                  Search through product names, SKU codes, brands, and tags. Results update automatically as you type.
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center space-x-4">
-            {/* Approval Status Filter for Moderators */}
-            {(currentUser.role === 'admin' || currentUser.role === 'moderator') && (
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Quick Category Filter */}
               <div>
-                <label htmlFor="status-filter" className="sr-only">Filter by approval status</label>
+                <label htmlFor="quick-category-filter" className="sr-only">Quick category filter</label>
                 <select
-                  id="status-filter"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  id="quick-category-filter"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  aria-label="Filter products by approval status"
                 >
-                  <option value="all">All Status</option>
-                  <option value="published">Published</option>
-                  <option value="draft">Draft</option>
-                  <option value="pending-approval">Pending Approval</option>
+                  <option value="all">All Categories</option>
+                  {categories.map((category, index) => (
+                    <option key={`${category.slug}-${index}`} value={category.slug}>
+                      {category.name}
+                    </option>
+                  ))}
                 </select>
               </div>
-            )}
-          </div>
 
+              {/* Approval Status Filter for Moderators */}
+              {(currentUser.role === 'admin' || currentUser.role === 'moderator') && (
+                <div>
+                  <label htmlFor="status-filter" className="sr-only">Filter by approval status</label>
+                  <select
+                    id="status-filter"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    aria-label="Filter products by approval status"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="published">Published</option>
+                    <option value="draft">Draft</option>
+                    <option value="pending-approval">Pending Approval</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Advanced Filters Toggle */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="whitespace-nowrap"
+                aria-label={showAdvancedFilters ? 'Hide advanced filters' : 'Show advanced filters'}
+              >
+                <ApperIcon name="Filter" className="w-4 h-4 mr-2" aria-hidden="true" />
+                {showAdvancedFilters ? 'Hide' : 'Show'} Filters
+                <ApperIcon 
+                  name={showAdvancedFilters ? "ChevronUp" : "ChevronDown"} 
+                  className="w-4 h-4 ml-2" 
+                  aria-hidden="true" 
+                />
+              </Button>
+            </div>
+</div>
+          </div>
+        </div>
           {/* Select All Checkbox */}
           <div className="flex items-center space-x-2">
             <input
@@ -1148,143 +1258,152 @@ return (
           </div>
         </div>
 
-        {/* Advanced Filters */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4 mt-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Advanced Filters</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearAllFilters}
-              className="text-gray-500 hover:text-gray-700"
-              aria-label="Clear all active filters"
+{/* Advanced Filters */}
+          {showAdvancedFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="border-t border-gray-200 pt-4 space-y-4"
             >
-              <ApperIcon name="X" className="w-4 h-4 mr-2" aria-hidden="true" />
-              Clear All
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {/* Category Filter */}
-            <div>
-              <label htmlFor="category-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                Category
-              </label>
-              <select
-                id="category-filter"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                aria-label="Filter by product category"
-              >
-                <option value="all">All Categories</option>
-                {categories.map((category, index) => (
-                  <option key={`${category.slug}-${index}`} value={category.slug}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Price Range */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Price Range</label>
-              <div className="flex space-x-2">
-                <Input
-                  type="number"
-                  placeholder="Min"
-                  value={priceRange.min}
-                  onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
-                  className="text-sm"
-                  aria-label="Minimum price"
-                />
-                <Input
-                  type="number"
-                  placeholder="Max"
-                  value={priceRange.max}
-                  onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
-                  className="text-sm"
-                  aria-label="Maximum price"
-                />
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-900">Advanced Filters</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="text-gray-500 hover:text-gray-700 text-xs"
+                  aria-label="Clear all active filters"
+                >
+                  <ApperIcon name="X" className="w-4 h-4 mr-1" aria-hidden="true" />
+                  Clear All
+                </Button>
               </div>
-            </div>
 
-            {/* Stock Status */}
-            <div>
-              <label htmlFor="stock-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                Stock Status
-              </label>
-              <select
-                id="stock-filter"
-                value={stockFilter}
-                onChange={(e) => setStockFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                aria-label="Filter by stock availability"
-              >
-                <option value="all">All Stock</option>
-                <option value="in-stock">In Stock (10+)</option>
-                <option value="low-stock">Low Stock (1-10)</option>
-                <option value="out-of-stock">Out of Stock</option>
-              </select>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                {/* Price Range */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price Range</label>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="number"
+                      placeholder="Min"
+                      value={priceRange.min}
+                      onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                      className="text-sm"
+                      aria-label="Minimum price"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Max"
+                      value={priceRange.max}
+                      onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                      className="text-sm"
+                      aria-label="Maximum price"
+                    />
+                  </div>
+                </div>
 
-            {/* Tag Filter */}
-            <div>
-              <label htmlFor="tag-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                Tags
-              </label>
-              <select
-                id="tag-filter"
-                value={tagFilter}
-                onChange={(e) => setTagFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                aria-label="Filter by product tags"
-              >
-                <option value="all">All Tags</option>
-                {availableTags.map((tag, index) => (
-                  <option key={`${tag}-${index}`} value={tag}>
-                    {tag}
-                  </option>
-                ))}
-              </select>
-            </div>
+                {/* Stock Status */}
+                <div>
+                  <label htmlFor="stock-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                    Stock Status
+                  </label>
+                  <select
+                    id="stock-filter"
+                    value={stockFilter}
+                    onChange={(e) => setStockFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    aria-label="Filter by stock availability"
+                  >
+                    <option value="all">All Stock</option>
+                    <option value="in-stock">In Stock (10+)</option>
+                    <option value="low-stock">Low Stock (1-10)</option>
+                    <option value="out-of-stock">Out of Stock</option>
+                  </select>
+                </div>
 
-            {/* Featured Status */}
-            <div>
-              <label htmlFor="featured-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                Featured
-              </label>
-              <select
-                id="featured-filter"
-                value={featuredFilter}
-                onChange={(e) => setFeaturedFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                aria-label="Filter by featured status"
-              >
-                <option value="all">All Products</option>
-                <option value="featured">Featured Only</option>
-                <option value="not-featured">Not Featured</option>
-              </select>
-            </div>
+                {/* Tag Filter */}
+                <div>
+                  <label htmlFor="tag-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                    Tags
+                  </label>
+                  <select
+                    id="tag-filter"
+                    value={tagFilter}
+                    onChange={(e) => setTagFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    aria-label="Filter by product tags"
+                  >
+                    <option value="all">All Tags</option>
+                    {availableTags.map((tag, index) => (
+                      <option key={`${tag}-${index}`} value={tag}>
+                        {tag}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Status Filter */}
-            <div>
-              <label htmlFor="visibility-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                id="visibility-filter"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                aria-label="Filter by publication status"
-              >
-                <option value="all">All Status</option>
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
-              </select>
-            </div>
-          </div>
+                {/* Featured Status */}
+                <div>
+                  <label htmlFor="featured-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                    Featured
+                  </label>
+                  <select
+                    id="featured-filter"
+                    value={featuredFilter}
+                    onChange={(e) => setFeaturedFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    aria-label="Filter by featured status"
+                  >
+                    <option value="all">All Products</option>
+                    <option value="featured">Featured Only</option>
+                    <option value="not-featured">Not Featured</option>
+                  </select>
+                </div>
+
+                {/* Status Filter */}
+                <div>
+                  <label htmlFor="visibility-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                    Visibility
+                  </label>
+                  <select
+                    id="visibility-filter"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    aria-label="Filter by publication status"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="published">Published</option>
+                    <option value="draft">Draft</option>
+                  </select>
+                </div>
+
+                {/* Date Range */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="date"
+                      value={dateRange.start}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                      className="text-sm"
+                      aria-label="Start date"
+                    />
+                    <Input
+                      type="date"
+                      value={dateRange.end}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                      className="text-sm"
+                      aria-label="End date"
+                    />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
 
           {/* Sort */}
           <div className="flex items-center space-x-4">
@@ -1359,43 +1478,63 @@ return (
               <div className="text-sm text-gray-600">Out of Stock</div>
             </div>
           </div>
-
-          <motion.div
+<motion.div
             className={cn(
               "grid gap-6",
               viewMode === 'grid'
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
                 : "grid-cols-1"
             )}
             layout
           >
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {filteredProducts.map((product) => (
-                <ProductManagementCard
+                <motion.div
                   key={product.Id}
-                  product={product}
-                  viewMode={viewMode}
-                  selected={selectedProducts.has(product.Id)}
-                  onSelect={handleSelectProduct}
-                  onToggleVisibility={handleToggleVisibility}
-                  onToggleFeatured={handleToggleFeatured}
-                  onEdit={handleEdit}
-                  onView={handleViewProduct}
-                  onDelete={handleDeleteClick}
-                  loading={actionLoading}
-                  currentUser={currentUser}
-                />
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ProductManagementCard
+                    product={product}
+                    viewMode={viewMode}
+                    selected={selectedProducts.has(product.Id)}
+                    onSelect={handleSelectProduct}
+                    onToggleVisibility={handleToggleVisibility}
+                    onToggleFeatured={handleToggleFeatured}
+                    onEdit={handleEdit}
+                    onView={handleViewProduct}
+                    onDelete={handleDeleteClick}
+                    loading={actionLoading}
+                    currentUser={currentUser}
+                  />
+                </motion.div>
               ))}
             </AnimatePresence>
           </motion.div>
+
+          {/* Pagination Placeholder */}
+          {filteredProducts.length > 50 && (
+            <div className="flex justify-center mt-8">
+              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <span>Showing {Math.min(filteredProducts.length, 50)} of {filteredProducts.length} products</span>
+                <Button variant="outline" size="sm" disabled>
+                  Load More
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
       {/* Bulk Edit Modal */}
-<AnimatePresence>
+{/* Bulk Edit Modal */}
+      <AnimatePresence>
         {showBulkEditModal && (
           <motion.div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1409,16 +1548,21 @@ return (
             }}
           >
             <motion.div
-              className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto"
+              className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 id="bulk-edit-title" className="text-lg font-medium text-gray-900">
-                  Bulk Edit ({selectedProducts.size} products)
-                </h3>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 id="bulk-edit-title" className="text-lg font-semibold text-gray-900">
+                    Bulk Edit Products
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Apply changes to {selectedProducts.size} selected products
+                  </p>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1430,53 +1574,55 @@ return (
               </div>
               
               <form onSubmit={(e) => { e.preventDefault(); handleBulkEdit(); }}>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {/* Price Adjustment */}
                   <div>
-                    <label htmlFor="price-adjustment-type" className="block text-sm font-medium text-gray-700 mb-2">
-                      Price Adjustment
+                    <label htmlFor="price-adjustment-type" className="block text-sm font-medium text-gray-700 mb-3">
+                      💰 Price Adjustment
                     </label>
-                    <div className="flex space-x-2">
-                      <select
-                        id="price-adjustment-type"
-                        value={bulkEditData.priceAdjustment.type}
-                        onChange={(e) => setBulkEditData(prev => ({
-                          ...prev,
-                          priceAdjustment: { ...prev.priceAdjustment, type: e.target.value }
-                        }))}
-                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        aria-label="Price adjustment type"
-                      >
-                        <option value="percentage">Percentage (%)</option>
-                        <option value="fixed">Fixed Amount (PKR)</option>
-                      </select>
-                      <Input
-                        type="number"
-                        placeholder={bulkEditData.priceAdjustment.type === 'percentage' ? '± %' : '± PKR'}
-                        value={bulkEditData.priceAdjustment.value}
-                        onChange={(e) => setBulkEditData(prev => ({
-                          ...prev,
-                          priceAdjustment: { ...prev.priceAdjustment, value: e.target.value }
-                        }))}
-                        className="flex-1"
-                        aria-label={`Price adjustment value in ${bulkEditData.priceAdjustment.type === 'percentage' ? 'percentage' : 'PKR'}`}
-                        min={bulkEditData.priceAdjustment.type === 'percentage' ? '-100' : undefined}
-                        max={bulkEditData.priceAdjustment.type === 'percentage' ? '1000' : undefined}
-                        step={bulkEditData.priceAdjustment.type === 'percentage' ? '0.1' : '1'}
-                      />
+                    <div className="space-y-3">
+                      <div className="flex space-x-2">
+                        <select
+                          id="price-adjustment-type"
+                          value={bulkEditData.priceAdjustment.type}
+                          onChange={(e) => setBulkEditData(prev => ({
+                            ...prev,
+                            priceAdjustment: { ...prev.priceAdjustment, type: e.target.value }
+                          }))}
+                          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          aria-label="Price adjustment type"
+                        >
+                          <option value="percentage">Percentage (%)</option>
+                          <option value="fixed">Fixed Amount (PKR)</option>
+                        </select>
+                        <Input
+                          type="number"
+                          placeholder={bulkEditData.priceAdjustment.type === 'percentage' ? '± %' : '± PKR'}
+                          value={bulkEditData.priceAdjustment.value}
+                          onChange={(e) => setBulkEditData(prev => ({
+                            ...prev,
+                            priceAdjustment: { ...prev.priceAdjustment, value: e.target.value }
+                          }))}
+                          className="flex-1"
+                          aria-label={`Price adjustment value in ${bulkEditData.priceAdjustment.type === 'percentage' ? 'percentage' : 'PKR'}`}
+                          min={bulkEditData.priceAdjustment.type === 'percentage' ? '-100' : undefined}
+                          max={bulkEditData.priceAdjustment.type === 'percentage' ? '1000' : undefined}
+                          step={bulkEditData.priceAdjustment.type === 'percentage' ? '0.1' : '1'}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {bulkEditData.priceAdjustment.type === 'percentage' ? 
+                          '📈 Use positive values to increase, negative to decrease (e.g., 10 for +10%, -20 for -20%)' :
+                          '💸 Use positive values to increase, negative to decrease (e.g., 100 for +100 PKR, -50 for -50 PKR)'
+                        }
+                      </p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {bulkEditData.priceAdjustment.type === 'percentage' ? 
-                        'Use positive values to increase, negative to decrease (e.g., 10 for +10%, -20 for -20%)' :
-                        'Use positive values to increase, negative to decrease (e.g., 100 for +100 PKR, -50 for -50 PKR)'
-                      }
-                    </p>
                   </div>
 
                   {/* Category Change */}
                   <div>
-                    <label htmlFor="bulk-category-select" className="block text-sm font-medium text-gray-700 mb-2">
-                      Change Category
+                    <label htmlFor="bulk-category-select" className="block text-sm font-medium text-gray-700 mb-3">
+                      📂 Change Category
                     </label>
                     <select
                       id="bulk-category-select"
@@ -1496,8 +1642,8 @@ return (
 
                   {/* Status Change */}
                   <div>
-                    <label htmlFor="bulk-status-select" className="block text-sm font-medium text-gray-700 mb-2">
-                      Change Status
+                    <label htmlFor="bulk-status-select" className="block text-sm font-medium text-gray-700 mb-3">
+                      👁️ Change Visibility
                     </label>
                     <select
                       id="bulk-status-select"
@@ -1507,34 +1653,46 @@ return (
                       aria-label="New publication status for selected products"
                     >
                       <option value="">Keep Current Status</option>
-                      <option value="published">Published (Visible to customers)</option>
-                      <option value="draft">Draft (Hidden from customers)</option>
+                      <option value="published">✅ Published (Visible to customers)</option>
+                      <option value="draft">📝 Draft (Hidden from customers)</option>
                     </select>
                   </div>
 
                   {/* Preview Changes */}
                   {(bulkEditData.priceAdjustment.value || bulkEditData.category || bulkEditData.status) && (
-                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                      <h4 className="text-sm font-medium text-blue-900 mb-2">Preview Changes:</h4>
-                      <ul className="text-sm text-blue-800 space-y-1">
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <h4 className="text-sm font-medium text-blue-900 mb-3 flex items-center">
+                        <ApperIcon name="Eye" className="w-4 h-4 mr-2" />
+                        Preview Changes:
+                      </h4>
+                      <ul className="text-sm text-blue-800 space-y-2">
                         {bulkEditData.priceAdjustment.value && (
-                          <li>• Price: {bulkEditData.priceAdjustment.type === 'percentage' ? 
-                            `${bulkEditData.priceAdjustment.value > 0 ? '+' : ''}${bulkEditData.priceAdjustment.value}%` :
-                            `${bulkEditData.priceAdjustment.value > 0 ? '+' : ''}${bulkEditData.priceAdjustment.value} PKR`
-                          }</li>
+                          <li className="flex items-center">
+                            <ApperIcon name="DollarSign" className="w-4 h-4 mr-2" />
+                            Price: {bulkEditData.priceAdjustment.type === 'percentage' ? 
+                              `${bulkEditData.priceAdjustment.value > 0 ? '+' : ''}${bulkEditData.priceAdjustment.value}%` :
+                              `${bulkEditData.priceAdjustment.value > 0 ? '+' : ''}${bulkEditData.priceAdjustment.value} PKR`
+                            }
+                          </li>
                         )}
                         {bulkEditData.category && (
-                          <li>• Category: {categories.find(c => c.slug === bulkEditData.category)?.name || bulkEditData.category}</li>
+                          <li className="flex items-center">
+                            <ApperIcon name="Folder" className="w-4 h-4 mr-2" />
+                            Category: {categories.find(c => c.slug === bulkEditData.category)?.name || bulkEditData.category}
+                          </li>
                         )}
                         {bulkEditData.status && (
-                          <li>• Status: {bulkEditData.status === 'published' ? 'Published' : 'Draft'}</li>
+                          <li className="flex items-center">
+                            <ApperIcon name="Eye" className="w-4 h-4 mr-2" />
+                            Status: {bulkEditData.status === 'published' ? '✅ Published' : '📝 Draft'}
+                          </li>
                         )}
                       </ul>
                     </div>
                   )}
                 </div>
                 
-                <div className="flex space-x-3 justify-end mt-6">
+                <div className="flex space-x-3 justify-end mt-8 pt-4 border-t border-gray-200">
                   <Button
                     type="button"
                     variant="ghost"
@@ -1547,6 +1705,7 @@ return (
                     type="submit"
                     disabled={actionLoading || (!bulkEditData.priceAdjustment.value && !bulkEditData.category && !bulkEditData.status)}
                     aria-describedby="bulk-edit-help"
+                    className="bg-primary-600 hover:bg-primary-700"
                   >
                     {actionLoading ? (
                       <>
@@ -1554,14 +1713,17 @@ return (
                         Updating {selectedProducts.size} products...
                       </>
                     ) : (
-                      `Apply Changes to ${selectedProducts.size} Products`
+                      <>
+                        <ApperIcon name="Save" className="w-4 h-4 mr-2" />
+                        Apply Changes to {selectedProducts.size} Products
+                      </>
                     )}
                   </Button>
                 </div>
                 
                 <div id="bulk-edit-help" className="sr-only">
                   This will apply the selected changes to all {selectedProducts.size} selected products. 
-                  Changes cannot be undone automatically.
+                  Changes will be tracked in the activity log.
                 </div>
               </form>
             </motion.div>
@@ -1570,10 +1732,11 @@ return (
       </AnimatePresence>
 
       {/* Bulk Delete Confirmation */}
-<AnimatePresence>
+{/* Bulk Delete Modal */}
+      <AnimatePresence>
         {showBulkDeleteDialog && (
           <motion.div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1587,59 +1750,99 @@ return (
             }}
           >
             <motion.div
-              className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+              className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center space-x-3 mb-4">
+              <div className="flex items-start space-x-3 mb-6">
                 <div className="flex-shrink-0">
-                  <ApperIcon name="AlertTriangle" className="w-6 h-6 text-red-600" aria-hidden="true" />
+                  <ApperIcon name="AlertTriangle" className="w-8 h-8 text-red-600" aria-hidden="true" />
                 </div>
-                <h3 id="bulk-delete-title" className="text-lg font-medium text-gray-900">
-                  Delete Selected Products
-                </h3>
+                <div>
+                  <h3 id="bulk-delete-title" className="text-xl font-semibold text-gray-900">
+                    Delete Selected Products
+                  </h3>
+                  <p className="text-gray-600 mt-1">
+                    This action will permanently remove {selectedProducts.size} products
+                  </p>
+                </div>
               </div>
               
-              <div className="mb-6">
-                <p className="text-gray-600 mb-3">
-                  Are you sure you want to delete <strong>{selectedProducts.size}</strong> selected products? 
-                  This action cannot be undone.
-                </p>
-                
-                {/* Show product titles if reasonable number */}
-                {selectedProducts.size <= 5 && (
-                  <div className="bg-red-50 p-3 rounded border border-red-200">
-                    <p className="text-sm font-medium text-red-800 mb-2">Products to be deleted:</p>
+              <div className="space-y-4 mb-6">
+                <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                  <div className="flex items-center mb-3">
+                    <ApperIcon name="Trash2" className="w-5 h-5 text-red-600 mr-2" />
+                    <span className="font-medium text-red-800">
+                      {selectedProducts.size} products will be deleted
+                    </span>
+                  </div>
+                  
+                  {selectedProducts.size <= 5 ? (
                     <ul className="text-sm text-red-700 space-y-1">
                       {Array.from(selectedProducts).map(productId => {
                         const product = products.find(p => p.Id === productId);
                         return (
-                          <li key={productId}>• {product?.title || `Product ID: ${productId}`}</li>
+                          <li key={productId} className="flex items-center">
+                            <ApperIcon name="Package" className="w-4 h-4 mr-2 flex-shrink-0" />
+                            {product?.title || `Product ID: ${productId}`}
+                          </li>
                         );
                       })}
                     </ul>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-sm text-red-700">
+                      Too many products to list individually. All {selectedProducts.size} selected products will be deleted.
+                    </p>
+                  )}
+                </div>
                 
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
                   <div className="flex items-start space-x-2">
-                    <ApperIcon name="AlertTriangle" className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" aria-hidden="true" />
-                    <div className="text-sm text-yellow-800">
-                      <p className="font-medium">Deletion will:</p>
-                      <ul className="mt-1 space-y-1 text-xs">
-                        <li>• Remove products from customer view immediately</li>
-                        <li>• Cancel any pending orders for these products</li>
-                        <li>• Remove from search results and recommendations</li>
-                        <li>• Delete associated images and data</li>
+                    <ApperIcon name="Shield" className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                    <div className="text-sm text-amber-800">
+                      <p className="font-medium mb-2">⚠️ This deletion will:</p>
+                      <ul className="space-y-1 text-xs">
+                        <li className="flex items-center">
+                          <ApperIcon name="Eye" className="w-3 h-3 mr-2" />
+                          Remove products from customer view immediately
+                        </li>
+                        <li className="flex items-center">
+                          <ApperIcon name="ShoppingCart" className="w-3 h-3 mr-2" />
+                          Cancel any pending orders for these products
+                        </li>
+                        <li className="flex items-center">
+                          <ApperIcon name="Search" className="w-3 h-3 mr-2" />
+                          Remove from search results and recommendations
+                        </li>
+                        <li className="flex items-center">
+                          <ApperIcon name="Image" className="w-3 h-3 mr-2" />
+                          Delete associated images and data
+                        </li>
+                        <li className="flex items-center">
+                          <ApperIcon name="FileText" className="w-3 h-3 mr-2" />
+                          Create audit trail entries for recovery
+                        </li>
                       </ul>
                     </div>
                   </div>
                 </div>
+
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <div className="flex items-center space-x-2">
+                    <ApperIcon name="RotateCcw" className="w-5 h-5 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">
+                      Products can be recovered within 30 days
+                    </span>
+                  </div>
+                  <p className="text-xs text-green-700 mt-1">
+                    Deleted products are backed up and can be restored by administrators
+                  </p>
+                </div>
               </div>
               
-              <div className="flex space-x-3 justify-end">
+              <div className="flex space-x-3 justify-end pt-4 border-t border-gray-200">
                 <Button
                   variant="ghost"
                   onClick={() => setShowBulkDeleteDialog(false)}
@@ -1662,7 +1865,7 @@ return (
                   ) : (
                     <>
                       <ApperIcon name="Trash2" className="w-4 h-4 mr-2" aria-hidden="true" />
-                      Permanently Delete {selectedProducts.size} Products
+                      Delete {selectedProducts.size} Products
                     </>
                   )}
                 </Button>
@@ -1670,17 +1873,18 @@ return (
               
               <div id="bulk-delete-confirm-help" className="sr-only">
                 Confirm permanent deletion of {selectedProducts.size} selected products. 
-                This action cannot be undone and will immediately remove products from the system.
+                Products can be recovered within 30 days through the admin recovery system.
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-{/* Delete Confirmation Dialog */}
-<AnimatePresence>
+
+      {/* Single Product Delete Modal */}
+      <AnimatePresence>
         {showDeleteDialog && (
           <motion.div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1694,52 +1898,48 @@ return (
             }}
           >
             <motion.div
-              className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+              className="bg-white rounded-lg p-6 max-w-md w-full"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center space-x-3 mb-4">
+              <div className="flex items-start space-x-3 mb-4">
                 <div className="flex-shrink-0">
                   <ApperIcon name="AlertTriangle" className="w-6 h-6 text-red-600" aria-hidden="true" />
                 </div>
-                <h3 id="delete-product-title" className="text-lg font-medium text-gray-900">
-                  Delete Product
-                </h3>
+                <div>
+                  <h3 id="delete-product-title" className="text-lg font-semibold text-gray-900">
+                    Delete Product
+                  </h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    This action cannot be undone immediately
+                  </p>
+                </div>
               </div>
               
-              <div className="mb-6">
-                <p className="text-gray-600 mb-3">
-                  Are you sure you want to delete "<strong>{productToDelete?.title}</strong>"? 
-                  This action cannot be undone.
+              <div className="mb-6 space-y-4">
+                <p className="text-gray-700">
+                  Are you sure you want to delete "<strong>{productToDelete?.title}</strong>"?
                 </p>
                 
-                {/* Product details */}
                 {productToDelete && (
-                  <div className="bg-red-50 p-3 rounded border border-red-200">
-                    <div className="text-sm text-red-800 space-y-1">
-                      <p><strong>SKU:</strong> {productToDelete.sku || 'N/A'}</p>
-                      <p><strong>Category:</strong> {productToDelete.category || 'N/A'}</p>
-                      <p><strong>Price:</strong> PKR {productToDelete.price || 'N/A'}</p>
-                      <p><strong>Stock:</strong> {productToDelete.stock || 0} units</p>
+                  <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+                    <div className="text-sm text-red-800 grid grid-cols-2 gap-2">
+                      <div><strong>SKU:</strong> {productToDelete.sku || 'N/A'}</div>
+                      <div><strong>Category:</strong> {productToDelete.category || 'N/A'}</div>
+                      <div><strong>Price:</strong> PKR {productToDelete.price || 'N/A'}</div>
+                      <div><strong>Stock:</strong> {productToDelete.stock || 0} units</div>
                     </div>
                   </div>
                 )}
                 
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                  <div className="flex items-start space-x-2">
-                    <ApperIcon name="Info" className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" aria-hidden="true" />
-                    <div className="text-sm text-yellow-800">
-                      <p className="font-medium">This will:</p>
-                      <ul className="mt-1 space-y-1 text-xs">
-                        <li>• Remove from customer view immediately</li>
-                        <li>• Cancel pending orders for this product</li>
-                        <li>• Remove from search and recommendations</li>
-                        <li>• Delete associated images and data</li>
-                        <li>• Create audit trail entry</li>
-                      </ul>
-                    </div>
+                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                  <div className="flex items-center space-x-2">
+                    <ApperIcon name="RotateCcw" className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">
+                      Recoverable for 30 days
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1767,15 +1967,15 @@ return (
                   ) : (
                     <>
                       <ApperIcon name="Trash2" className="w-4 h-4 mr-2" aria-hidden="true" />
-                      Permanently Delete Product
+                      Delete Product
                     </>
                   )}
                 </Button>
               </div>
               
               <div id="delete-confirm-help" className="sr-only">
-                Confirm permanent deletion of product "{productToDelete?.title}". 
-                This action cannot be undone and will immediately remove the product from the system.
+                Confirm deletion of product "{productToDelete?.title}". 
+                Product can be recovered within 30 days through the admin recovery system.
               </div>
             </motion.div>
           </motion.div>

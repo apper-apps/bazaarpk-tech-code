@@ -36,20 +36,34 @@ const [formData, setFormData] = useState({
     discountedPrice: "",
     stockStatus: "In Stock",
     stockQuantity: "",
+    lowStockThreshold: "10",
     sku: "",
     barcode: "",
     mainImage: null,
     additionalImages: [],
     tags: [],
+    variants: [],
     includeInDeals: false,
+    dealOfTheDay: false,
+    countdownTimer: "",
+    bannerText: "",
+    badge: "",
+    shippingWeight: "",
+    shippingDimensions: { length: "", width: "", height: "" },
     shippingFreeThreshold: "1000",
     returnPolicy: "7-day",
+    bundleComponents: [],
+    bundleSavings: "",
+    preparationTime: "",
+    servings: "",
     visibility: "draft",
     moderatorApproved: false,
     requiresApproval: true,
+    scheduledPublish: "",
     metaTitle: "",
     metaDescription: "",
-    seoKeywords: []
+    seoKeywords: [],
+    relatedProducts: []
   });
 
   // Admin/Moderator permissions
@@ -134,11 +148,12 @@ const [formData, setFormData] = useState({
     : 0;
 
 const tabs = [
-    { id: "basic", label: "Basic Information", icon: "Info" },
+{ id: "basic", label: "Basic Information", icon: "Info" },
     { id: "pricing", label: "Pricing & Variants", icon: "DollarSign" },
     { id: "inventory", label: "Inventory & Stock", icon: "Package" },
-    { id: "marketing", label: "Marketing & Deals", icon: "Tag" },
+    { id: "variations", label: "Variations", icon: "Grid3X3" },
     { id: "media", label: "Media Gallery", icon: "Image" },
+    { id: "marketing", label: "Marketing & Deals", icon: "Tag" },
     { id: "shipping", label: "Shipping & Policies", icon: "Truck" },
     { id: "seo", label: "SEO Settings", icon: "Search" },
     { id: "approval", label: "Approval Settings", icon: "Shield" }
@@ -154,6 +169,15 @@ const handleInputChange = (field, value) => {
       if (!formData.sku) {
         setFormData(prev => ({ ...prev, sku: autoSku }));
       }
+    }
+    
+    // Auto-generate meta fields if not set
+    if (field === 'title' && value && !formData.metaTitle) {
+      setFormData(prev => ({ ...prev, metaTitle: value }));
+    }
+    
+    if (field === 'shortDescription' && value && !formData.metaDescription) {
+      setFormData(prev => ({ ...prev, metaDescription: value }));
     }
     
     // Clear error when user starts typing
@@ -174,19 +198,25 @@ const handleInputChange = (field, value) => {
   };
 
   const getCompletionPercentage = () => {
-    const requiredFields = ['title', 'category', 'description', 'sellingPrice', 'stockQuantity', 'sku'];
-    const optionalFields = ['brand', 'shortDescription', 'buyingPrice', 'mainImage'];
+const requiredFields = ['title', 'category', 'description', 'sellingPrice', 'stockQuantity', 'sku'];
+    const optionalFields = ['brand', 'shortDescription', 'buyingPrice', 'mainImage', 'tags', 'metaTitle'];
+    const advancedFields = ['variants', 'bundleComponents', 'seoKeywords', 'relatedProducts'];
     
     const requiredCompleted = requiredFields.filter(field => formData[field]).length;
-    const optionalCompleted = optionalFields.filter(field => formData[field]).length;
+    const optionalCompleted = optionalFields.filter(field => formData[field] && formData[field].length > 0).length;
+    const advancedCompleted = advancedFields.filter(field => 
+      Array.isArray(formData[field]) ? formData[field].length > 0 : formData[field]
+    ).length;
     
-    const requiredWeight = 0.7;
+    const requiredWeight = 0.5;
     const optionalWeight = 0.3;
+    const advancedWeight = 0.2;
     
     const requiredScore = (requiredCompleted / requiredFields.length) * requiredWeight;
     const optionalScore = (optionalCompleted / optionalFields.length) * optionalWeight;
+    const advancedScore = (advancedCompleted / advancedFields.length) * advancedWeight;
     
-    return Math.round((requiredScore + optionalScore) * 100);
+    return Math.round((requiredScore + optionalScore + advancedScore) * 100);
   };
 
   const handleImageUpload = (file) => {
@@ -223,7 +253,7 @@ const handleInputChange = (field, value) => {
     setIsDragOver(false);
   };
 
-  const validateForm = () => {
+const validateForm = () => {
     const newErrors = {};
     
     // Basic Information validation
@@ -247,6 +277,24 @@ const handleInputChange = (field, value) => {
       newErrors.stockQuantity = "Stock quantity must be 0 or greater";
     }
     if (!formData.sku.trim()) newErrors.sku = "SKU is required";
+    
+    // Shipping validation for bundles
+    if (formData.bundleComponents.length > 0) {
+      if (!formData.bundleSavings) {
+        newErrors.bundleSavings = "Bundle savings amount is required for bundles";
+      }
+      if (!formData.preparationTime) {
+        newErrors.preparationTime = "Preparation time is required for bundles";
+      }
+    }
+    
+    // SEO validation
+    if (formData.metaTitle && formData.metaTitle.length > 60) {
+      newErrors.metaTitle = "Meta title should not exceed 60 characters";
+    }
+    if (formData.metaDescription && formData.metaDescription.length > 160) {
+      newErrors.metaDescription = "Meta description should not exceed 160 characters";
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -278,28 +326,47 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
         visibility,
         requiresApproval,
         moderatorApproved: currentUser.permissions.canBypassApproval,
-        scheduledPublish: schedule,
+        scheduledPublish: schedule || formData.scheduledPublish,
         price: sellingPrice,
         oldPrice: discountedPrice > 0 ? sellingPrice : null,
         discountedPrice: discountedPrice > 0 ? discountedPrice : null,
         stock: parseInt(formData.stockQuantity),
+        lowStockThreshold: parseInt(formData.lowStockThreshold) || 10,
         images: [
           ...(formData.mainImage ? [URL.createObjectURL(formData.mainImage)] : []),
           ...formData.additionalImages.map(img => img.preview)
         ],
         badges: formData.tags,
-        variants: [],
+        variants: formData.variants || [],
         barcode: formData.barcode,
         returnPolicy: formData.returnPolicy,
         includeInDeals: formData.includeInDeals,
+        dealOfTheDay: formData.dealOfTheDay,
+        countdownTimer: formData.countdownTimer,
+        bannerText: formData.bannerText,
+        badge: formData.badge,
+        shipping: {
+          weight: formData.shippingWeight,
+          dimensions: formData.shippingDimensions,
+          freeThreshold: parseInt(formData.shippingFreeThreshold) || 1000
+        },
+        bundle: formData.bundleComponents.length > 0 ? {
+          components: formData.bundleComponents,
+          savings: parseFloat(formData.bundleSavings) || 0,
+          preparationTime: formData.preparationTime,
+          servings: formData.servings
+        } : null,
         seo: {
           metaTitle: formData.metaTitle || formData.title,
           metaDescription: formData.metaDescription || formData.shortDescription,
-          keywords: formData.seoKeywords
+          keywords: formData.seoKeywords,
+          relatedProducts: formData.relatedProducts
         },
         createdBy: currentUser.role,
         createdAt: new Date(),
-        lastModified: new Date()
+        lastModified: new Date(),
+        featured: false,
+        priority: 0
       };
 
       await ProductService.create(productData);
@@ -340,20 +407,34 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
           discountedPrice: "",
           stockStatus: "In Stock",
           stockQuantity: "",
+          lowStockThreshold: "10",
           sku: "",
           barcode: "",
           mainImage: null,
           additionalImages: [],
           tags: [],
+          variants: [],
           includeInDeals: false,
+          dealOfTheDay: false,
+          countdownTimer: "",
+          bannerText: "",
+          badge: "",
+          shippingWeight: "",
+          shippingDimensions: { length: "", width: "", height: "" },
           shippingFreeThreshold: "1000",
           returnPolicy: "7-day",
+          bundleComponents: [],
+          bundleSavings: "",
+          preparationTime: "",
+          servings: "",
           visibility: "draft",
           moderatorApproved: false,
           requiresApproval: true,
+          scheduledPublish: "",
           metaTitle: "",
           metaDescription: "",
-          seoKeywords: []
+          seoKeywords: [],
+          relatedProducts: []
         });
         setImagePreview(null);
         setActiveTab("basic");
@@ -367,10 +448,16 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
       setLoading(false);
     }
   };
-
-  // SEO Tab Render Function
+// SEO & Advanced Tab Render Function
   const renderSEO = () => (
     <div className="space-y-6">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-blue-900 mb-2">🔍 Search Engine Optimization</h3>
+        <p className="text-xs text-blue-700">
+          Optimize your product for search engines and improve discoverability
+        </p>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Meta Title
@@ -380,10 +467,23 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
           onChange={(e) => handleInputChange('metaTitle', e.target.value)}
           placeholder="SEO-friendly title (60 characters max)"
           maxLength={60}
+          className={cn(errors.metaTitle && "border-red-500")}
         />
-        <p className="text-xs text-gray-500 mt-1">
-          {formData.metaTitle.length}/60 characters
-        </p>
+        <div className="flex justify-between mt-1">
+          <p className="text-xs text-gray-500">
+            {formData.metaTitle.length}/60 characters
+          </p>
+          {!formData.metaTitle && formData.title && (
+            <button
+              type="button"
+              onClick={() => handleInputChange('metaTitle', formData.title)}
+              className="text-xs text-primary-600 hover:text-primary-700"
+            >
+              Use product title
+            </button>
+          )}
+        </div>
+        {errors.metaTitle && <p className="text-red-500 text-sm mt-1">{errors.metaTitle}</p>}
       </div>
 
       <div>
@@ -396,11 +496,26 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
           placeholder="Brief description for search engines (160 characters max)"
           maxLength={160}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          className={cn(
+            "w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500",
+            errors.metaDescription && "border-red-500"
+          )}
         />
-        <p className="text-xs text-gray-500 mt-1">
-          {formData.metaDescription.length}/160 characters
-        </p>
+        <div className="flex justify-between mt-1">
+          <p className="text-xs text-gray-500">
+            {formData.metaDescription.length}/160 characters
+          </p>
+          {!formData.metaDescription && formData.shortDescription && (
+            <button
+              type="button"
+              onClick={() => handleInputChange('metaDescription', formData.shortDescription)}
+              className="text-xs text-primary-600 hover:text-primary-700"
+            >
+              Use short description
+            </button>
+          )}
+        </div>
+        {errors.metaDescription && <p className="text-red-500 text-sm mt-1">{errors.metaDescription}</p>}
       </div>
 
       <div>
@@ -409,96 +524,249 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
         </label>
         <Input
           value={formData.seoKeywords.join(', ')}
-          onChange={(e) => handleInputChange('seoKeywords', e.target.value.split(',').map(k => k.trim()))}
+          onChange={(e) => handleInputChange('seoKeywords', e.target.value.split(',').map(k => k.trim()).filter(k => k))}
           placeholder="keyword1, keyword2, keyword3"
         />
-      </div>
-    </div>
-  );
-
-  // Approval Settings Tab Render Function
-  const renderApproval = () => (
-    <div className="space-y-6">
-      {currentUser.role === 'admin' && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <ApperIcon name="Shield" className="w-5 h-5 text-blue-600 mr-2" />
-            <span className="font-medium text-blue-900">Administrator Settings</span>
-          </div>
-          <p className="text-blue-700 text-sm mt-1">
-            As an administrator, you can bypass approval workflows and publish directly.
-          </p>
-        </div>
-      )}
-
-      <div>
-        <label className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            checked={formData.requiresApproval}
-            onChange={(e) => handleInputChange('requiresApproval', e.target.checked)}
-            disabled={currentUser.permissions.canBypassApproval}
-            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-          />
-          <span className="text-sm font-medium text-gray-700">
-            Requires moderator approval
-          </span>
-        </label>
         <p className="text-xs text-gray-500 mt-1">
-          {currentUser.permissions.canBypassApproval 
-            ? "Admin users can publish directly without approval"
-            : "Product will need approval before going live"
-          }
+          Add relevant keywords to help customers find your product
         </p>
       </div>
 
-      {(currentUser.role === 'admin' || currentUser.role === 'moderator') && (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Related Products
+        </label>
+        <div className="border border-gray-300 rounded-lg p-3 min-h-[100px] bg-gray-50">
+          {formData.relatedProducts.length === 0 ? (
+            <p className="text-gray-500 text-sm text-center py-4">
+              No related products selected. Related products will appear here.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {formData.relatedProducts.map((productId, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
+                >
+                  Product #{productId}
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('relatedProducts', formData.relatedProducts.filter((_, i) => i !== index))}
+                    className="ml-2 text-primary-600 hover:text-primary-800"
+                  >
+                    <ApperIcon name="X" className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Related products feature coming soon - will suggest products based on category and tags
+        </p>
+      </div>
+
+      {formData.scheduledPublish && (
         <div>
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={formData.moderatorApproved}
-              onChange={(e) => handleInputChange('moderatorApproved', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span className="text-sm font-medium text-gray-700">
-              Pre-approve this product
-            </span>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Scheduled Publication
           </label>
+          <Input
+            type="datetime-local"
+            value={formData.scheduledPublish}
+            onChange={(e) => handleInputChange('scheduledPublish', e.target.value)}
+          />
           <p className="text-xs text-gray-500 mt-1">
-            Skip the approval workflow for this product
+            Product will be automatically published at the scheduled time
           </p>
         </div>
       )}
     </div>
   );
-
-  const renderBasicInfo = () => (
+// Variations Tab Render Function
+  const renderVariations = () => (
     <div className="space-y-6">
+      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-purple-900 mb-2">📦 Product Variations</h3>
+        <p className="text-xs text-purple-700">
+          Create different variations of your product (size, color, weight, etc.)
+        </p>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <label className="block text-sm font-medium text-gray-700">
+            Product Variations
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const newVariant = {
+                id: Date.now(),
+                name: `Variant ${formData.variants.length + 1}`,
+                price: parseFloat(formData.sellingPrice) || 0,
+                oldPrice: null,
+                stock: 0,
+                sku: `${formData.sku}-V${formData.variants.length + 1}`,
+                image: null,
+                attributes: {}
+              };
+              handleInputChange('variants', [...formData.variants, newVariant]);
+            }}
+          >
+            <ApperIcon name="Plus" className="w-4 h-4 mr-2" />
+            Add Variation
+          </Button>
+        </div>
+
+        {formData.variants.length === 0 ? (
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+            <ApperIcon name="Package" className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 mb-2">No variations created yet</p>
+            <p className="text-gray-400 text-sm">
+              Add variations like different sizes, colors, or weights for this product
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {formData.variants.map((variant, index) => (
+              <div key={variant.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-medium text-gray-900">Variation {index + 1}</h4>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newVariants = formData.variants.filter((_, i) => i !== index);
+                      handleInputChange('variants', newVariants);
+                    }}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <ApperIcon name="Trash2" className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Variation Name
+                    </label>
+                    <Input
+                      value={variant.name}
+                      onChange={(e) => {
+                        const newVariants = [...formData.variants];
+                        newVariants[index].name = e.target.value;
+                        handleInputChange('variants', newVariants);
+                      }}
+                      placeholder="e.g., Large, Red, 1kg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price (PKR)
+                    </label>
+                    <Input
+                      type="number"
+                      value={variant.price}
+                      onChange={(e) => {
+                        const newVariants = [...formData.variants];
+                        newVariants[index].price = parseFloat(e.target.value) || 0;
+                        handleInputChange('variants', newVariants);
+                      }}
+                      min="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Stock Quantity
+                    </label>
+                    <Input
+                      type="number"
+                      value={variant.stock}
+                      onChange={(e) => {
+                        const newVariants = [...formData.variants];
+                        newVariants[index].stock = parseInt(e.target.value) || 0;
+                        handleInputChange('variants', newVariants);
+                      }}
+                      min="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      SKU
+                    </label>
+                    <Input
+                      value={variant.sku}
+                      onChange={(e) => {
+                        const newVariants = [...formData.variants];
+                        newVariants[index].sku = e.target.value;
+                        handleInputChange('variants', newVariants);
+                      }}
+                      placeholder="Unique SKU"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="text-xs text-gray-500 mt-2">
+          💡 Tip: Variations allow customers to choose different options of the same product
+        </p>
+      </div>
+    </div>
+  );
+
+const renderBasicInfo = () => (
+    <div className="space-y-6">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-green-900 mb-2">📝 Basic Product Information</h3>
+        <p className="text-xs text-green-700">
+          Essential details about your product that customers will see first
+        </p>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Product Name *
         </label>
         <Input
           type="text"
-          placeholder="e.g., Premium Basmati Rice"
+          placeholder="e.g., Premium Basmati Rice 5kg"
           value={formData.title}
           onChange={(e) => handleInputChange("title", e.target.value)}
           className={cn(errors.title && "border-red-500")}
         />
         {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+        <p className="text-xs text-gray-500 mt-1">
+          Use descriptive names that help customers understand what you're selling
+        </p>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Brand/Manufacturer
         </label>
-        <Input
-          type="text"
-          placeholder="e.g., Shan, National, etc."
-          value={formData.brand}
-          onChange={(e) => handleInputChange("brand", e.target.value)}
-        />
+        <div className="relative">
+          <Input
+            type="text"
+            placeholder="e.g., Shan, National, PureFood, etc."
+            value={formData.brand}
+            onChange={(e) => handleInputChange("brand", e.target.value)}
+            className="pr-10"
+          />
+          <ApperIcon name="Building" className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Brand name helps build trust and recognition
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -541,16 +809,19 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
               </option>
             ))}
           </select>
+          {!formData.category && (
+            <p className="text-xs text-gray-500 mt-1">Select a category first</p>
+          )}
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Description *
+          Detailed Description *
         </label>
         <textarea
           rows={4}
-          placeholder="Detailed product description..."
+          placeholder="Provide comprehensive product details, ingredients, usage instructions, benefits..."
           value={formData.description}
           onChange={(e) => handleInputChange("description", e.target.value)}
           className={cn(
@@ -559,6 +830,9 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
           )}
         />
         {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+        <p className="text-xs text-gray-500 mt-1">
+          Include key features, benefits, and specifications that help customers make informed decisions
+        </p>
       </div>
 
       <div>
@@ -567,69 +841,108 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
         </label>
         <textarea
           rows={2}
-          placeholder="Brief highlights..."
+          placeholder="Brief highlights that will appear on product cards..."
           value={formData.shortDescription}
           onChange={(e) => handleInputChange("shortDescription", e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+          maxLength={150}
         />
+        <div className="flex justify-between mt-1">
+          <p className="text-xs text-gray-500">
+            Used in product listings and search results
+          </p>
+          <p className="text-xs text-gray-400">
+            {formData.shortDescription.length}/150
+          </p>
+        </div>
       </div>
     </div>
   );
-
-  const renderPricing = () => (
+const renderPricing = () => (
     <div className="space-y-6">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-green-900 mb-2">💰 Pricing & Variants</h3>
+        <p className="text-xs text-green-700">
+          Set competitive pricing and create product variants for different options
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Selling Price (Rs) *
+            Selling Price (PKR) *
           </label>
-          <Input
-            type="number"
-            placeholder="0"
-            value={formData.sellingPrice}
-            onChange={(e) => handleInputChange("sellingPrice", e.target.value)}
-            className={cn(errors.sellingPrice && "border-red-500")}
-          />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+              Rs
+            </span>
+            <Input
+              type="number"
+              placeholder="0"
+              value={formData.sellingPrice}
+              onChange={(e) => handleInputChange("sellingPrice", e.target.value)}
+              className={cn(errors.sellingPrice && "border-red-500", "pl-8")}
+              min="0"
+              step="0.01"
+            />
+          </div>
           {errors.sellingPrice && <p className="text-red-500 text-sm mt-1">{errors.sellingPrice}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Buying Price (Rs)
+            Cost Price (PKR)
           </label>
-          <Input
-            type="number"
-            placeholder="0"
-            value={formData.buyingPrice}
-            onChange={(e) => handleInputChange("buyingPrice", e.target.value)}
-            className={cn(errors.buyingPrice && "border-red-500")}
-          />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+              Rs
+            </span>
+            <Input
+              type="number"
+              placeholder="0"
+              value={formData.buyingPrice}
+              onChange={(e) => handleInputChange("buyingPrice", e.target.value)}
+              className={cn(errors.buyingPrice && "border-red-500", "pl-8")}
+              min="0"
+              step="0.01"
+            />
+          </div>
           {errors.buyingPrice && <p className="text-red-500 text-sm mt-1">{errors.buyingPrice}</p>}
+          <p className="text-xs text-gray-500 mt-1">Your cost to acquire/produce this product</p>
         </div>
       </div>
 
       {/* Profit Calculation Display */}
       {buyingPrice > 0 && sellingPrice > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h4 className="font-medium text-green-800 mb-2">Profit Analysis</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-gray-600">Profit: </span>
-              <span className={cn(
-                "font-semibold",
-                profit >= 0 ? "text-green-700" : "text-red-700"
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+          <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+            <ApperIcon name="TrendingUp" className="w-5 h-5 mr-2 text-green-600" />
+            Profit Analysis
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="text-center">
+              <p className="text-gray-600 mb-1">Profit per Unit</p>
+              <p className={cn(
+                "text-2xl font-bold",
+                profit >= 0 ? "text-green-600" : "text-red-600"
               )}>
                 {formatPrice(profit)}
-              </span>
+              </p>
             </div>
-            <div>
-              <span className="text-gray-600">Margin: </span>
-              <span className={cn(
-                "font-semibold",
-                profitMargin >= 0 ? "text-green-700" : "text-red-700"
+            <div className="text-center">
+              <p className="text-gray-600 mb-1">Profit Margin</p>
+              <p className={cn(
+                "text-2xl font-bold",
+                profitMargin >= 0 ? "text-green-600" : "text-red-600"
               )}>
                 {profitMargin.toFixed(1)}%
-              </span>
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-600 mb-1">Markup</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {buyingPrice > 0 ? (((sellingPrice - buyingPrice) / buyingPrice) * 100).toFixed(1) : 0}%
+              </p>
             </div>
           </div>
         </div>
@@ -637,79 +950,208 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Discounted Price (Rs)
+          Sale Price (PKR)
+          <span className="text-gray-500 text-xs ml-1">(Optional - for discounts)</span>
         </label>
-        <Input
-          type="number"
-          placeholder="Optional"
-          value={formData.discountedPrice}
-          onChange={(e) => handleInputChange("discountedPrice", e.target.value)}
-          className={cn(errors.discountedPrice && "border-red-500")}
-        />
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+            Rs
+          </span>
+          <Input
+            type="number"
+            placeholder="Leave empty if no discount"
+            value={formData.discountedPrice}
+            onChange={(e) => handleInputChange("discountedPrice", e.target.value)}
+            className={cn(errors.discountedPrice && "border-red-500", "pl-8")}
+            min="0"
+            step="0.01"
+          />
+        </div>
         {errors.discountedPrice && <p className="text-red-500 text-sm mt-1">{errors.discountedPrice}</p>}
       </div>
 
       {/* Discount Display */}
       {discountPercentage > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-          <h4 className="font-medium text-orange-800 mb-2">Discount Information</h4>
-          <div className="text-sm">
-            <span className="text-gray-600">Discount: </span>
-            <span className="font-semibold text-orange-700">
-              {discountPercentage.toFixed(1)}% off
-            </span>
-            <span className="text-gray-600 ml-2">
-              (Save {formatPrice(sellingPrice - discountedPrice)})
-            </span>
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg p-4">
+          <h4 className="font-semibold text-orange-800 mb-3 flex items-center">
+            <ApperIcon name="Percent" className="w-5 h-5 mr-2 text-orange-600" />
+            Discount Details
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="text-center">
+              <p className="text-gray-600 mb-1">Discount</p>
+              <p className="text-2xl font-bold text-orange-600">
+                {discountPercentage.toFixed(1)}% OFF
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-600 mb-1">Customer Saves</p>
+              <p className="text-2xl font-bold text-red-600">
+                {formatPrice(sellingPrice - discountedPrice)}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-600 mb-1">Final Price</p>
+              <p className="text-2xl font-bold text-green-600">
+                {formatPrice(discountedPrice)}
+              </p>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Quick Pricing Templates */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <h4 className="font-medium text-gray-800 mb-3">💡 Quick Pricing Templates</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (buyingPrice > 0) {
+                const price = Math.round(buyingPrice * 1.5);
+                handleInputChange('sellingPrice', price.toString());
+              }
+            }}
+            disabled={!buyingPrice || buyingPrice <= 0}
+            className="text-xs"
+          >
+            50% Markup
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (buyingPrice > 0) {
+                const price = Math.round(buyingPrice * 2);
+                handleInputChange('sellingPrice', price.toString());
+              }
+            }}
+            disabled={!buyingPrice || buyingPrice <= 0}
+            className="text-xs"
+          >
+            100% Markup
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (sellingPrice > 0) {
+                const discountPrice = Math.round(sellingPrice * 0.9);
+                handleInputChange('discountedPrice', discountPrice.toString());
+              }
+            }}
+            disabled={!sellingPrice || sellingPrice <= 0}
+            className="text-xs"
+          >
+            10% Discount
+          </Button>
+        </div>
+      </div>
     </div>
   );
-
 const renderInventory = () => (
     <div className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Stock Status
-        </label>
-        <select
-          value={formData.stockStatus}
-          onChange={(e) => handleInputChange("stockStatus", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        >
-          <option value="In Stock">In Stock</option>
-          <option value="Out of Stock">Out of Stock</option>
-          <option value="Pre-order">Pre-order</option>
-        </select>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-blue-900 mb-2">📦 Inventory & Stock Management</h3>
+        <p className="text-xs text-blue-700">
+          Track your inventory levels and manage stock alerts
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Stock Status
+          </label>
+          <select
+            value={formData.stockStatus}
+            onChange={(e) => handleInputChange("stockStatus", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value="In Stock">✅ In Stock</option>
+            <option value="Low Stock">⚠️ Low Stock</option>
+            <option value="Out of Stock">❌ Out of Stock</option>
+            <option value="Pre-order">📋 Pre-order</option>
+            <option value="Discontinued">🚫 Discontinued</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Stock Quantity *
+          </label>
+          <div className="relative">
+            <Input
+              type="number"
+              placeholder="0"
+              value={formData.stockQuantity}
+              onChange={(e) => handleInputChange("stockQuantity", e.target.value)}
+              className={cn(errors.stockQuantity && "border-red-500", "pr-12")}
+              min="0"
+            />
+            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+              units
+            </span>
+          </div>
+          {errors.stockQuantity && <p className="text-red-500 text-sm mt-1">{errors.stockQuantity}</p>}
+        </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Stock Quantity *
+          Low Stock Threshold
         </label>
-        <Input
-          type="number"
-          placeholder="0"
-          value={formData.stockQuantity}
-          onChange={(e) => handleInputChange("stockQuantity", e.target.value)}
-          className={cn(errors.stockQuantity && "border-red-500")}
-        />
-        {errors.stockQuantity && <p className="text-red-500 text-sm mt-1">{errors.stockQuantity}</p>}
+        <div className="relative max-w-xs">
+          <Input
+            type="number"
+            placeholder="10"
+            value={formData.lowStockThreshold}
+            onChange={(e) => handleInputChange("lowStockThreshold", e.target.value)}
+            className="pr-12"
+            min="0"
+          />
+          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+            units
+          </span>
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Get notified when stock falls below this level
+        </p>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           SKU (Stock Keeping Unit) *
         </label>
-        <Input
-          type="text"
-          placeholder="e.g., BR-001, VEG-TOM-001"
-          value={formData.sku}
-          onChange={(e) => handleInputChange("sku", e.target.value)}
-          className={cn(errors.sku && "border-red-500")}
-        />
+        <div className="flex space-x-2">
+          <Input
+            type="text"
+            placeholder="e.g., BR-001, VEG-TOM-001"
+            value={formData.sku}
+            onChange={(e) => handleInputChange("sku", e.target.value)}
+            className={cn(errors.sku && "border-red-500", "flex-1")}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              const autoSku = `${formData.category?.substring(0,3).toUpperCase() || 'PRD'}-${Date.now().toString().slice(-6)}`;
+              handleInputChange("sku", autoSku);
+            }}
+            className="px-4"
+            title="Generate automatic SKU"
+          >
+            <ApperIcon name="Shuffle" className="w-4 h-4" />
+          </Button>
+        </div>
         {errors.sku && <p className="text-red-500 text-sm mt-1">{errors.sku}</p>}
+        <p className="text-xs text-gray-500 mt-1">
+          Unique identifier for inventory tracking
+        </p>
       </div>
 
       <div>
@@ -719,7 +1161,7 @@ const renderInventory = () => (
         <div className="flex space-x-2">
           <Input
             type="text"
-            placeholder="Enter or scan barcode"
+            placeholder="Enter or scan barcode (EAN-13, UPC, etc.)"
             value={formData.barcode}
             onChange={(e) => handleInputChange("barcode", e.target.value)}
             className="flex-1"
@@ -727,13 +1169,53 @@ const renderInventory = () => (
           <Button
             type="button"
             variant="outline"
-            onClick={() => showToast("Barcode scanner feature coming soon", "info")}
+            onClick={() => showToast("Barcode scanner integration coming soon", "info")}
             className="px-3"
+            title="Scan barcode with camera"
           >
             <ApperIcon name="Scan" className="w-4 h-4" />
           </Button>
         </div>
+        <p className="text-xs text-gray-500 mt-1">
+          For point-of-sale systems and inventory management
+        </p>
       </div>
+
+      {/* Stock Status Indicators */}
+      {formData.stockQuantity && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <h4 className="font-medium text-gray-800 mb-3">📊 Stock Status</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="text-center">
+              <p className="text-gray-600 mb-1">Current Stock</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {formData.stockQuantity}
+              </p>
+              <p className="text-xs text-gray-500">units available</p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-600 mb-1">Alert Level</p>
+              <p className="text-2xl font-bold text-orange-600">
+                {formData.lowStockThreshold || 10}
+              </p>
+              <p className="text-xs text-gray-500">threshold</p>
+            </div>
+            <div className="text-center">
+              <p className="text-gray-600 mb-1">Status</p>
+              <p className={cn(
+                "text-lg font-semibold",
+                parseInt(formData.stockQuantity) === 0 ? "text-red-600" :
+                parseInt(formData.stockQuantity) <= parseInt(formData.lowStockThreshold || 10) ? "text-orange-600" :
+                "text-green-600"
+              )}>
+                {parseInt(formData.stockQuantity) === 0 ? "Out of Stock" :
+                 parseInt(formData.stockQuantity) <= parseInt(formData.lowStockThreshold || 10) ? "Low Stock" :
+                 "In Stock"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -1083,6 +1565,108 @@ const renderShipping = () => (
         </div>
       </div>
     </div>
+);
+
+  const renderApproval = () => (
+    <div className="space-y-6">
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-yellow-900 mb-2">🔒 Approval Settings</h3>
+        <p className="text-xs text-yellow-700">
+          Configure approval workflow and publication settings
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Publication Settings
+        </label>
+        <div className="space-y-3">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={formData.requiresApproval}
+              onChange={(e) => handleInputChange("requiresApproval", e.target.checked)}
+              className="mr-3 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              disabled={!currentUser.permissions.canApprove}
+            />
+            <div>
+              <div className="font-medium">Requires Approval</div>
+              <div className="text-sm text-gray-500">
+                Product needs moderator approval before going live
+              </div>
+            </div>
+          </label>
+
+          {currentUser.permissions.canApprove && (
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={formData.moderatorApproved}
+                onChange={(e) => handleInputChange("moderatorApproved", e.target.checked)}
+                className="mr-3 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+              <div>
+                <div className="font-medium">Pre-approve Product</div>
+                <div className="text-sm text-gray-500">
+                  Bypass approval process (Admin/Moderator only)
+                </div>
+              </div>
+            </label>
+          )}
+        </div>
+      </div>
+
+      {currentUser.permissions.canSchedule && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Scheduled Publication
+          </label>
+          <Input
+            type="datetime-local"
+            value={formData.scheduledPublish}
+            onChange={(e) => handleInputChange('scheduledPublish', e.target.value)}
+            min={new Date().toISOString().slice(0, 16)}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Product will be automatically published at the scheduled time
+          </p>
+        </div>
+      )}
+
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <h4 className="font-medium text-gray-800 mb-3">Current User Permissions</h4>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="flex items-center">
+            <div className={cn(
+              "w-2 h-2 rounded-full mr-2",
+              currentUser.permissions.canPublish ? "bg-green-500" : "bg-red-500"
+            )} />
+            <span>Can Publish: {currentUser.permissions.canPublish ? "Yes" : "No"}</span>
+          </div>
+          <div className="flex items-center">
+            <div className={cn(
+              "w-2 h-2 rounded-full mr-2",
+              currentUser.permissions.canApprove ? "bg-green-500" : "bg-red-500"
+            )} />
+            <span>Can Approve: {currentUser.permissions.canApprove ? "Yes" : "No"}</span>
+          </div>
+          <div className="flex items-center">
+            <div className={cn(
+              "w-2 h-2 rounded-full mr-2",
+              currentUser.permissions.canSchedule ? "bg-green-500" : "bg-red-500"
+            )} />
+            <span>Can Schedule: {currentUser.permissions.canSchedule ? "Yes" : "No"}</span>
+          </div>
+          <div className="flex items-center">
+            <div className={cn(
+              "w-2 h-2 rounded-full mr-2",
+              currentUser.permissions.canBypassApproval ? "bg-green-500" : "bg-red-500"
+            )} />
+            <span>Bypass Approval: {currentUser.permissions.canBypassApproval ? "Yes" : "No"}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 
 const renderTabContent = () => {
@@ -1090,8 +1674,9 @@ const renderTabContent = () => {
       case "basic": return renderBasicInfo();
       case "pricing": return renderPricing();
       case "inventory": return renderInventory();
-      case "marketing": return renderMarketing();
+case "marketing": return renderMarketing();
       case "media": return renderMedia();
+      case "variations": return renderVariations();
       case "shipping": return renderShipping();
       case "seo": return renderSEO();
       case "approval": return renderApproval();

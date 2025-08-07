@@ -449,11 +449,70 @@ return (
                   </div>
                 </div>
               </div>
-            }>
+}>
               <Route index element={<ManageProducts />} />
               <Route path="products" element={<ManageProducts />} />
               <Route path="products/manage" element={<ManageProducts />} />
               <Route path="products/add" element={<AddProduct />} />
+              <Route path="categories" element={<div className="p-6">
+                <div className="max-w-6xl mx-auto">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Categories Management</h2>
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <p className="text-gray-600">Category management system coming soon. This will include:</p>
+                    <ul className="mt-4 space-y-2 text-sm text-gray-600">
+                      <li>• Multi-level category tree</li>
+                      <li>• Drag & drop category ordering</li>
+                      <li>• Category image management</li>
+                      <li>• SEO settings per category</li>
+                      <li>• Product count tracking</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>} />
+              <Route path="inventory" element={<div className="p-6">
+                <div className="max-w-6xl mx-auto">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Inventory Management</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white p-6 rounded-lg shadow-sm">
+                      <div className="flex items-center">
+                        <ApperIcon name="Package" className="w-8 h-8 text-blue-600" />
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">Total Products</p>
+                          <p className="text-2xl font-bold text-gray-900">1,245</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-lg shadow-sm">
+                      <div className="flex items-center">
+                        <ApperIcon name="AlertTriangle" className="w-8 h-8 text-orange-600" />
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">Low Stock</p>
+                          <p className="text-2xl font-bold text-gray-900">23</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-lg shadow-sm">
+                      <div className="flex items-center">
+                        <ApperIcon name="XCircle" className="w-8 h-8 text-red-600" />
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">Out of Stock</p>
+                          <p className="text-2xl font-bold text-gray-900">8</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <p className="text-gray-600">Advanced inventory management coming soon:</p>
+                    <ul className="mt-4 space-y-2 text-sm text-gray-600">
+                      <li>• Real-time stock tracking</li>
+                      <li>• Low stock alerts & notifications</li>
+                      <li>• Bulk stock adjustments</li>
+                      <li>• Inventory history & audit trails</li>
+                      <li>• Supplier management integration</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>} />
               <Route path="orders" element={<OrderManagement />} />
               <Route path="customers" element={<div className="p-6">Customer Management - Coming Soon</div>} />
               <Route path="users" element={<UserManagement />} />

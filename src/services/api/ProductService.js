@@ -1,5 +1,8 @@
 import productsData from "@/services/mockData/products.json";
 
+// Enhanced product service with admin capabilities
+let nextId = Math.max(...productsData.map(p => p.Id)) + 1;
+
 export const ProductService = {
   getAll: async () => {
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -68,34 +71,44 @@ delete: async (id) => {
     const index = productsData.findIndex(product => product.Id === parseInt(id));
     if (index !== -1) {
       const deleted = productsData.splice(index, 1)[0];
+      // Store deletion timestamp for audit
+      deleted.deletedAt = new Date().toISOString();
       return { ...deleted };
     }
     return null;
   },
 
   // Bulk operations
-  bulkDelete: async (ids) => {
+bulkDelete: async (ids) => {
     await new Promise(resolve => setTimeout(resolve, 500));
     const deletedProducts = [];
+    const timestamp = new Date().toISOString();
     
     ids.forEach(id => {
       const index = productsData.findIndex(product => product.Id === parseInt(id));
       if (index !== -1) {
-        deletedProducts.push(productsData.splice(index, 1)[0]);
+        const deleted = productsData.splice(index, 1)[0];
+        deleted.deletedAt = timestamp;
+        deletedProducts.push(deleted);
       }
     });
     
-    return deletedProducts;
+return deletedProducts;
   },
 
   bulkUpdate: async (updates) => {
     await new Promise(resolve => setTimeout(resolve, 500));
     const updatedProducts = [];
+    const timestamp = new Date().toISOString();
     
     updates.forEach(({ id, data }) => {
       const index = productsData.findIndex(product => product.Id === parseInt(id));
       if (index !== -1) {
-        productsData[index] = { ...productsData[index], ...data };
+        productsData[index] = { 
+          ...productsData[index], 
+          ...data,
+          lastModified: timestamp 
+        };
         updatedProducts.push({ ...productsData[index] });
       }
     });
@@ -103,23 +116,58 @@ delete: async (id) => {
     return updatedProducts;
   },
 
-  // Admin-specific methods
+  // Bulk price adjustment
+  bulkPriceAdjustment: async (ids, adjustment) => {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    const updatedProducts = [];
+    
+    ids.forEach(id => {
+      const index = productsData.findIndex(product => product.Id === parseInt(id));
+      if (index !== -1) {
+        const product = productsData[index];
+        const oldPrice = product.price;
+        
+        if (adjustment.type === 'percentage') {
+          product.price = Math.round(product.price * (1 + adjustment.value / 100));
+        } else {
+          product.price = Math.max(0, product.price + adjustment.value);
+        }
+        
+        // Track price history
+        if (!product.priceHistory) product.priceHistory = [];
+        product.priceHistory.push({
+          oldPrice,
+          newPrice: product.price,
+          adjustment: adjustment.value,
+          type: adjustment.type,
+          date: new Date().toISOString()
+        });
+        
+        updatedProducts.push({ ...product });
+      }
+    });
+    
+    return updatedProducts;
+  },
+
+// Admin-specific methods
   toggleVisibility: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
     if (index !== -1) {
       const currentVisibility = productsData[index].visibility || 'published';
       productsData[index].visibility = currentVisibility === 'published' ? 'draft' : 'published';
+      productsData[index].lastModified = new Date().toISOString();
       return { ...productsData[index] };
     }
     return null;
   },
-
-  toggleFeatured: async (id) => {
+toggleFeatured: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
     if (index !== -1) {
       productsData[index].featured = !productsData[index].featured;
+      productsData[index].lastModified = new Date().toISOString();
       return { ...productsData[index] };
     }
     return null;
@@ -130,12 +178,57 @@ delete: async (id) => {
     const index = productsData.findIndex(product => product.Id === parseInt(id));
     if (index !== -1) {
       productsData[index].status = status;
+      productsData[index].lastModified = new Date().toISOString();
       return { ...productsData[index] };
     }
     return null;
   },
 
-  getByCategory: async (category) => {
+  // Get featured products for homepage
+  getFeaturedProducts: async () => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return productsData
+      .filter(product => product.featured && product.visibility === 'published')
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0))
+      .slice(0, 8)
+      .map(product => ({ ...product }));
+  },
+
+  // Low stock alerts
+  getLowStockProducts: async (threshold = 10) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return productsData
+      .filter(product => product.stock <= threshold && product.stock > 0)
+      .map(product => ({ ...product }));
+  },
+
+  // Out of stock products
+  getOutOfStockProducts: async () => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return productsData
+      .filter(product => product.stock === 0)
+      .map(product => ({ ...product }));
+  },
+
+  // Product analytics
+  getProductAnalytics: async (id) => {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    const product = productsData.find(p => p.Id === parseInt(id));
+    if (!product) return null;
+    
+    // Mock analytics data
+    return {
+      productId: id,
+      views: Math.floor(Math.random() * 1000) + 100,
+      clicks: Math.floor(Math.random() * 100) + 10,
+      conversions: Math.floor(Math.random() * 20) + 1,
+      revenue: product.price * (Math.floor(Math.random() * 50) + 5),
+      lastWeekViews: Math.floor(Math.random() * 200) + 20,
+      conversionRate: ((Math.floor(Math.random() * 20) + 1) / (Math.floor(Math.random() * 100) + 10) * 100).toFixed(2)
+    };
+  },
+
+getByCategory: async (category) => {
     await new Promise(resolve => setTimeout(resolve, 300));
     if (!category) return productsData.map(product => ({ ...product }));
     
@@ -153,12 +246,102 @@ delete: async (id) => {
       .filter(product => 
         product.title.toLowerCase().includes(lowercaseQuery) ||
         product.sku?.toLowerCase().includes(lowercaseQuery) ||
-        product.description.toLowerCase().includes(lowercaseQuery)
+        product.description.toLowerCase().includes(lowercaseQuery) ||
+        product.brand?.toLowerCase().includes(lowercaseQuery) ||
+        product.tags?.some(tag => tag.toLowerCase().includes(lowercaseQuery))
       )
       .map(product => ({ ...product }));
   },
 
-  getTrendingByLocation: async (location) => {
+  // Advanced filtering
+  filterProducts: async (filters) => {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    let filtered = [...productsData];
+
+    if (filters.category && filters.category !== 'all') {
+      filtered = filtered.filter(p => p.category === filters.category);
+    }
+
+    if (filters.priceRange) {
+      const { min, max } = filters.priceRange;
+      if (min) filtered = filtered.filter(p => p.price >= parseFloat(min));
+      if (max) filtered = filtered.filter(p => p.price <= parseFloat(max));
+    }
+
+    if (filters.stockStatus && filters.stockStatus !== 'all') {
+      switch (filters.stockStatus) {
+        case 'in-stock':
+          filtered = filtered.filter(p => p.stock > 10);
+          break;
+        case 'low-stock':
+          filtered = filtered.filter(p => p.stock > 0 && p.stock <= 10);
+          break;
+        case 'out-of-stock':
+          filtered = filtered.filter(p => p.stock === 0);
+          break;
+      }
+    }
+
+    if (filters.tags && filters.tags !== 'all') {
+      filtered = filtered.filter(p => p.badges?.includes(filters.tags));
+    }
+
+    if (filters.featured && filters.featured !== 'all') {
+      const isFeatured = filters.featured === 'featured';
+      filtered = filtered.filter(p => !!p.featured === isFeatured);
+    }
+
+    if (filters.status && filters.status !== 'all') {
+      filtered = filtered.filter(p => (p.visibility || 'published') === filters.status);
+    }
+
+    return filtered.map(product => ({ ...product }));
+  },
+
+  // Sorting methods
+  sortProducts: async (products, sortBy) => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const sorted = [...products];
+
+    switch (sortBy) {
+      case 'name-asc':
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'name-desc':
+        sorted.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case 'price-asc':
+        sorted.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-desc':
+        sorted.sort((a, b) => b.price - a.price);
+        break;
+      case 'stock-asc':
+        sorted.sort((a, b) => a.stock - b.stock);
+        break;
+      case 'stock-desc':
+        sorted.sort((a, b) => b.stock - a.stock);
+        break;
+      case 'newest':
+        sorted.sort((a, b) => b.Id - a.Id);
+        break;
+      case 'oldest':
+        sorted.sort((a, b) => a.Id - b.Id);
+        break;
+      case 'last-updated':
+        sorted.sort((a, b) => 
+          new Date(b.lastModified || 0) - new Date(a.lastModified || 0)
+        );
+        break;
+      default:
+        // Keep original order
+        break;
+    }
+
+    return sorted;
+  },
+
+getTrendingByLocation: async (location) => {
     await new Promise(resolve => setTimeout(resolve, 400));
     
     if (!location) {
