@@ -1,8 +1,8 @@
-import mockProducts from "../mockData/products.json";
-import { calculateProfitMargin } from "@/utils/currency";
+import productsData from '../mockData/products.json';
+import { calculateProfitMargin } from '@/utils/currency';
 
-// Enhanced product service with admin capabilities
-let productsData = mockProducts || [];
+// Local copy of products for manipulation
+let mockProducts = [...productsData];
 
 // Validation helper functions
 const validateProductData = async (product) => {
@@ -167,7 +167,7 @@ const validateProductUpdateData = async (data, originalProduct) => {
   if (data.stockQuantity !== undefined) {
     const stock = parseInt(data.stockQuantity);
     if (isNaN(stock) || stock < 0) {
-      errors.push('Stock quantity must be a non-negative number');
+errors.push('Stock quantity must be a non-negative number');
     }
   }
   
@@ -175,6 +175,50 @@ const validateProductUpdateData = async (data, originalProduct) => {
     isValid: errors.length === 0,
     errors
   };
+};
+
+// Helper function for bulk update validation - moved here for proper scope
+const validateBulkUpdateEdgeCases = async (updates) => {
+  const criticalErrors = [];
+  const warnings = [];
+  
+  for (const update of updates) {
+    const product = mockProducts.find(p => p.Id === update.id);
+    if (!product) {
+      criticalErrors.push(`Product ${update.id} not found`);
+      continue;
+    }
+    
+    // Edge case: Approve product without images
+    if (update.data.status === 'approved') {
+      if (!product.image && (!product.images || product.images.length === 0)) {
+        warnings.push(`Product ${update.id} (${product.name}) approved without images`);
+      }
+      
+      // Edge case: Approve product with negative stock
+      if (product.stock < 0 || product.stockCount < 0) {
+        warnings.push(`Product ${update.id} (${product.name}) approved with negative stock: ${product.stock}`);
+      }
+      
+      // Edge case: Approve product with invalid pricing
+      if (!product.price || product.price <= 0 || isNaN(product.price)) {
+        warnings.push(`Product ${update.id} (${product.name}) approved with invalid pricing: ${product.price}`);
+      }
+    }
+    
+    // Edge case: Approve then immediately reject (rapid status changes)
+    if (update.data.status && product.lastModified) {
+      const lastModified = new Date(product.lastModified);
+      const now = new Date();
+      const timeDiff = now - lastModified;
+      
+      if (timeDiff < 60000) { // Less than 1 minute
+        warnings.push(`Product ${update.id} status changed rapidly (${timeDiff}ms ago)`);
+      }
+    }
+  }
+  
+  return { criticalErrors, warnings };
 };
 
 export const ProductService = {
@@ -188,20 +232,20 @@ export const ProductService = {
     return [...productsData];
   },
   
-  getTrendingByLocation: async (location) => {
+getTrendingByLocation: async (location) => {
     await new Promise(resolve => setTimeout(resolve, 300));
     // Filter products based on location preferences
-    const trendingProducts = productsData.filter(product => 
+    const trendingProducts = mockProducts.filter(product => 
       product.category === 'vegetables' || 
       product.category === 'fruits' ||
-      (location && product.name.toLowerCase().includes('organic'))
+      (location && product.name && product.name.toLowerCase().includes('organic'))
     ).slice(0, 12);
     return trendingProducts;
   },
 
   getById: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 200));
-    const product = productsData.find(p => p.Id === id);
+    const product = mockProducts.find(p => p.Id === id);
     return product ? { ...product } : null;
   },
 getByCategory: async (category) => {
@@ -481,11 +525,11 @@ const processedProduct = {
       console.error('❌ Error adding product to data store:', error);
       throw new Error('Failed to save product to database');
     }
-  },
+},
 
-// Enhanced toggle product visibility with approval workflow
+  // Enhanced toggle product visibility with approval workflow
   async toggleVisibility(id) {
-    const product = productsData.find(p => p.Id === parseInt(id));
+    const product = mockProducts.find(p => p.Id === parseInt(id));
     if (!product) {
       throw new Error('Product not found');
     }
@@ -523,9 +567,9 @@ const processedProduct = {
     return product;
   },
 
-// Enhanced toggle featured status with approval workflow
-  async toggleFeatured(id) {
-    const product = productsData.find(p => p.Id === parseInt(id));
+  // Enhanced toggle featured status with approval workflow
+async toggleFeatured(id) {
+    const product = mockProducts.find(p => p.Id === parseInt(id));
     if (!product) {
       throw new Error('Product not found');
     }
@@ -550,17 +594,32 @@ const processedProduct = {
       oldValue: wasFeatured,
       newValue: product.featured
     });
-return product;
+    
+    return product;
   },
-
 // Enhanced bulk update products with approval workflow
   bulkUpdate: async (updates) => {
     const updatedProducts = [];
     const errors = [];
     
+    // Validate edge cases first
+    const validationResult = await validateBulkUpdateEdgeCases(updates);
+    if (validationResult.criticalErrors.length > 0) {
+      return {
+        updatedProducts: [],
+        errors: validationResult.criticalErrors,
+        warnings: validationResult.warnings,
+        summary: {
+          total: updates.length,
+          successful: 0,
+          failed: validationResult.criticalErrors.length
+        }
+      };
+    }
+    
     for (const update of updates) {
       try {
-        const product = productsData.find(p => p.Id === parseInt(update.id));
+        const product = mockProducts.find(p => p.Id === parseInt(update.id));
         if (!product) {
           errors.push(`Product not found: ${update.id}`);
           continue;
@@ -609,6 +668,7 @@ return product;
     return {
       updatedProducts,
       errors,
+      warnings: validationResult.warnings,
       summary: {
         total: updates.length,
         successful: updatedProducts.length,
@@ -618,11 +678,11 @@ return product;
   },
 
   // Bulk price adjustment
-  async bulkPriceAdjustment(productIds, adjustment) {
+async bulkPriceAdjustment(productIds, adjustment) {
     const updatedProducts = [];
     
     for (const id of productIds) {
-      const product = productsData.find(p => p.Id === parseInt(id));
+      const product = mockProducts.find(p => p.Id === parseInt(id));
       if (product) {
         const currentPrice = parseFloat(product.price) || 0;
         let newPrice = currentPrice;
@@ -638,7 +698,8 @@ return product;
         updatedProducts.push(product);
       }
     }
-return updatedProducts;
+    
+    return updatedProducts;
   },
 
   update: async (id, updates) => {
@@ -1011,48 +1072,7 @@ throw new Error('Invalid product IDs provided');
     };
     
     // Edge case validation function
-    const validateBulkUpdateEdgeCases = async (updates) => {
-      const criticalErrors = [];
-      const warnings = [];
-      
-      for (const update of updates) {
-        const product = mockProducts.find(p => p.Id === update.id);
-        if (!product) {
-          criticalErrors.push(`Product ${update.id} not found`);
-          continue;
-        }
-        
-        // Edge case: Approve product without images
-        if (update.data.status === 'approved') {
-          if (!product.image && (!product.images || product.images.length === 0)) {
-            warnings.push(`Product ${update.id} (${product.name}) approved without images`);
-          }
-          
-          // Edge case: Approve product with negative stock
-          if (product.stock < 0 || product.stockCount < 0) {
-            warnings.push(`Product ${update.id} (${product.name}) approved with negative stock: ${product.stock}`);
-          }
-          
-          // Edge case: Approve product with invalid pricing
-          if (!product.price || product.price <= 0 || isNaN(product.price)) {
-            warnings.push(`Product ${update.id} (${product.name}) approved with invalid pricing: ${product.price}`);
-          }
-        }
-        
-        // Edge case: Approve then immediately reject (rapid status changes)
-        if (update.data.status && product.lastModified) {
-          const lastModified = new Date(product.lastModified);
-          const now = new Date();
-          const timeDiff = now - lastModified;
-          
-          if (timeDiff < 60000) { // Less than 1 minute
-            warnings.push(`Product ${update.id} status changed rapidly (${timeDiff}ms ago)`);
-          }
-        }
-      }
-      
-      return { criticalErrors, warnings };
-    };
+// Function moved to proper scope before main export
     if (ids.length > 100) {
       throw new Error('Cannot adjust prices for more than 100 products at once');
     }
@@ -1602,13 +1622,13 @@ getTrendingByLocation: async (location) => {
     
     if (!location) {
       // Fallback to general trending if no location
-      return productsData
+      return mockProducts
         .filter(p => p.badges?.includes("BESTSELLER"))
         .slice(0, 8)
         .map(product => ({ ...product }));
     }
 
-    const { LocationService } = await import('./LocationService.js');
+    const { LocationService } = await import('@/services/api/LocationService');
     
     // Get weather-appropriate categories
     const preferredCategories = LocationService.getWeatherBasedCategories(
@@ -1620,7 +1640,7 @@ getTrendingByLocation: async (location) => {
     const seasonalProducts = LocationService.getSeasonalProducts(location.weather);
     
     // Score products based on location context
-    const scoredProducts = productsData.map(product => {
+    const scoredProducts = mockProducts.map(product => {
       let score = 0;
       
       // Base score for bestsellers
@@ -1635,25 +1655,25 @@ getTrendingByLocation: async (location) => {
       
       // Seasonal product name match bonus
       const isSeasonalMatch = seasonalProducts.some(seasonal => 
-        product.title.toLowerCase().includes(seasonal.toLowerCase()) ||
-        seasonal.toLowerCase().includes(product.title.toLowerCase().split(' ')[0])
+        product.title?.toLowerCase().includes(seasonal.toLowerCase()) ||
+        seasonal.toLowerCase().includes(product.title?.toLowerCase().split(' ')[0])
       );
       if (isSeasonalMatch) score += 20;
       
       // Weather-specific bonuses
       if (location.weather === 'hot' || location.weather === 'warm') {
         if (product.category === 'diet' || product.category === 'fruits') score += 12;
-        if (product.title.toLowerCase().includes('tea') || 
-            product.title.toLowerCase().includes('cold') ||
-            product.title.toLowerCase().includes('fresh')) score += 8;
+        if (product.title?.toLowerCase().includes('tea') || 
+            product.title?.toLowerCase().includes('cold') ||
+            product.title?.toLowerCase().includes('fresh')) score += 8;
       }
       
       if (location.weather === 'cool' || location.weather === 'cold') {
         if (product.category === 'electric' || product.category === 'foods') score += 12;
-        if (product.title.toLowerCase().includes('heater') || 
-            product.title.toLowerCase().includes('warm') ||
-            product.title.toLowerCase().includes('ghee') ||
-            product.title.toLowerCase().includes('honey')) score += 8;
+        if (product.title?.toLowerCase().includes('heater') || 
+            product.title?.toLowerCase().includes('warm') ||
+            product.title?.toLowerCase().includes('ghee') ||
+            product.title?.toLowerCase().includes('honey')) score += 8;
       }
       
       // Stock availability penalty
