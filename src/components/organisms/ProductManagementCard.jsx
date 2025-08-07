@@ -20,12 +20,14 @@ viewMode = 'grid',
   onEdit,
   onView,
   onDelete,
-  loading = false
+  loading = false,
+  currentUser
 }) => {
   const isVisible = product.visibility === 'published';
   const isFeatured = product.featured;
   const isLowStock = product.stock < 10;
   const isOutOfStock = product.stock === 0;
+  const adminRating = product.adminRating || 0;
 
 if (viewMode === 'list') {
     return (
@@ -63,6 +65,21 @@ if (viewMode === 'list') {
           
           {/* Product Info */}
           <div className="flex-1 min-w-0 space-y-2 sm:space-y-1">
+{/* Admin Rating Stars */}
+            {adminRating > 0 && (
+              <div className="flex items-center mb-2">
+                {[...Array(5)].map((_, i) => (
+                  <span
+                    key={i}
+                    className={`text-sm ${i < adminRating ? 'text-yellow-500' : 'text-gray-300'}`}
+                  >
+                    ⭐
+                  </span>
+                ))}
+                <span className="text-xs text-gray-500 ml-1">({adminRating}/5)</span>
+              </div>
+            )}
+            
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-gray-900 text-sm sm:text-base leading-tight">
@@ -197,6 +214,26 @@ return (
     )}
     
     <div className="pl-7 sm:pl-8">
+{/* Featured Star Badge */}
+      {isFeatured && (
+        <div className="absolute top-2 left-2 z-10">
+          <div className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center shadow-lg">
+            <span className="mr-1">⭐</span>
+            FEATURED
+          </div>
+        </div>
+      )}
+
+      {/* Admin Rating Badge */}
+      {adminRating > 0 && (
+        <div className="absolute top-2 right-2 z-10">
+          <div className="bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs flex items-center">
+            <span className="text-yellow-400 mr-1">⭐</span>
+            {adminRating}/5
+          </div>
+        </div>
+      )}
+
       {/* Product Image - Responsive aspect ratio */}
       <div className="w-full aspect-square sm:h-48 bg-gray-200 rounded-lg overflow-hidden mb-3 sm:mb-4">
         <img

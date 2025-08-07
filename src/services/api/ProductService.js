@@ -1,7 +1,7 @@
-import productsData from "@/services/mockData/products.json";
+import mockProducts from "../mockData/products.json";
 
 // Enhanced product service with admin capabilities
-let nextId = Math.max(...productsData.map(p => p.Id)) + 1;
+let productsData = mockProducts || [];
 
 export const ProductService = {
   getAll: async () => {
@@ -75,18 +75,17 @@ create: async (product) => {
       discountedPrice: parseFloat(product.discountedPrice) || 0,
       discountAmount: parseFloat(product.discountAmount) || 0,
       discountType: product.discountType || "percentage",
+discountType: product.discountType || "percentage",
       
       // Calculate profit metrics
-      profit: (parseFloat(product.sellingPrice) || 0) - (parseFloat(product.buyingPrice) || 0),
-      profitMargin: parseFloat(product.buyingPrice) > 0 ? 
-        (((parseFloat(product.sellingPrice) || 0) - (parseFloat(product.buyingPrice) || 0)) / (parseFloat(product.buyingPrice) || 0)) * 100 : 0,
-      
-      // Enhanced inventory fields
-      stock: parseInt(product.stockQuantity) || 0,
-      stockQuantity: parseInt(product.stockQuantity) || 0,
-      stockStatus: product.stockStatus || "In Stock",
-      lowStockThreshold: parseInt(product.lowStockThreshold) || 10,
-      sku: product.sku || `PRD-${newId}`,
+      profitMargin: 0,
+      stock: parseInt(product.stock) || 0,
+      sku: product.sku || "",
+      mainImage: product.mainImage || "",
+      images: product.images || [],
+      tags: product.tags || [],
+      weight: product.weight || "",
+      dimensions: product.dimensions || "",
       barcode: product.barcode || "",
       
       // Order management
@@ -119,6 +118,71 @@ create: async (product) => {
     productsData.push(processedProduct);
     
     return { ...processedProduct };
+  },
+
+  // Toggle product visibility
+  async toggleVisibility(id) {
+    const product = productsData.find(p => p.Id === parseInt(id));
+async toggleVisibility(id) {
+    const product = productsData.find(p => p.Id === parseInt(id));
+    if (product) {
+      product.visibility = product.visibility === 'published' ? 'draft' : 'published';
+      product.lastModified = new Date().toISOString();
+      return product;
+    }
+    throw new Error('Product not found');
+  },
+
+  // Toggle featured status
+  async toggleFeatured(id) {
+    const product = productsData.find(p => p.Id === parseInt(id));
+    if (product) {
+      product.featured = !product.featured;
+      product.priority = product.featured ? Date.now() : 0;
+      product.lastModified = new Date().toISOString();
+      return product;
+    }
+    throw new Error('Product not found');
+
+  // Bulk update products
+async bulkUpdate(updates) {
+    const updatedProducts = [];
+    
+    for (const update of updates) {
+      const product = productsData.find(p => p.Id === parseInt(update.id));
+      if (product) {
+        Object.assign(product, update.data);
+        product.lastModified = new Date().toISOString();
+        updatedProducts.push(product);
+      }
+    }
+    
+    return updatedProducts;
+  },
+
+  // Bulk price adjustment
+  async bulkPriceAdjustment(productIds, adjustment) {
+    const updatedProducts = [];
+    
+    for (const id of productIds) {
+      const product = productsData.find(p => p.Id === parseInt(id));
+      if (product) {
+        const currentPrice = parseFloat(product.price) || 0;
+        let newPrice = currentPrice;
+        
+        if (adjustment.type === 'percentage') {
+          newPrice = currentPrice * (1 + adjustment.value / 100);
+        } else {
+          newPrice = currentPrice + adjustment.value;
+        }
+        
+        product.price = Math.max(0, newPrice);
+        product.lastModified = new Date().toISOString();
+        updatedProducts.push(product);
+      }
+    }
+    
+return updatedProducts;
   },
 
   update: async (id, updates) => {

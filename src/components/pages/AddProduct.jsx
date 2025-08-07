@@ -40,10 +40,14 @@ const [formData, setFormData] = useState({
     stockQuantity: "",
     lowStockThreshold: "10",
     sku: "",
-    barcode: "",
+barcode: "",
     mainImage: null,
+    mainImageAltText: "",
     additionalImages: [],
+    videoUrl: "",
     tags: [],
+    adminRating: 0,
+    featured: false,
     variants: [],
     includeInDeals: false,
     dealOfTheDay: false,
@@ -216,6 +220,11 @@ const handleInputChange = (field, value) => {
     
     if (field === 'shortDescription' && value && !formData.metaDescription) {
       setFormData(prev => ({ ...prev, metaDescription: value }));
+    }
+    
+    // Auto-update main image alt text if not set
+    if (field === 'title' && value && !formData.mainImageAltText) {
+      setFormData(prev => ({ ...prev, mainImageAltText: `${value} - Product Image` }));
     }
     
     // Auto-calculate discount price when discount amount changes
@@ -459,11 +468,21 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
         oldPrice: discountedPrice > 0 ? sellingPrice : null,
         discountedPrice: discountedPrice > 0 ? discountedPrice : null,
         stock: parseInt(formData.stockQuantity),
-        lowStockThreshold: parseInt(formData.lowStockThreshold) || 10,
+lowStockThreshold: parseInt(formData.lowStockThreshold) || 10,
         images: [
-          ...(formData.mainImage ? [URL.createObjectURL(formData.mainImage)] : []),
-          ...formData.additionalImages.map(img => img.preview)
+          ...(formData.mainImage ? [{ 
+            url: URL.createObjectURL(formData.mainImage), 
+            altText: formData.mainImageAltText || formData.title,
+            isMain: true 
+          }] : []),
+          ...formData.additionalImages.map(img => ({
+            url: img.preview,
+            altText: img.altText || formData.title,
+            isMain: false
+          }))
         ],
+        videoUrl: formData.videoUrl,
+        adminRating: parseInt(formData.adminRating) || 0,
         badges: formData.tags,
         variants: formData.variants || [],
         barcode: formData.barcode,
@@ -493,8 +512,8 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
         createdBy: currentUser.role,
         createdAt: new Date(),
         lastModified: new Date(),
-        featured: false,
-        priority: 0
+featured: formData.featured || false,
+        priority: formData.featured ? Date.now() : 0
       };
 
       await ProductService.create(productData);
@@ -539,15 +558,19 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
           sku: "",
           barcode: "",
           mainImage: null,
-          additionalImages: [],
+additionalImages: [],
+          mainImageAltText: "",
+          videoUrl: "",
           tags: [],
+          adminRating: 0,
+          featured: false,
           variants: [],
           includeInDeals: false,
           dealOfTheDay: false,
           countdownTimer: "",
           bannerText: "",
           badge: "",
-          shippingWeight: "",
+shippingWeight: "",
           shippingDimensions: { length: "", width: "", height: "" },
           shippingFreeThreshold: "1000",
           returnPolicy: "7-day",
@@ -1864,8 +1887,58 @@ const renderInventory = () => (
     </div>
   );
 
-  const renderMarketing = () => (
+const renderMarketing = () => (
     <div className="space-y-6">
+      {/* Admin Rating */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          ⭐ Admin Quality Rating
+        </label>
+        <div className="flex items-center space-x-3">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              onClick={() => handleInputChange("adminRating", star)}
+              className={`text-2xl transition-colors ${
+                star <= formData.adminRating 
+                  ? "text-yellow-500 hover:text-yellow-600" 
+                  : "text-gray-300 hover:text-yellow-400"
+              }`}
+            >
+              ⭐
+            </button>
+          ))}
+          <span className="text-sm text-gray-600">
+            ({formData.adminRating}/5 stars)
+          </span>
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Admin-only quality rating for internal reference and customer sorting
+        </p>
+      </div>
+
+      {/* Featured Product Toggle */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          🌟 Featured Product
+        </label>
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={formData.featured}
+            onChange={(e) => handleInputChange("featured", e.target.checked)}
+            className="mr-3 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          <div>
+            <div className="font-medium">Mark as Featured Product</div>
+            <div className="text-sm text-gray-500">
+              Featured products appear prominently on the homepage and in search results
+            </div>
+          </div>
+        </label>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
           Tags/Labels
@@ -1963,7 +2036,7 @@ const renderInventory = () => (
     </div>
   );
 
-  const handleAdditionalImageUpload = (files) => {
+const handleAdditionalImageUpload = (files) => {
     const fileArray = Array.from(files);
     const validImages = fileArray.filter(file => file.type.startsWith('image/'));
     
@@ -1971,7 +2044,9 @@ const renderInventory = () => (
       const newImages = validImages.map(file => ({
         file,
         preview: URL.createObjectURL(file),
-        id: Date.now() + Math.random()
+        id: Date.now() + Math.random(),
+        altText: `${formData.title || 'Product'} - Additional Image`,
+        order: formData.additionalImages.length
       }));
       
       handleInputChange("additionalImages", [...formData.additionalImages, ...newImages]);
@@ -1996,7 +2071,7 @@ const renderMedia = () => (
     <div className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Main Product Image
+          📸 Main Product Image
         </label>
         
         {/* Image Upload Zone */}
@@ -2098,35 +2173,134 @@ const renderMedia = () => (
             Upload multiple images (PNG, JPG, JPEG)
           </p>
         </div>
+{/* Main Image Alt Text */}
+        {formData.mainImage && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Alt Text (for accessibility)
+            </label>
+            <Input
+              type="text"
+              value={formData.mainImageAltText}
+              onChange={(e) => handleInputChange("mainImageAltText", e.target.value)}
+              placeholder="Describe the main image for screen readers"
+              className="w-full"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Improves SEO and accessibility. Describe what's shown in the image.
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Product Gallery */}
+      {/* Video URL */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          🎥 Product Video URL (Optional)
+        </label>
+        <Input
+          type="url"
+          value={formData.videoUrl}
+          onChange={(e) => handleInputChange("videoUrl", e.target.value)}
+          placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+          className="w-full"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          YouTube, Vimeo, or direct video URLs. Videos help increase conversion rates.
+        </p>
+        {formData.videoUrl && (
+          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center text-green-700">
+              <ApperIcon name="Video" className="w-4 h-4 mr-2" />
+              <span className="text-sm font-medium">Video URL Added</span>
+            </div>
+            <p className="text-xs text-green-600 mt-1">
+              Video will be embedded in the product page
+            </p>
+          </div>
+        )}
+      </div>
+
+{/* Product Gallery with Enhanced Features */}
       {formData.additionalImages.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Product Gallery ({formData.additionalImages.length} images)
           </label>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {formData.additionalImages.map((image, index) => (
-              <div key={image.id} className="relative group">
+{formData.additionalImages.map((image, index) => (
+              <div key={image.id} className="relative group bg-white rounded-lg border-2 border-dashed border-gray-300 hover:border-primary-400 transition-colors">
                 <img
                   src={image.preview}
-                  alt={`Additional ${index + 1}`}
-                  className="w-full h-32 object-cover rounded-lg border"
+                  alt={image.altText || `Additional ${index + 1}`}
+                  className="w-full h-32 object-cover rounded-lg"
                 />
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center">
                   <div className="opacity-0 group-hover:opacity-100 flex space-x-2">
+                    {/* Move Up */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (index > 0) {
+                          const newImages = [...formData.additionalImages];
+                          [newImages[index], newImages[index - 1]] = [newImages[index - 1], newImages[index]];
+                          handleInputChange("additionalImages", newImages);
+                        }
+                      }}
+                      disabled={index === 0}
+                      className="p-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50"
+                      title="Move up"
+                    >
+                      <ApperIcon name="ChevronUp" className="w-4 h-4" />
+                    </button>
+                    
+                    {/* Move Down */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (index < formData.additionalImages.length - 1) {
+                          const newImages = [...formData.additionalImages];
+                          [newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]];
+                          handleInputChange("additionalImages", newImages);
+                        }
+                      }}
+                      disabled={index === formData.additionalImages.length - 1}
+                      className="p-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50"
+                      title="Move down"
+                    >
+                      <ApperIcon name="ChevronDown" className="w-4 h-4" />
+                    </button>
+                    
+                    {/* Delete */}
                     <button
                       type="button"
                       onClick={() => removeAdditionalImage(image.id)}
                       className="p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      title="Remove image"
                     >
                       <ApperIcon name="Trash2" className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                  {index + 1}
+                
+                {/* Image Order Badge */}
+                <div className="absolute top-2 left-2 bg-primary-500 text-white px-2 py-1 rounded text-xs font-medium">
+                  #{index + 1}
+                </div>
+                
+                {/* Alt Text Input */}
+                <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-95 p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-all">
+                  <Input
+                    type="text"
+                    value={image.altText || ""}
+                    onChange={(e) => {
+                      const newImages = [...formData.additionalImages];
+                      newImages[index] = { ...newImages[index], altText: e.target.value };
+                      handleInputChange("additionalImages", newImages);
+                    }}
+                    placeholder="Alt text for this image"
+                    className="text-xs h-6 text-gray-700"
+                  />
                 </div>
               </div>
             ))}
