@@ -73,10 +73,8 @@ create: async (product) => {
       buyingPrice: parseFloat(product.buyingPrice) || 0,
       costPrice: parseFloat(product.buyingPrice) || 0,
       discountedPrice: parseFloat(product.discountedPrice) || 0,
-      discountAmount: parseFloat(product.discountAmount) || 0,
+discountAmount: parseFloat(product.discountAmount) || 0,
       discountType: product.discountType || "percentage",
-discountType: product.discountType || "percentage",
-      
       // Calculate profit metrics
       profitMargin: 0,
       stock: parseInt(product.stock) || 0,
@@ -121,8 +119,6 @@ discountType: product.discountType || "percentage",
   },
 
   // Toggle product visibility
-  async toggleVisibility(id) {
-    const product = productsData.find(p => p.Id === parseInt(id));
 async toggleVisibility(id) {
     const product = productsData.find(p => p.Id === parseInt(id));
     if (product) {
@@ -134,7 +130,7 @@ async toggleVisibility(id) {
   },
 
   // Toggle featured status
-  async toggleFeatured(id) {
+async toggleFeatured(id) {
     const product = productsData.find(p => p.Id === parseInt(id));
     if (product) {
       product.featured = !product.featured;
@@ -143,9 +139,10 @@ async toggleVisibility(id) {
       return product;
     }
     throw new Error('Product not found');
+  },
 
   // Bulk update products
-async bulkUpdate(updates) {
+  bulkUpdate: async (updates) => {
     const updatedProducts = [];
     
     for (const update of updates) {
@@ -181,14 +178,13 @@ async bulkUpdate(updates) {
         updatedProducts.push(product);
       }
     }
-    
 return updatedProducts;
   },
 
   update: async (id, updates) => {
     await new Promise(resolve => setTimeout(resolve, 350));
     const index = productsData.findIndex(p => p.Id === id);
-if (index !== -1) {
+    if (index !== -1) {
       productsData[index] = { ...productsData[index], ...updates };
       return { ...productsData[index] };
     }
@@ -208,7 +204,7 @@ delete: async (id) => {
   },
 
   // Bulk operations
-bulkDelete: async (ids) => {
+  bulkDelete: async (ids) => {
     await new Promise(resolve => setTimeout(resolve, 500));
     const deletedProducts = [];
     const timestamp = new Date().toISOString();
@@ -222,7 +218,7 @@ bulkDelete: async (ids) => {
       }
     });
     
-return deletedProducts;
+    return deletedProducts;
   },
 
   bulkUpdate: async (updates) => {
@@ -357,14 +353,7 @@ toggleFeatured: async (id) => {
     };
   },
 
-getByCategory: async (category) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    if (!category) return productsData.map(product => ({ ...product }));
-    
-    return productsData
-      .filter(product => product.category === category)
-      .map(product => ({ ...product }));
-  },
+// Removed duplicate getByCategory function - already defined earlier in the service
 
   searchProducts: async (query) => {
     await new Promise(resolve => setTimeout(resolve, 300));
