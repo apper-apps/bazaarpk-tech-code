@@ -17,9 +17,9 @@ import { formatPrice } from "@/utils/currency";
 import { announceToScreenReader, generateDataChecksum, getCSRFToken, initializeCSRF, sanitizeInput, sanitizeNumericInput, sanitizeURL, validateDataConsistency, validateFormData } from "@/utils/security";
 
 const AddProduct = () => {
-  const navigate = useNavigate();
+const navigate = useNavigate();
   const location = useLocation();
-  const showToast = useToast();
+  const { showToast } = useToast();
   
   // Check if we're in admin dashboard context
   const isInAdminDashboard = location.pathname.includes('/admin') || 
