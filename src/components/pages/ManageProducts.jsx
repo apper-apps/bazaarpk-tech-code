@@ -1509,42 +1509,70 @@ return (
               <div className="text-sm text-gray-600">Out of Stock</div>
             </div>
           </div>
-<motion.div
-            className={cn(
-              "grid gap-6",
-              viewMode === 'grid'
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-                : "grid-cols-1"
-            )}
-            layout
-          >
-            <AnimatePresence mode="wait">
-              {filteredProducts.map((product) => (
-                <motion.div
-                  key={product.Id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <ProductManagementCard
-                    product={product}
-                    viewMode={viewMode}
-                    selected={selectedProducts.has(product.Id)}
-                    onSelect={handleSelectProduct}
-                    onToggleVisibility={handleToggleVisibility}
-                    onToggleFeatured={handleToggleFeatured}
-                    onEdit={handleEdit}
-                    onView={handleViewProduct}
-                    onDelete={handleDeleteClick}
-                    loading={actionLoading}
-                    currentUser={currentUser}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+{viewMode === 'grid' ? (
+            <motion.div
+              className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
+              layout
+            >
+              <AnimatePresence mode="wait">
+                {filteredProducts.map((product) => (
+                  <motion.div
+                    key={product.Id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200"
+                  >
+                    <ProductManagementCard
+                      product={product}
+                      viewMode={viewMode}
+                      selected={selectedProducts.has(product.Id)}
+                      onSelect={handleSelectProduct}
+                      onToggleVisibility={handleToggleVisibility}
+                      onToggleFeatured={handleToggleFeatured}
+                      onEdit={handleEdit}
+                      onView={handleViewProduct}
+                      onDelete={handleDeleteClick}
+                      loading={actionLoading}
+                      currentUser={currentUser}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          ) : (
+            <motion.div className="space-y-3" layout>
+              <AnimatePresence mode="wait">
+                {filteredProducts.map((product) => (
+                  <motion.div
+                    key={product.Id}
+                    layout
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                    className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-all duration-200"
+                  >
+                    <ProductManagementCard
+                      product={product}
+                      viewMode={viewMode}
+                      selected={selectedProducts.has(product.Id)}
+                      onSelect={handleSelectProduct}
+                      onToggleVisibility={handleToggleVisibility}
+                      onToggleFeatured={handleToggleFeatured}
+                      onEdit={handleEdit}
+                      onView={handleViewProduct}
+                      onDelete={handleDeleteClick}
+                      loading={actionLoading}
+                      currentUser={currentUser}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
 
           {/* Pagination Placeholder */}
           {filteredProducts.length > 50 && (
