@@ -44,88 +44,27 @@ try {
     } catch (error) {
       console.error('WebSocket connection failed:', error);
       
-      // Enhanced error handling with better user messaging and serialization safety
+      // Simplified error handling - WebSocketService now provides clean error messages
       let userMessage = 'Connection failed - will retry automatically';
       let toastType = 'error';
       
-      // Safely extract error information with multiple fallbacks
-      const safeError = {
-        code: null,
-        message: null,
-        details: null
-      };
-      
-      try {
-        // Handle different error types safely
-        if (error && typeof error === 'object') {
-          safeError.code = error.code || error.name || 'UNKNOWN_ERROR';
-          safeError.message = error.message || error.toString() || 'Unknown error occurred';
-          safeError.details = error.details || {};
-          
-          // If error has toJSON method, use it
-          if (typeof error.toJSON === 'function') {
-            const jsonError = error.toJSON();
-            safeError.code = jsonError.code || safeError.code;
-            safeError.message = jsonError.message || safeError.message;
-            safeError.details = jsonError.details || safeError.details;
-          }
-        } else if (typeof error === 'string') {
-          safeError.message = error;
-          safeError.code = 'STRING_ERROR';
-        } else {
-          safeError.message = 'Connection error occurred';
-          safeError.code = 'UNKNOWN_ERROR_TYPE';
+      // Extract error message safely
+      if (error instanceof Error) {
+        const message = error.message || '';
+        
+        // Map common error patterns to user-friendly messages
+        if (message.includes('Failed to establish')) {
+          userMessage = 'Unable to connect - retrying';
+          toastType = 'warning';
+        } else if (message.includes('closed unexpectedly')) {
+          userMessage = 'Connection lost - attempting to reconnect';
+          toastType = 'warning';
+        } else if (message.includes('security') || message.includes('blocked')) {
+          userMessage = 'Connection blocked by security policy';
+          toastType = 'error';
+        } else if (message && message.trim() !== '') {
+          userMessage = message;
         }
-      } catch (parseError) {
-        // Ultimate fallback if error parsing fails
-        safeError.code = 'ERROR_PARSE_FAILED';
-        safeError.message = 'Connection error - unable to determine details';
-        console.warn('Error parsing failed:', parseError);
-      }
-      
-      // Use safe error information for user messaging
-      if (safeError.code) {
-        switch (safeError.code) {
-          case 'CONNECTION_CLOSED':
-            userMessage = 'Connection lost - attempting to reconnect';
-            toastType = 'warning';
-            break;
-          case 'CONNECTION_ERROR':
-            userMessage = 'Unable to establish connection - retrying';
-            toastType = 'error';
-            break;
-          case 'WEBSOCKET_ERROR':
-            userMessage = 'Network error - checking connection';
-            toastType = 'warning';
-            break;
-          case 'SECURITY_ERROR':
-          case 'PROTOCOL_ERROR':
-            userMessage = 'Connection blocked by security policy';
-            toastType = 'error';
-            break;
-          case 'ERROR_PARSE_FAILED':
-            userMessage = 'Connection error - please try again';
-            toastType = 'error';
-            break;
-default:
-            // Use the enhanced error message if available and safe
-            if (safeError.message && 
-                typeof safeError.message === 'string' &&
-                safeError.message !== '[object Object]' && 
-                safeError.message !== '[object Event]' &&
-                safeError.message.trim() !== '') {
-              userMessage = safeError.message;
-            }
-        }
-      }
-      
-      // Final safety check before showing toast
-      if (typeof userMessage !== 'string' || 
-          userMessage === '[object Event]' || 
-          userMessage === '[object Object]' ||
-          userMessage.trim() === '') {
-        userMessage = 'Connection error - please try again';
-        toastType = 'warning';
       }
       
       if (showConnectionToasts) {
@@ -167,109 +106,40 @@ useEffect(() => {
             onDisconnect?.(data);
             break;
           case 'error':
-            // Enhanced error message processing with multiple validation layers
+            // Simplified error handling - WebSocketService provides clean error messages
             let errorMessage = 'Connection error occurred';
             let toastType = 'error';
             
-            // First attempt: Extract safe error message based on error code
-            if (data?.code && typeof data.code === 'string') {
-              const safeCode = String(data.code).replace(/\[object \w+\]/g, '').trim();
-              switch (safeCode) {
+            // Map error codes to user-friendly messages
+            if (data?.code) {
+              switch (data.code) {
                 case 'CONNECTION_CLOSED':
-                case 'CONNECTION_CLOSED_ERROR':
                   errorMessage = 'Connection unexpectedly closed';
                   toastType = 'warning';
                   break;
                 case 'CONNECTION_FAILED':
-                case 'CONNECTION_ERROR':
                   errorMessage = 'Failed to establish connection';
+                  break;
+                case 'CONNECTION_ERROR':
+                  errorMessage = 'Connection encountered an error';
+                  toastType = 'warning';
                   break;
                 case 'CONNECTION_CLOSING_ERROR':
                   errorMessage = 'Connection closing with error';
                   toastType = 'warning';
                   break;
-                case 'ERROR_PARSE_FAILED':
-                case 'SANITIZED_ERROR':
-                  errorMessage = 'Connection problem - please try again';
-                  toastType = 'warning';
-                  break;
-                case 'OBJECT_ERROR':
-                case 'TOSTRING_ERROR':
-                  errorMessage = 'Connection encountered an issue';
-                  toastType = 'warning';
-                  break;
                 default:
-                  // Try to use the error message if it's safe
+                  // Use the error message from WebSocketService (already sanitized)
                   if (data.error && typeof data.error === 'string') {
-                    const safeError = String(data.error).replace(/\[object \w+\]/g, '').trim();
-                    if (safeError && safeError.length > 0 && !safeError.includes('[object')) {
-                      errorMessage = safeError;
-                    }
+                    errorMessage = data.error;
                   }
               }
-            } 
-            // Second attempt: Direct error message extraction with sanitization
-            else if (data?.error && typeof data.error === 'string') {
-              const sanitizedError = String(data.error)
-                .replace(/\[object \w+\]/g, '')
-                .replace(/WebSocket error:\s*\[object \w+\]/gi, 'WebSocket connection failed')
-                .trim();
-              
-              if (sanitizedError && sanitizedError.length > 2 && !sanitizedError.includes('[object')) {
-                errorMessage = sanitizedError;
-              }
-            }
-            // Third attempt: Check for nested error properties
-            else if (data?.error && typeof data.error === 'object' && data.error !== null) {
-              try {
-                if (data.error.message && typeof data.error.message === 'string') {
-                  const safeMessage = String(data.error.message).replace(/\[object \w+\]/g, '').trim();
-                  if (safeMessage && !safeMessage.includes('[object')) {
-                    errorMessage = safeMessage;
-                  }
-                } else if (data.error.code && typeof data.error.code === 'string') {
-                  errorMessage = `Connection error (${data.error.code})`;
-                }
-              } catch (nestedError) {
-                console.warn('Error extracting nested error properties:', nestedError);
-              }
+            } else if (data?.error && typeof data.error === 'string') {
+              errorMessage = data.error;
             }
             
-            // Multiple safety validation layers
-            if (!errorMessage || 
-                typeof errorMessage !== 'string' || 
-                errorMessage.includes('[object') ||
-                errorMessage.trim() === '' ||
-                errorMessage.length < 3) {
-              errorMessage = 'Connection error - please check your network';
-              toastType = 'warning';
-            }
-            
-            // Final sanitization pass to catch any remaining issues
-            errorMessage = String(errorMessage)
-              .replace(/\[object \w+\]/g, 'connection issue')
-              .replace(/WebSocket error:\s*connection issue/gi, 'Connection failed')
-              .trim();
-            
-            // Ultimate fallback validation
-            if (!errorMessage || errorMessage.includes('[object') || errorMessage.length < 3) {
-              errorMessage = 'Unable to connect - please try again';
-              toastType = 'warning';
-            }
-            
-            // Ensure we have a clean, user-friendly message
             showToast(errorMessage, toastType);
-            
-            // Create safe data object for callback
-            const safeCallbackData = {
-...data,
-error: errorMessage,
-              // Preserve original data for debugging in development
-              ...(import.meta.env.MODE === 'development' && {
-                originalData: data
-              })
-            };
-            onError?.(safeCallbackData);
+            onError?.(data);
             break;
         }
       }

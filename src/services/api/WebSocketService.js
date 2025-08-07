@@ -89,126 +89,54 @@ this.socket.onerror = (error) => {
           console.error('WebSocket error:', error);
           this.isConnecting = false;
           
-          // Enhanced error handling to completely prevent "[object Event]" serialization
+          // Simplified error handling - map WebSocket states to user-friendly messages
           let errorMessage = 'WebSocket connection error';
           let errorCode = 'WEBSOCKET_ERROR';
           let readyState = 3; // Default to CLOSED state
           
-          // Process different error types safely with multiple validation layers
-          try {
-            // Handle Event objects (most common case)
-            if (error instanceof Event && error.target instanceof WebSocket) {
-              const ws = error.target;
-              readyState = ws.readyState ?? 3;
-              
-              // Map readyState to meaningful messages
-              switch (readyState) {
-                case WebSocket.CONNECTING:
-                  errorMessage = 'Failed to establish WebSocket connection';
-                  errorCode = 'CONNECTION_FAILED';
-                  break;
-                case WebSocket.OPEN:
-                  errorMessage = 'WebSocket connection encountered an error';
-                  errorCode = 'CONNECTION_ERROR';
-                  break;
-                case WebSocket.CLOSING:
-                  errorMessage = 'WebSocket connection closing with error';
-                  errorCode = 'CONNECTION_CLOSING_ERROR';
-                  break;
-                case WebSocket.CLOSED:
-                default:
-                  errorMessage = 'WebSocket connection closed unexpectedly';
-                  errorCode = 'CONNECTION_CLOSED';
-                  break;
-              }
-              
-              // Safely extract close reason if available - never trust Event properties directly
-              try {
-                if (error.reason && typeof error.reason === 'string' && error.reason.trim().length > 0) {
-                  const sanitizedReason = String(error.reason).replace(/\[object \w+\]/g, '').trim();
-                  if (sanitizedReason && !sanitizedReason.includes('[object')) {
-                    errorMessage = sanitizedReason;
-                  }
-                }
-                if (error.code && typeof error.code === 'number' && error.code > 0) {
-                  errorCode = `CLOSE_${error.code}`;
-                }
-              } catch (propError) {
-                console.warn('Error extracting Event properties:', propError);
-                // Keep default errorMessage and errorCode
-              }
-              
-            } else if (error instanceof Error) {
-              // Handle Error objects
-              const safeMessage = String(error.message || '').replace(/\[object \w+\]/g, '').trim();
-              errorMessage = safeMessage || 'WebSocket error occurred';
-              errorCode = String(error.name || 'WEBSOCKET_ERROR').replace(/\[object \w+\]/g, '') || 'WEBSOCKET_ERROR';
-              
-            } else if (typeof error === 'string' && error.trim()) {
-              // Handle string errors
-              const safeString = String(error).replace(/\[object \w+\]/g, '').trim();
-              if (safeString && safeString.length > 0) {
-                errorMessage = safeString;
-                errorCode = 'STRING_ERROR';
-              }
-            } else if (error !== null && error !== undefined) {
-              // Handle any other object types - force safe serialization
-              try {
-                const stringified = JSON.stringify(error);
-                if (stringified && stringified !== '{}' && !stringified.includes('[object')) {
-                  errorMessage = `WebSocket error: ${stringified}`;
-                  errorCode = 'OBJECT_ERROR';
-                }
-              } catch (jsonError) {
-                // JSON.stringify failed, use toString with sanitization
-                const toStringResult = String(error).replace(/\[object \w+\]/g, '').trim();
-                if (toStringResult && toStringResult.length > 0 && !toStringResult.includes('[object')) {
-                  errorMessage = `WebSocket error: ${toStringResult}`;
-                  errorCode = 'TOSTRING_ERROR';
-                }
-              }
+          // Handle Event objects (most common WebSocket error case)
+          if (error instanceof Event && error.target instanceof WebSocket) {
+            const ws = error.target;
+            readyState = ws.readyState ?? 3;
+            
+            // Map readyState to meaningful messages
+            switch (readyState) {
+              case WebSocket.CONNECTING:
+                errorMessage = 'Failed to establish WebSocket connection';
+                errorCode = 'CONNECTION_FAILED';
+                break;
+              case WebSocket.OPEN:
+                errorMessage = 'WebSocket connection encountered an error';
+                errorCode = 'CONNECTION_ERROR';
+                break;
+              case WebSocket.CLOSING:
+                errorMessage = 'WebSocket connection closing with error';
+                errorCode = 'CONNECTION_CLOSING_ERROR';
+                break;
+              case WebSocket.CLOSED:
+              default:
+                errorMessage = 'WebSocket connection closed unexpectedly';
+                errorCode = 'CONNECTION_CLOSED';
+                break;
             }
-          } catch (parseError) {
-            console.warn('Error processing WebSocket error:', parseError);
-            errorMessage = 'WebSocket connection error - unable to determine details';
-            errorCode = 'ERROR_PARSE_FAILED';
+          } else if (error instanceof Error) {
+            // Handle standard Error objects
+            errorMessage = error.message || 'WebSocket error occurred';
+            errorCode = error.name || 'WEBSOCKET_ERROR';
+          } else if (typeof error === 'string') {
+            // Handle string errors
+            errorMessage = error;
+            errorCode = 'STRING_ERROR';
           }
           
-          // Triple-layer safety validation to prevent any "[object" strings
-          if (!errorMessage || 
-              typeof errorMessage !== 'string' || 
-              errorMessage.includes('[object') ||
-              errorMessage.trim() === '' ||
-              errorMessage.length < 3) {
-            errorMessage = 'WebSocket connection error occurred';
-            errorCode = 'SANITIZED_ERROR';
-          }
-          
-          // Additional sanitization pass
-          errorMessage = String(errorMessage).replace(/\[object \w+\]/g, 'connection error').trim();
-          errorCode = String(errorCode).replace(/\[object \w+\]/g, 'ERROR').trim() || 'WEBSOCKET_ERROR';
-          
-          // Final validation - ensure we have valid strings
-          if (!errorMessage || errorMessage.includes('[object')) {
-            errorMessage = 'WebSocket connection failed';
-          }
-          if (!errorCode || errorCode.includes('[object')) {
-            errorCode = 'CONNECTION_ERROR';
-          }
-          
-          // Create completely safe error data object
+          // Create safe error data object (no Event object serialization)
           const safeErrorData = {
             status: 'error',
             error: errorMessage,
             code: errorCode,
-readyState: Number(readyState) || 3,
-timestamp: new Date().toISOString(),
-// Add debug info for development (will be filtered out in production)
-...(import.meta.env.MODE === 'development' && {
-originalErrorType: error?.constructor?.name || typeof error,
-hasTarget: !!(error?.target)
-})
-};
+            readyState: readyState,
+            timestamp: new Date().toISOString()
+          };
           
           // Emit safe error data
           this.emit('connection', safeErrorData);
