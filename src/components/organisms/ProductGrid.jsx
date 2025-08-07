@@ -14,8 +14,20 @@ const ProductGrid = ({
   className,
   ...props 
 }) => {
-  const [visibleCount, setVisibleCount] = useState(initialCount);
+const [visibleCount, setVisibleCount] = useState(initialCount);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile for responsive behavior
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const visibleProducts = products.slice(0, visibleCount);
   const hasMore = visibleCount < products.length;
@@ -23,10 +35,13 @@ const ProductGrid = ({
   const loadMore = async () => {
     setIsLoading(true);
     
-    // Simulate loading delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Performance-optimized loading delay based on device
+    const loadDelay = isMobile ? 300 : 200;
+    const batchSize = isMobile ? 8 : 12;
     
-    setVisibleCount(prev => Math.min(prev + 12, products.length));
+    await new Promise(resolve => setTimeout(resolve, loadDelay));
+    
+    setVisibleCount(prev => Math.min(prev + batchSize, products.length));
     setIsLoading(false);
   };
 
@@ -67,17 +82,27 @@ const ProductGrid = ({
           </p>
         </div>
         
-        {products.length > initialCount && (
-          <div className="hidden md:flex items-center space-x-2">
-            <span className="text-sm text-gray-500">
-              {Math.round((visibleCount / products.length) * 100)}% loaded
-            </span>
-            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-primary-500 to-primary-600 transition-all duration-500"
-                style={{ width: `${(visibleCount / products.length) * 100}%` }}
-              />
+{products.length > initialCount && (
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-500">
+                {isMobile ? 
+                  `${visibleCount}/${products.length}` :
+                  `${Math.round((visibleCount / products.length) * 100)}% loaded`
+                }
+              </span>
+              <div className={`${isMobile ? 'w-16' : 'w-24'} h-2 bg-gray-200 rounded-full overflow-hidden`}>
+                <div 
+                  className="h-full bg-gradient-to-r from-primary-500 to-primary-600 transition-all duration-500"
+                  style={{ width: `${(visibleCount / products.length) * 100}%` }}
+                />
+              </div>
             </div>
+            {!isMobile && (
+              <span className="text-xs text-gray-400">
+                {hasMore ? `${products.length - visibleCount} more` : 'All loaded'}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -87,7 +112,11 @@ const ProductGrid = ({
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+className={`grid gap-4 ${
+          isMobile 
+            ? 'grid-cols-1 sm:grid-cols-2' 
+            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
+        }`}
       >
         <AnimatePresence>
           {visibleProducts.map((product) => (
@@ -95,32 +124,45 @@ const ProductGrid = ({
               key={product.Id}
               variants={itemVariants}
               layout
+              whileHover={isMobile ? {} : { y: -4 }}
+              transition={{ duration: isMobile ? 0.1 : 0.2 }}
             >
-              <ProductCard product={product} />
+              <ProductCard 
+                product={product} 
+                className={isMobile ? 'touch-optimized' : ''}
+              />
             </motion.div>
           ))}
         </AnimatePresence>
       </motion.div>
 
       {/* Load More Button */}
-      {showLoadMore && hasMore && (
-        <div className="flex justify-center mt-12">
+{showLoadMore && hasMore && (
+        <div className="flex justify-center mt-8">
           <Button
             onClick={loadMore}
             disabled={isLoading}
-            size="lg"
-            className="px-8"
+            size={isMobile ? "md" : "lg"}
+            className={`${isMobile ? 'px-6 py-3 text-sm' : 'px-8 py-4'} 
+              transition-all duration-200 transform hover:scale-105`}
           >
             {isLoading ? (
-              <>
+              <div className="flex items-center">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Loading...
-              </>
+                <span className={isMobile ? 'text-sm' : ''}>
+                  Loading{isMobile ? '...' : ' more products...'}
+                </span>
+              </div>
             ) : (
-              <>
-                <ApperIcon name="Plus" className="w-5 h-5 mr-2" />
-                Load More Products ({products.length - visibleCount} remaining)
-              </>
+              <div className="flex items-center">
+                <ApperIcon name="Plus" className="w-4 h-4 mr-2" />
+                <span className={isMobile ? 'text-sm' : ''}>
+                  {isMobile ? 
+                    `Load More (${products.length - visibleCount})` :
+                    `Load More Products (${products.length - visibleCount} remaining)`
+                  }
+                </span>
+              </div>
             )}
           </Button>
         </div>

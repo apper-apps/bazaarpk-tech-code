@@ -24,27 +24,49 @@ const detectBrowser = () => {
     name: 'Unknown',
     version: 'Unknown',
     mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
+    tablet: /iPad|Android(?=.*Tablet)|(?=.*\bTablet\b)/.test(userAgent),
     touch: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
     screenReader: window.speechSynthesis !== undefined,
     reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
-    highContrast: window.matchMedia('(prefers-contrast: high)').matches
+    highContrast: window.matchMedia('(prefers-contrast: high)').matches,
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      ratio: window.devicePixelRatio || 1
+    },
+    connection: navigator.connection ? {
+      effectiveType: navigator.connection.effectiveType,
+      downlink: navigator.connection.downlink,
+      rtt: navigator.connection.rtt
+    } : null
   };
 
-  // Browser detection
+  // Enhanced browser detection with version checking
   if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
     browserInfo.name = 'Chrome';
     browserInfo.version = userAgent.match(/Chrome\/(\d+)/)?.[1] || 'Unknown';
+    browserInfo.modern = parseInt(browserInfo.version) >= 88;
   } else if (userAgent.includes('Firefox')) {
     browserInfo.name = 'Firefox';
     browserInfo.version = userAgent.match(/Firefox\/(\d+)/)?.[1] || 'Unknown';
+    browserInfo.modern = parseInt(browserInfo.version) >= 85;
   } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
     browserInfo.name = 'Safari';
     browserInfo.version = userAgent.match(/Version\/(\d+)/)?.[1] || 'Unknown';
+    browserInfo.modern = parseInt(browserInfo.version) >= 14;
   } else if (userAgent.includes('Edg')) {
     browserInfo.name = 'Edge';
     browserInfo.version = userAgent.match(/Edg\/(\d+)/)?.[1] || 'Unknown';
+    browserInfo.modern = parseInt(browserInfo.version) >= 88;
   }
+
+  // Device categorization for admin interfaces
+  browserInfo.deviceType = browserInfo.mobile ? 'mobile' : 
+                          browserInfo.tablet ? 'tablet' : 'desktop';
+  browserInfo.adminOptimized = browserInfo.modern && 
+                              (browserInfo.deviceType === 'desktop' || 
+                               browserInfo.deviceType === 'tablet');
 
   return browserInfo;
 };
@@ -173,7 +195,9 @@ const handleAdminAccess = useCallback(async () => {
     }
     
     // Adaptive progress interval based on device performance
-    const intervalDelay = BROWSER_INFO.mobile ? 150 : 100;
+// Responsive performance optimization
+    const intervalDelay = BROWSER_INFO.mobile ? 200 : 
+                         BROWSER_INFO.tablet ? 150 : 100;
     const progressInterval = setInterval(() => {
       if (cleanupRef.current || !isMountedRef.current) {
         clearInterval(progressInterval);
@@ -181,14 +205,18 @@ const handleAdminAccess = useCallback(async () => {
       }
       setAdminLoadProgress(prev => {
         if (prev >= 90) return prev;
-        return prev + Math.random() * 15;
+        const increment = BROWSER_INFO.adminOptimized ? 
+          Math.random() * 15 : Math.random() * 10;
+        return prev + increment;
       });
     }, intervalDelay);
 
-    // Browser-specific timeout (longer for mobile/slower browsers)
-    const timeoutDuration = BROWSER_INFO.mobile || 
-                           (BROWSER_INFO.name === 'Safari' && parseInt(BROWSER_INFO.version) < 14) ? 
-                           8000 : 5000;
+    // Device and connection aware timeout
+    const connectionMultiplier = BROWSER_INFO.connection?.effectiveType === 'slow-2g' ? 2 : 
+                                BROWSER_INFO.connection?.effectiveType === '2g' ? 1.5 : 1;
+    const baseTimeout = BROWSER_INFO.mobile ? 8000 : 
+                       BROWSER_INFO.tablet ? 6000 : 5000;
+    const timeoutDuration = Math.round(baseTimeout * connectionMultiplier);
     
     const timeoutId = setTimeout(() => {
       if (cleanupRef.current || !isMountedRef.current) return;
@@ -425,33 +453,49 @@ return (
             
             {/* Admin Dashboard Routes */}
 <Route path="/admin" element={
-              <div className="min-h-screen bg-gray-50 p-6">
-                <div className="max-w-4xl mx-auto">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Admin Panel</h2>
-                  <p className="text-gray-600 mb-6">Dashboard component has been removed. Use the navigation below to access admin features.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <Link to="/admin/products" className="block p-4 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all">
-                      <h3 className="font-semibold text-gray-900">Manage Products</h3>
-                      <p className="text-sm text-gray-600 mt-1">Add, edit, and manage products</p>
+              <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
+                <div className="max-w-7xl mx-auto">
+                  <div className="mb-6">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Admin Panel</h2>
+                    <p className="text-sm sm:text-base text-gray-600 mb-4">
+                      Dashboard component has been removed. Use the navigation below to access admin features.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                    <Link 
+                      to="/admin/products" 
+                      className="block p-4 sm:p-6 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all transform hover:scale-105 hover:bg-primary-50 border border-gray-200 hover:border-primary-200"
+                    >
+                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Manage Products</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1">Add, edit, and manage products</p>
                     </Link>
-                    <Link to="/admin/orders" className="block p-4 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all">
-                      <h3 className="font-semibold text-gray-900">Orders</h3>
-                      <p className="text-sm text-gray-600 mt-1">View and manage orders</p>
+                    <Link 
+                      to="/admin/orders" 
+                      className="block p-4 sm:p-6 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all transform hover:scale-105 hover:bg-blue-50 border border-gray-200 hover:border-blue-200"
+                    >
+                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Orders</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1">View and manage orders</p>
                     </Link>
-                    <Link to="/admin/users" className="block p-4 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all">
-                      <h3 className="font-semibold text-gray-900">User Management</h3>
-                      <p className="text-sm text-gray-600 mt-1">Manage user accounts</p>
+                    <Link 
+                      to="/admin/users" 
+                      className="block p-4 sm:p-6 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all transform hover:scale-105 hover:bg-green-50 border border-gray-200 hover:border-green-200"
+                    >
+                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base">User Management</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1">Manage user accounts</p>
                     </Link>
-                    <Link to="/admin/reports" className="block p-4 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all">
-                      <h3 className="font-semibold text-gray-900">Reports & Analytics</h3>
-                      <p className="text-sm text-gray-600 mt-1">View reports and analytics</p>
+                    <Link 
+                      to="/admin/reports" 
+                      className="block p-4 sm:p-6 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all transform hover:scale-105 hover:bg-purple-50 border border-gray-200 hover:border-purple-200"
+                    >
+                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Reports & Analytics</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1">View reports and analytics</p>
                     </Link>
                   </div>
                 </div>
               </div>
 }>
               <Route index element={<ManageProducts />} />
-              <Route path="products" element={<ManageProducts />} />
+<Route path="products" element={<ManageProducts />} />
               <Route path="products/manage" element={<ManageProducts />} />
               <Route path="products/add" element={<AddProduct />} />
               <Route path="categories" element={<div className="p-6">
