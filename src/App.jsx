@@ -1,6 +1,6 @@
 import '@/index.css';
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useNavigate, Link } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import ApperIcon from "@/components/ApperIcon";
 import Header from "@/components/organisms/Header";
@@ -56,16 +56,15 @@ const BROWSER_INFO = detectBrowser();
 function AppContent() {
   const navigate = useNavigate();
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+  const [performanceMetrics, setPerformanceMetrics] = useState({});
   const [isAdminLoading, setIsAdminLoading] = useState(false);
   const [adminLoadProgress, setAdminLoadProgress] = useState(0);
   const [adminError, setAdminError] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
   const [showForceExit, setShowForceExit] = useState(false);
-  const [performanceMetrics, setPerformanceMetrics] = useState({});
+  const [retryCount, setRetryCount] = useState(0);
 
   // Ref to track component mount status
   const isMountedRef = useRef(true);
-
   // Initialize performance monitoring only once
   useEffect(() => {
     console.log('🔍 Browser Compatibility Check:', BROWSER_INFO);
@@ -115,90 +114,11 @@ function AppContent() {
       }
     };
 
-    const handleAdminMaskError = (e) => {
-      if (!isMountedRef.current) return;
-
-      // Enhanced console logging for debugging with browser context
-      console.group('🔴 Admin Mask Persistence Error');
-      console.error('Error Details:', {
-        timestamp: new Date().toISOString(),
-        errorType: e.detail?.type || 'unknown',
-        errorMessage: e.detail?.message || 'No message provided',
-        errorStack: e.detail?.error?.stack,
-        currentRoute: window.location.pathname,
-        userAgent: navigator.userAgent,
-        browserInfo: BROWSER_INFO,
-        screenInfo: {
-          width: window.screen.width,
-          height: window.screen.height,
-          availWidth: window.screen.availWidth,
-          availHeight: window.screen.availHeight,
-          devicePixelRatio: window.devicePixelRatio
-        },
-        adminState: {
-          isAdminRoute: window.location.pathname.includes('/admin'),
-          hasAdminClass: document.body.classList.contains('admin-accessing'),
-          adminElements: document.querySelectorAll('.admin-dashboard, [data-admin-content]').length
-        }
-      });
-      console.groupEnd();
-      
-      // Track mask persistence errors in analytics
-      if (typeof window !== 'undefined' && window.gtag) {
-        window.gtag('event', 'admin_mask_persistence_error', {
-          error_type: e.detail?.type || 'unknown',
-          browser_name: BROWSER_INFO.name || 'unknown',
-          browser_version: BROWSER_INFO.version || 'unknown',
-          is_mobile: BROWSER_INFO.mobile || false,
-          route: window.location.pathname,
-          timestamp: Date.now()
-        });
-      }
-      
-      // Dispatch enhanced custom event for error tracking
-      window.dispatchEvent(new CustomEvent('admin_debug_log', {
-        detail: {
-          type: 'mask_error',
-          severity: 'high',
-          data: e.detail,
-          debugInfo: {
-            route: window.location.pathname,
-            timestamp: Date.now(),
-            retryable: e.detail?.retryable !== false,
-            browserInfo: BROWSER_INFO,
-            performanceMetrics
-          }
-        }
-      }));
-    };
-
-    // Monitor console errors
-    const originalConsoleError = console.error;
-    console.error = (...args) => {
-      originalConsoleError.apply(console, args);
-      
-      // Track console errors in analytics
-      if (typeof window !== 'undefined' && window.gtag) {
-        window.gtag('event', 'console_error', {
-          error_message: args[0]?.toString() || 'Unknown error',
-          browser_name: BROWSER_INFO.name || 'unknown',
-          route: window.location.pathname,
-          timestamp: Date.now()
-        });
-      }
-    };
-
-    // Initialize monitoring
-    initPerformanceMonitoring();
-    window.addEventListener('admin_mask_error', handleAdminMaskError);
-
-    // Cleanup on component unmount
+// Cleanup on component unmount
     return () => {
       isMountedRef.current = false;
-      window.removeEventListener('admin_mask_error', handleAdminMaskError);
-      console.error = originalConsoleError;
     };
-  }, []); // Empty dependency array is correct - this only runs once on mount
+  }, []);
 
 const cleanupRef = useRef(false);
   
@@ -432,89 +352,22 @@ const handleAdminAccess = useCallback(async () => {
     navigate('/');
   }, [navigate, adminError]); // Removed browserInfo from dependencies
 
-  return (
-<div className="min-h-screen bg-background content-layer">
+return (
+    <div className="min-h-screen bg-background">
       {/* Admin Loading Progress Bar */}
-{isAdminLoading && (
-        <>
-          <div className="admin-progress-bar" role="progressbar" aria-valuenow={adminLoadProgress} aria-valuemin="0" aria-valuemax="100">
-            <div 
-              className="admin-progress-fill" 
-              style={{ width: `${adminLoadProgress}%` }}
-            />
-          </div>
-          <div className="admin-loading-overlay" role="dialog" aria-modal="true" aria-labelledby="admin-loading-title">
-            <div className="admin-loading-modal">
-              <div className="admin-loading-spinner" aria-hidden="true" />
-              <p id="admin-loading-title" className="admin-loading-text" aria-live="polite">
-                {adminLoadProgress < 20 ? 'Initializing dashboard...' : 
-                 adminLoadProgress < 40 ? 'Checking browser compatibility...' :
-                 adminLoadProgress < 60 ? 'Loading admin content...' :
-                 adminLoadProgress < 80 ? 'Securing connection...' :
-                 adminLoadProgress < 100 ? 'Finalizing access...' : 'Complete!'}
-              </p>
-              
-{/* Browser compatibility info */}
-              <div className="text-xs text-gray-500 mt-2" aria-live="polite">
-                {BROWSER_INFO.name} {BROWSER_INFO.version} {BROWSER_INFO.mobile ? '(Mobile)' : '(Desktop)'}
-              </div>
-              
-              {adminError && (
-                <div className="admin-error-message" role="alert" aria-live="assertive">
-                  <div className="flex items-start space-x-2">
-                    <ApperIcon name="AlertTriangle" className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-red-600 text-sm font-medium">{adminError}</p>
-                      {retryCount > 0 && (
-                        <p className="text-gray-500 text-xs mt-1">
-                          Retry attempt {retryCount} of 3...
-                        </p>
-                      )}
-                      
-{/* Browser-specific help */}
-                      {BROWSER_INFO.name === 'Safari' && adminError.includes('timeout') && (
-                        <p className="text-blue-600 text-xs mt-1">
-                          Safari may take longer to load. Consider using Chrome or Firefox for better performance.
-                        </p>
-                      )}
-                      
-                      {BROWSER_INFO.mobile && adminError.includes('timeout') && (
-                        <p className="text-blue-600 text-xs mt-1">
-                          Mobile connections may be slower. Please ensure you have a stable internet connection.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {showForceExit && (
-                <button
-                  onClick={handleForceExit}
-                  className="admin-force-exit-btn focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                  title="Emergency exit from loading state"
-                  aria-label="Force exit from admin loading state"
-                  tabIndex={0}
-                >
-                  <ApperIcon name="X" className="w-3 h-3 mr-1 inline" />
-                  Force Exit
-                </button>
-              )}
-              
-              {/* Accessibility instructions */}
-              <div className="sr-only" aria-live="polite">
-                Admin dashboard is loading. Progress: {adminLoadProgress}%. 
-                {adminError ? `Error occurred: ${adminError}` : ''}
-                {showForceExit ? 'Press Force Exit button if loading fails to complete.' : ''}
-              </div>
-            </div>
-          </div>
-        </>
+      {isAdminLoading && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-gray-200 z-50">
+          <div 
+            className="h-full bg-blue-600 transition-all duration-300"
+            style={{ width: `${adminLoadProgress}%` }}
+          />
+        </div>
       )}
-        <Header />
+      
+      <Header />
         
-<main>
-          <Routes>
+      <main>
+        <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/cart" element={<Cart />} />
@@ -612,35 +465,13 @@ const handleAdminAccess = useCallback(async () => {
 <div>
                 <h4 className="font-medium mb-4">System</h4>
                 <div className="space-y-2">
-                  <a
-                    href="/admin-dashboard"
-                    className="admin-access-link"
-                    data-role="admin-entry"
-                    aria-label="Access admin dashboard"
-onClick={(e) => {
-                      e.preventDefault();
-                      handleAdminAccess();
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleAdminAccess();
-                      }
-                    }}
+                  <Link
+                    to="/admin"
+                    className="admin-access-link text-xs text-gray-500 hover:text-gray-300 transition-colors"
                     aria-label="Access Admin Dashboard"
-                    tabIndex={0}
                   >
-                    <button
-                      disabled={isAdminLoading}
-                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50 flex items-center space-x-1"
-                      title="Administrator Access"
-                    >
-                      {isAdminLoading && (
-                        <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
-                      )}
-                      <span>Admin Access</span>
-                    </button>
-                  </a>
+                    Admin Access
+                  </Link>
                 </div>
               </div>
             </div>
