@@ -22,9 +22,10 @@ const RecipeBundlesPage = () => {
   // State
   const [bundles, setBundles] = useState([]);
   const [filteredBundles, setFilteredBundles] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
+const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
+  const [featuredFilter, setFeaturedFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(null);
@@ -54,7 +55,7 @@ const RecipeBundlesPage = () => {
     loadBundles();
   }, []);
 
-  // Filter bundles
+// Filter bundles
   useEffect(() => {
     let filtered = [...bundles];
 
@@ -63,7 +64,8 @@ const RecipeBundlesPage = () => {
       filtered = filtered.filter(bundle =>
         bundle.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         bundle.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        bundle.category?.toLowerCase().includes(searchQuery.toLowerCase())
+        bundle.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        bundle.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
@@ -77,8 +79,17 @@ const RecipeBundlesPage = () => {
       filtered = filtered.filter(bundle => bundle.difficulty === selectedDifficulty);
     }
 
+    // Featured filter
+    if (featuredFilter !== "all") {
+      if (featuredFilter === "featured") {
+        filtered = filtered.filter(bundle => bundle.featured);
+      } else if (featuredFilter === "regular") {
+        filtered = filtered.filter(bundle => !bundle.featured);
+      }
+    }
+
     setFilteredBundles(filtered);
-  }, [bundles, searchQuery, selectedCategory, selectedDifficulty]);
+  }, [bundles, searchQuery, selectedCategory, selectedDifficulty, featuredFilter]);
 
   // Delete bundle
   const handleDeleteBundle = async (bundleId) => {
@@ -236,7 +247,7 @@ const RecipeBundlesPage = () => {
               </select>
             </div>
 
-            <div>
+<div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Difficulty
               </label>
@@ -252,10 +263,25 @@ const RecipeBundlesPage = () => {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Featured Status
+              </label>
+              <select
+                value={featuredFilter}
+                onChange={(e) => setFeaturedFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="all">All Bundles</option>
+                <option value="featured">Featured Only</option>
+                <option value="regular">Regular Bundles</option>
+              </select>
+            </div>
           </div>
 
-          {/* Active Filters */}
-          {(searchQuery || selectedCategory !== "all" || selectedDifficulty !== "all") && (
+{/* Active Filters */}
+          {(searchQuery || selectedCategory !== "all" || selectedDifficulty !== "all" || featuredFilter !== "all") && (
             <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t">
               <span className="text-sm text-gray-600">Active filters:</span>
               
@@ -286,11 +312,21 @@ const RecipeBundlesPage = () => {
                 </span>
               )}
 
+              {featuredFilter !== "all" && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+                  {featuredFilter === "featured" ? "Featured" : "Regular"}
+                  <button onClick={() => setFeaturedFilter("all")}>
+                    <ApperIcon name="X" className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
               <button
                 onClick={() => {
                   setSearchQuery("");
                   setSelectedCategory("all");
                   setSelectedDifficulty("all");
+                  setFeaturedFilter("all");
                 }}
                 className="text-sm text-gray-500 hover:text-gray-700"
               >

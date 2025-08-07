@@ -991,7 +991,7 @@ toggleFeatured: async (id) => {
   },
 
   // Advanced filtering
-  filterProducts: async (filters) => {
+filterProducts: async (filters) => {
     await new Promise(resolve => setTimeout(resolve, 400));
     let filtered = [...productsData];
 
@@ -1019,20 +1019,113 @@ toggleFeatured: async (id) => {
       }
     }
 
+    // Enhanced tag filtering
     if (filters.tags && filters.tags !== 'all') {
-      filtered = filtered.filter(p => p.badges?.includes(filters.tags));
+      filtered = filtered.filter(p => 
+        p.badges?.includes(filters.tags) || 
+        p.tags?.includes(filters.tags)
+      );
     }
 
+    // Enhanced featured filtering
     if (filters.featured && filters.featured !== 'all') {
-      const isFeatured = filters.featured === 'featured';
-      filtered = filtered.filter(p => !!p.featured === isFeatured);
+      if (filters.featured === 'featured') {
+        filtered = filtered.filter(p => 
+          p.featured || 
+          p.badges?.includes("BESTSELLER") ||
+          p.badges?.includes("PREMIUM")
+        );
+      } else if (filters.featured === 'regular') {
+        filtered = filtered.filter(p => 
+          !p.featured && 
+          !p.badges?.includes("BESTSELLER") &&
+          !p.badges?.includes("PREMIUM")
+        );
+      }
     }
 
     if (filters.status && filters.status !== 'all') {
       filtered = filtered.filter(p => (p.visibility || 'published') === filters.status);
     }
 
+    // Advanced search filtering
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase();
+      filtered = filtered.filter(p =>
+        p.title.toLowerCase().includes(query) ||
+        p.description.toLowerCase().includes(query) ||
+        p.category.toLowerCase().includes(query) ||
+        p.tags?.some(tag => tag.toLowerCase().includes(query)) ||
+        p.badges?.some(badge => badge.toLowerCase().includes(query))
+      );
+    }
+
     return filtered.map(product => ({ ...product }));
+  },
+
+  // New method for getting available tags/badges
+  getAvailableTags: async () => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const allTags = new Set();
+    
+    productsData.forEach(product => {
+      if (product.badges) {
+        product.badges.forEach(badge => allTags.add(badge));
+      }
+      if (product.tags) {
+        product.tags.forEach(tag => allTags.add(tag));
+      }
+    });
+    
+    return Array.from(allTags).sort();
+  },
+
+  // Enhanced method for getting featured products with better scoring
+  getFeaturedProductsAdvanced: async (options = {}) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const { limit = 8, category = null, excludeIds = [] } = options;
+    
+    const scoredProducts = productsData
+      .filter(product => 
+        product.visibility === 'published' && 
+        !excludeIds.includes(product.Id) &&
+        (category ? product.category.toLowerCase() === category.toLowerCase() : true)
+      )
+      .map(product => {
+        let score = 0;
+        
+        // Featured status scoring
+        if (product.featured) score += 20;
+        
+        // Badge-based scoring
+        if (product.badges?.includes("BESTSELLER")) score += 15;
+        if (product.badges?.includes("PREMIUM")) score += 12;
+        if (product.badges?.includes("FRESH")) score += 10;
+        if (product.badges?.includes("ORGANIC")) score += 8;
+        if (product.badges?.includes("HALAL")) score += 6;
+        
+        // Stock availability
+        if (product.stock > 0) score += 5;
+        if (product.stock > 50) score += 3;
+        
+        // Discount bonus
+        if (product.oldPrice && product.oldPrice > product.price) {
+          const discountPercent = ((product.oldPrice - product.price) / product.oldPrice) * 100;
+          score += Math.floor(discountPercent / 5);
+        }
+        
+        // Rating bonus
+        if (product.rating) {
+          score += product.rating * 2;
+        }
+        
+        return { ...product, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(({ score, ...product }) => product);
+      
+    return scoredProducts;
   },
 
   // Sorting methods
