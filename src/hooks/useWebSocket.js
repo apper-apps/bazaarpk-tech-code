@@ -167,62 +167,48 @@ default:
             onDisconnect?.(data);
             break;
 case 'error':
-            // Enhanced error message based on error details with serialization safety
+            // Streamlined error message processing
             let errorMessage = 'Connection error occurred';
             let toastType = 'error';
             
-            // Safely extract error information with comprehensive fallbacks
-            try {
-              if (data?.code) {
-                switch (data.code) {
-                  case 'CONNECTION_CLOSED':
-                    errorMessage = 'Connection unexpectedly closed';
-                    toastType = 'warning';
-                    break;
-                  case 'CONNECTION_ERROR':
-                    errorMessage = 'Failed to establish connection';
-                    break;
-                  case 'WEBSOCKET_ERROR':
-                    errorMessage = 'Network communication error';
-                    toastType = 'warning';
-                    break;
-                  case 'UNKNOWN_ERROR':
-                  case 'ERROR_PARSE_FAILED':
-                    errorMessage = 'Connection problem - please try again';
-                    toastType = 'warning';
-                    break;
-                  default:
-                    // Safely use provided error message
-                    if (data.error && 
-                        typeof data.error === 'string' && 
-                        data.error !== '[object Object]' && 
-                        data.error !== '[object Event]') {
-                      errorMessage = data.error;
-                    }
-                }
-              } else if (data?.error) {
-                // Handle various error formats safely
-                if (typeof data.error === 'string' && 
-                    data.error !== '[object Object]' && 
-                    data.error !== '[object Event]') {
-                  errorMessage = data.error;
-                } else if (data.error?.message && typeof data.error.message === 'string') {
-                  errorMessage = data.error.message;
-                } else {
-                  errorMessage = 'Network connection error';
-                }
+            // Extract safe error message
+            if (data?.code) {
+              switch (data.code) {
+                case 'CONNECTION_CLOSED':
+                  errorMessage = 'Connection unexpectedly closed';
+                  toastType = 'warning';
+                  break;
+                case 'CONNECTION_FAILED':
+                case 'CONNECTION_ERROR':
+                  errorMessage = 'Failed to establish connection';
+                  break;
+                case 'CONNECTION_CLOSING_ERROR':
+                  errorMessage = 'Connection closing with error';
+                  toastType = 'warning';
+                  break;
+                case 'ERROR_PARSE_FAILED':
+                  errorMessage = 'Connection problem - please try again';
+                  toastType = 'warning';
+                  break;
+                default:
+                  if (data.error && 
+                      typeof data.error === 'string' && 
+                      !data.error.includes('[object') &&
+                      data.error.trim()) {
+                    errorMessage = data.error;
+                  }
               }
-            } catch (parseError) {
-              // Ultimate fallback if error processing fails
-              errorMessage = 'Connection error - please check your network';
-              toastType = 'warning';
-console.warn('Error message parsing failed:', parseError);
+            } else if (data?.error && 
+                       typeof data.error === 'string' && 
+                       !data.error.includes('[object') &&
+                       data.error.trim()) {
+              errorMessage = data.error;
             }
             
-            // Ultimate safety check before displaying error message
-            if (typeof errorMessage !== 'string' || 
-                errorMessage === '[object Event]' || 
-                errorMessage === '[object Object]' ||
+            // Final safety check
+            if (!errorMessage || 
+                typeof errorMessage !== 'string' || 
+                errorMessage.includes('[object') ||
                 errorMessage.trim() === '') {
               errorMessage = 'Connection error - please check your network';
               toastType = 'warning';
