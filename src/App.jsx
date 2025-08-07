@@ -16,7 +16,6 @@ import Category from "@/components/pages/Category";
 import RecipeBundlesPage from "@/components/pages/RecipeBundlesPage";
 import ManageProducts from "@/components/pages/ManageProducts";
 import Cart from "@/components/pages/Cart";
-import AdminDashboard from "@/components/pages/AdminDashboard";
 import ReportsAnalytics from "@/components/pages/ReportsAnalytics";
 // Browser detection at module level to avoid re-computation
 const detectBrowser = () => {
@@ -426,8 +425,29 @@ return (
             
             {/* Admin Dashboard Routes */}
 <Route path="/admin" element={
-              <div className="admin-dashboard fade-in-admin">
-                <AdminDashboard />
+              <div className="min-h-screen bg-gray-50 p-6">
+                <div className="max-w-4xl mx-auto">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Admin Panel</h2>
+                  <p className="text-gray-600 mb-6">Dashboard component has been removed. Use the navigation below to access admin features.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Link to="/admin/products" className="block p-4 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all">
+                      <h3 className="font-semibold text-gray-900">Manage Products</h3>
+                      <p className="text-sm text-gray-600 mt-1">Add, edit, and manage products</p>
+                    </Link>
+                    <Link to="/admin/orders" className="block p-4 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all">
+                      <h3 className="font-semibold text-gray-900">Orders</h3>
+                      <p className="text-sm text-gray-600 mt-1">View and manage orders</p>
+                    </Link>
+                    <Link to="/admin/users" className="block p-4 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all">
+                      <h3 className="font-semibold text-gray-900">User Management</h3>
+                      <p className="text-sm text-gray-600 mt-1">Manage user accounts</p>
+                    </Link>
+                    <Link to="/admin/reports" className="block p-4 bg-white rounded-lg shadow-soft hover:shadow-medium transition-all">
+                      <h3 className="font-semibold text-gray-900">Reports & Analytics</h3>
+                      <p className="text-sm text-gray-600 mt-1">View reports and analytics</p>
+                    </Link>
+                  </div>
+                </div>
               </div>
             }>
               <Route index element={<ManageProducts />} />
