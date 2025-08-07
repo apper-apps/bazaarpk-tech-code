@@ -636,9 +636,9 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
         lastModified: new Date().toISOString(),
         csrfToken: csrfToken,
         sessionId: sessionStorage.getItem('sessionId') || 'unknown',
-        userAgent: navigator.userAgent,
+userAgent: navigator.userAgent,
         featured: Boolean(sanitizedData.featured),
-        priority: Boolean(sanitizedData.featured) ? Date.now() : 0
+        priority: sanitizedData.featured ? Date.now() : 0
       };
 
       // Submit with CSRF protection
