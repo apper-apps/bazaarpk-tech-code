@@ -366,13 +366,62 @@ this.socket.onerror = (error) => {
     }
   }
 
-  flushMessageQueue() {
-    while (this.messageQueue.length > 0 && this.socket && this.socket.readyState === WebSocket.OPEN) {
-      const message = this.messageQueue.shift();
-      this.socket.send(JSON.stringify(message));
+flushMessageQueue() {
+    if (!this.messageQueue.length) return;
+    
+    const messages = [...this.messageQueue];
+    this.messageQueue = [];
+    
+    for (const message of messages) {
+      try {
+        // Enhanced JSON serialization with comprehensive error handling
+        let serializedMessage;
+        
+        // First, ensure the message is serializable
+        if (message === null || message === undefined) {
+          console.warn('WebSocket: Skipping null or undefined message in queue');
+          continue;
+        }
+        
+        // Handle different message types safely
+        if (typeof message === 'string') {
+          serializedMessage = message;
+        } else if (typeof message === 'object') {
+          // Test serialization first to catch any issues
+          const testSerialization = JSON.stringify(message);
+          serializedMessage = testSerialization;
+        } else {
+          // Convert primitives to strings safely
+          serializedMessage = String(message);
+        }
+        
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+          this.socket.send(serializedMessage);
+        } else {
+          // Re-queue if connection is lost
+          this.messageQueue.push(message);
+          break;
+        }
+      } catch (serializationError) {
+        // Handle serialization errors gracefully
+        console.error('WebSocket message serialization failed:', serializationError);
+        
+        // Attempt to send a simplified version
+        try {
+          const fallbackMessage = {
+            error: 'Message serialization failed',
+            originalType: typeof message,
+            timestamp: new Date().toISOString()
+          };
+          if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify(fallbackMessage));
+          }
+        } catch (fallbackError) {
+          console.error('WebSocket fallback message also failed:', fallbackError);
+        }
+      }
     }
   }
-
   getConnectionStatus() {
     if (!this.socket) return 'disconnected';
     
