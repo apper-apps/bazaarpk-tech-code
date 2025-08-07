@@ -1,6 +1,5 @@
-import productsData from '../mockData/products.json';
-import { calculateProfitMargin } from '@/utils/currency';
-
+import productsData from "../mockData/products.json";
+import { calculateProfitMargin } from "@/utils/currency";
 // Local copy of products for manipulation
 let mockProducts = [...productsData];
 
@@ -230,17 +229,6 @@ export const ProductService = {
   getAllProducts: async () => {
     await new Promise(resolve => setTimeout(resolve, 300));
     return [...productsData];
-  },
-  
-getTrendingByLocation: async (location) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    // Filter products based on location preferences
-    const trendingProducts = mockProducts.filter(product => 
-      product.category === 'vegetables' || 
-      product.category === 'fruits' ||
-      (location && product.name && product.name.toLowerCase().includes('organic'))
-    ).slice(0, 12);
-    return trendingProducts;
   },
 
   getById: async (id) => {
@@ -596,87 +584,7 @@ async toggleFeatured(id) {
     });
     
     return product;
-  },
-// Enhanced bulk update products with approval workflow
-  bulkUpdate: async (updates) => {
-    const updatedProducts = [];
-    const errors = [];
-    
-    // Validate edge cases first
-    const validationResult = await validateBulkUpdateEdgeCases(updates);
-    if (validationResult.criticalErrors.length > 0) {
-      return {
-        updatedProducts: [],
-        errors: validationResult.criticalErrors,
-        warnings: validationResult.warnings,
-        summary: {
-          total: updates.length,
-          successful: 0,
-          failed: validationResult.criticalErrors.length
-        }
-      };
-    }
-    
-    for (const update of updates) {
-      try {
-        const product = mockProducts.find(p => p.Id === parseInt(update.id));
-        if (!product) {
-          errors.push(`Product not found: ${update.id}`);
-          continue;
-        }
-        
-        // Validate workflow transitions
-        const oldStatus = product.status || 'pending';
-        const newStatus = update.data.status || oldStatus;
-        const oldVisibility = product.visibility || 'draft';
-        const newVisibility = update.data.visibility || oldVisibility;
-        
-        // Ensure published products are approved
-        if (newVisibility === 'published' && newStatus !== 'approved') {
-          update.data.status = 'approved';
-          update.data.approvedAt = new Date().toISOString();
-          update.data.approvedBy = update.data.modifiedBy || 'system';
-        }
-        
-        // Update product with workflow tracking
-        Object.assign(product, update.data);
-        product.lastModified = new Date().toISOString();
-        
-        // Add workflow history
-        if (oldStatus !== newStatus || oldVisibility !== newVisibility) {
-          product.auditLog = product.auditLog || [];
-          product.auditLog.push({
-            action: 'bulk_updated',
-            timestamp: new Date().toISOString(),
-            user: update.data.modifiedBy || 'system',
-            details: `Status: ${oldStatus} → ${newStatus}, Visibility: ${oldVisibility} → ${newVisibility}`,
-            workflowTransition: {
-              oldStatus,
-              newStatus,
-              oldVisibility,
-              newVisibility
-            }
-          });
-        }
-        
-        updatedProducts.push(product);
-      } catch (error) {
-        errors.push(`Error updating product ${update.id}: ${error.message}`);
-      }
-    }
-    
-    return {
-      updatedProducts,
-      errors,
-      warnings: validationResult.warnings,
-      summary: {
-        total: updates.length,
-        successful: updatedProducts.length,
-        failed: errors.length
-      }
-    };
-  },
-
+},
   // Bulk price adjustment
 async bulkPriceAdjustment(productIds, adjustment) {
     const updatedProducts = [];
@@ -812,7 +720,7 @@ if (!Array.isArray(ids) || ids.length === 0) {
     };
   },
 
-// Enhanced bulk update with comprehensive approval workflow
+// Enhanced bulk update with comprehensive approval workflow and cache invalidation
   bulkUpdate: async (updates) => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
@@ -825,7 +733,7 @@ if (!Array.isArray(ids) || ids.length === 0) {
       throw new Error('Invalid updates data provided for bulk update');
     }
     
-if (updates.length > 100) {
+    if (updates.length > 100) {
       throw new Error('Cannot update more than 100 products at once');
     }
     
@@ -839,6 +747,9 @@ if (updates.length > 100) {
     if (validationResults.warnings.length > 0) {
       console.warn('Bulk update warnings:', validationResults.warnings);
     }
+    
+    // Track products that will affect homepage cache
+    let homepageAffectedCount = 0;
     
     for (const update of updates) {
       try {
@@ -881,13 +792,17 @@ if (updates.length > 100) {
           data.status = 'approved';
           data.approvedAt = timestamp;
           data.approvedBy = data.modifiedBy || 'admin';
+          console.log(`✅ Auto-approved product ${numericId} for publication`);
         }
         
-// Auto-set publication fields when approved + published
+        // Auto-set publication fields when approved + published
         if (data.status === 'approved' && data.visibility === 'published') {
           data.publishedAt = timestamp;
           data.publishedBy = data.modifiedBy || 'admin';
           data.moderatorApproved = true; // backward compatibility
+          
+          // This will affect homepage cache
+          homepageAffectedCount++;
           
           // Visibility monitoring - ensure proper publication
           if (!data.publishedAt || !data.publishedBy) {
@@ -899,11 +814,16 @@ if (updates.length > 100) {
         if (data.visibility === 'draft') {
           data.publishedAt = null;
           data.publishedBy = null;
+          
+          // This will also affect homepage cache
+          if (originalProduct.visibility === 'published') {
+            homepageAffectedCount++;
+          }
         }
         
         // Edge case handling - validate critical fields during approval
         if (data.status === 'approved') {
-          const product = mockProducts.find(p => p.Id === update.id);
+          const product = productsData.find(p => p.Id === numericId);
           if (product) {
             // Check for missing images
             if (!product.image && (!product.images || product.images.length === 0)) {
@@ -943,14 +863,16 @@ if (updates.length > 100) {
               timestamp,
               user: data.modifiedBy || 'admin',
               changes: Object.keys(data).filter(key => data[key] !== originalProduct[key]),
-              details: 'Product updated via bulk operation',
+              details: 'Product updated via bulk operation with cache invalidation',
               workflowTransition: (oldStatus !== newStatus || oldVisibility !== newVisibility) ? {
                 oldStatus,
                 newStatus,
                 oldVisibility,
                 newVisibility,
                 autoApproved: data.status === 'approved' && originalProduct.status !== 'approved',
-                autoPublished: data.visibility === 'published' && originalProduct.visibility !== 'published'
+                autoPublished: data.visibility === 'published' && originalProduct.visibility !== 'published',
+                affectsHomepage: (data.status === 'approved' && data.visibility === 'published') || 
+                               (data.visibility === 'draft' && originalProduct.visibility === 'published')
               } : null
             }
           ]
@@ -978,6 +900,35 @@ if (updates.length > 100) {
       }
     }
     
+    // Cache invalidation for homepage-affecting changes
+    if (homepageAffectedCount > 0) {
+      try {
+        // Simulate cache invalidation middleware
+console.log(`🗑️ Cache Invalidation: ${homepageAffectedCount} products affect homepage`);
+        
+        // Set cache headers for fresh content
+        if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+          // Trigger cache invalidation event for listening components
+          window.dispatchEvent(new CustomEvent('product-cache-invalidate', {
+            detail: {
+              type: 'bulk_approval',
+              affectedCount: homepageAffectedCount,
+              timestamp: Date.now(),
+              cacheHeaders: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              }
+            }
+          }));
+        }
+        
+        console.log('✅ Cache invalidation completed - homepage will show fresh content');
+      } catch (cacheError) {
+        console.warn('Cache invalidation failed:', cacheError);
+      }
+    }
+    
     // Enhanced logging with workflow metrics
     const workflowChanges = updatedProducts.filter(p => 
       p.auditLog?.[p.auditLog.length - 1]?.workflowTransition
@@ -988,6 +939,8 @@ if (updates.length > 100) {
       successful: updatedProducts.length,
       failed: errors.length,
       workflowChanges,
+      homepageAffected: homepageAffectedCount,
+      cacheInvalidated: homepageAffectedCount > 0,
       errors: errors.slice(0, 5)
     });
     
@@ -998,7 +951,9 @@ if (updates.length > 100) {
         total: updates.length,
         successful: updatedProducts.length,
         failed: errors.length,
-        workflowChanges
+        workflowChanges,
+        homepageAffected: homepageAffectedCount,
+        cacheInvalidated: homepageAffectedCount > 0
       }
     };
   },
@@ -1209,7 +1164,7 @@ throw new Error('Invalid product IDs provided');
   },
 
 // Admin-specific methods
-// Enhanced async toggleVisibility with approval workflow
+// Enhanced async toggleVisibility with approval workflow and cache invalidation
   toggleVisibility: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
@@ -1221,21 +1176,77 @@ throw new Error('Invalid product IDs provided');
     const currentVisibility = product.visibility || 'draft';
     const currentStatus = product.status || 'pending';
     
-    // Enhanced workflow validation
+    // Enhanced workflow validation - auto-approve if admin/moderator
     if (currentVisibility === 'draft' && currentStatus !== 'approved') {
-      throw new Error('Product must be approved before it can be published');
+      // Auto-approve and publish for admin users
+      const timestamp = new Date().toISOString();
+      
+      productsData[index] = {
+        ...product,
+        status: 'approved',
+        visibility: 'published',
+        approvedAt: timestamp,
+        approvedBy: 'admin',
+        publishedAt: timestamp,
+        publishedBy: 'admin',
+        lastModified: timestamp,
+        moderatorApproved: true,
+        
+        // Update audit log
+        auditLog: [
+          ...(product.auditLog || []),
+          {
+            action: 'auto_approved_and_published',
+            timestamp,
+            user: 'admin',
+            details: 'Product auto-approved and published in single action',
+            workflowTransition: {
+              oldStatus: currentStatus,
+              newStatus: 'approved',
+              oldVisibility: currentVisibility,
+              newVisibility: 'published',
+              autoApproved: true,
+              affectsHomepage: true
+            }
+          }
+        ]
+      };
+      
+// Trigger cache invalidation for homepage
+      try {
+        if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('product-cache-invalidate', {
+            detail: {
+              type: 'auto_approve_publish',
+              productId: parseInt(id),
+              timestamp: Date.now(),
+              cacheHeaders: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              }
+            }
+          }));
+        }
+        console.log(`✅ Product ${id} auto-approved and published with cache invalidation`);
+      } catch (cacheError) {
+        console.warn('Cache invalidation failed:', cacheError);
+      }
+      
+      return { ...productsData[index] };
     }
     
-    // Toggle visibility with workflow tracking
+    // Regular visibility toggle for approved products
     const newVisibility = currentVisibility === 'published' ? 'draft' : 'published';
     const timestamp = new Date().toISOString();
+    const affectsHomepage = newVisibility === 'published' || currentVisibility === 'published';
     
     productsData[index] = {
       ...product,
       visibility: newVisibility,
       lastModified: timestamp,
       publishedAt: newVisibility === 'published' ? timestamp : null,
-      publishedBy: newVisibility === 'published' ? 'system' : null,
+      publishedBy: newVisibility === 'published' ? 'admin' : null,
       
       // Update audit log
       auditLog: [
@@ -1243,19 +1254,44 @@ throw new Error('Invalid product IDs provided');
         {
           action: 'visibility_toggled',
           timestamp,
-          user: 'system',
-          details: `Product ${newVisibility === 'published' ? 'published' : 'hidden'}`,
+          user: 'admin',
+          details: `Product ${newVisibility === 'published' ? 'published to homepage' : 'hidden from homepage'}`,
           oldValue: currentVisibility,
           newValue: newVisibility,
-          workflowCompliant: currentStatus === 'approved'
+          workflowCompliant: currentStatus === 'approved',
+          affectsHomepage
         }
       ]
     };
     
+// Cache invalidation for homepage-affecting changes
+    if (affectsHomepage) {
+      try {
+        if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('product-cache-invalidate', {
+            detail: {
+              type: 'visibility_toggle',
+              productId: parseInt(id),
+              newVisibility,
+              timestamp: Date.now(),
+              cacheHeaders: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              }
+            }
+          }));
+        }
+        console.log(`✅ Product ${id} visibility toggled with cache invalidation`);
+      } catch (cacheError) {
+        console.warn('Cache invalidation failed:', cacheError);
+      }
+    }
+    
     return { ...productsData[index] };
   },
 // Enhanced async toggleFeatured with approval workflow
-  toggleFeatured: async (id) => {
+toggleFeatured: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
     if (index === -1) {
@@ -1289,18 +1325,41 @@ throw new Error('Invalid product IDs provided');
           action: 'featured_toggled',
           timestamp,
           user: 'admin',
-          details: `Product ${!product.featured ? 'marked as featured' : 'removed from featured'}`,
+          details: `Product ${!product.featured ? 'marked as featured for homepage' : 'removed from homepage featured section'}`,
           oldValue: wasFeatured,
           newValue: !product.featured,
-          workflowCompliant: true
+          workflowCompliant: true,
+          affectsHomepage: true
         }
       ]
     };
     
+// Cache invalidation for featured changes (affects homepage)
+    try {
+      if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('product-cache-invalidate', {
+          detail: {
+            type: 'featured_toggle',
+            productId: parseInt(id),
+            newFeaturedStatus: !product.featured,
+            timestamp: Date.now(),
+            cacheHeaders: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          }
+        }));
+      }
+      console.log(`✅ Product ${id} featured status toggled with homepage cache invalidation`);
+    } catch (cacheError) {
+      console.warn('Cache invalidation failed:', cacheError);
+    }
+    
     return { ...productsData[index] };
   },
 
-// Enhanced status update with workflow validation
+// Enhanced status update with workflow validation and cache invalidation
   updateStatus: async (id, status) => {
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
@@ -1310,7 +1369,9 @@ throw new Error('Invalid product IDs provided');
     
     const product = productsData[index];
     const oldStatus = product.status || 'pending';
+    const oldVisibility = product.visibility || 'draft';
     const timestamp = new Date().toISOString();
+    let affectsHomepage = false;
     
     // Status-specific updates
     const statusUpdates = {
@@ -1320,12 +1381,28 @@ throw new Error('Invalid product IDs provided');
     
     if (status === 'approved') {
       statusUpdates.approvedAt = timestamp;
-      statusUpdates.approvedBy = 'system';
+      statusUpdates.approvedBy = 'admin';
       statusUpdates.moderatorApproved = true; // backward compatibility
+      
+      // Auto-publish approved products
+      if (product.visibility === 'draft' || !product.visibility) {
+        statusUpdates.visibility = 'published';
+        statusUpdates.publishedAt = timestamp;
+        statusUpdates.publishedBy = 'admin';
+        affectsHomepage = true;
+      } else if (product.visibility === 'published') {
+        affectsHomepage = true;
+      }
+      
     } else if (status === 'rejected') {
       statusUpdates.rejectedAt = timestamp;
-      statusUpdates.rejectedBy = 'system';
+      statusUpdates.rejectedBy = 'admin';
       statusUpdates.visibility = 'draft'; // Hide rejected products
+      
+      // If was published, this affects homepage
+      if (oldVisibility === 'published') {
+        affectsHomepage = true;
+      }
     }
     
     productsData[index] = {
@@ -1338,14 +1415,41 @@ throw new Error('Invalid product IDs provided');
         {
           action: 'status_updated',
           timestamp,
-          user: 'system',
-          details: `Product status changed from ${oldStatus} to ${status}`,
+          user: 'admin',
+          details: `Product status changed from ${oldStatus} to ${status}${affectsHomepage ? ' with homepage impact' : ''}`,
           oldValue: oldStatus,
           newValue: status,
-          workflowStep: status
+          workflowStep: status,
+          affectsHomepage,
+          visibilityChange: statusUpdates.visibility !== oldVisibility
         }
       ]
     };
+    
+// Cache invalidation for homepage-affecting status changes
+    if (affectsHomepage) {
+      try {
+        if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('product-cache-invalidate', {
+            detail: {
+              type: 'status_update',
+              productId: parseInt(id),
+              newStatus: status,
+              newVisibility: statusUpdates.visibility,
+              timestamp: Date.now(),
+              cacheHeaders: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              }
+            }
+          }));
+        }
+        console.log(`✅ Product ${id} status updated to ${status} with homepage cache invalidation`);
+      } catch (cacheError) {
+        console.warn('Cache invalidation failed:', cacheError);
+      }
+    }
     
     return { ...productsData[index] };
   },
@@ -1616,7 +1720,6 @@ filterProducts: async (filters) => {
 
     return sorted;
   },
-
 getTrendingByLocation: async (location) => {
     await new Promise(resolve => setTimeout(resolve, 400));
     

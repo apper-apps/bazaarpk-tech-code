@@ -299,9 +299,43 @@ useEffect(() => {
     } catch (error) {
       console.warn('Cache manager not available for event listening:', error);
     }
+
+    // Listen for direct product cache invalidation events (from admin actions)
+    const handleProductCacheInvalidate = (event) => {
+      const { type, timestamp, productId, cacheHeaders } = event.detail;
+      
+      console.log('🏠 Homepage received cache invalidation:', {
+        type,
+        productId,
+        timestamp: new Date(timestamp).toISOString(),
+        cacheHeaders
+      });
+      
+      // Set cache headers to ensure fresh content
+      if (cacheHeaders && typeof document !== 'undefined') {
+        const meta = document.createElement('meta');
+        meta.httpEquiv = 'Cache-Control';
+        meta.content = cacheHeaders['Cache-Control'];
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        
+        // Remove after applying
+        setTimeout(() => {
+          if (meta.parentNode) {
+            meta.parentNode.removeChild(meta);
+          }
+        }, 1000);
+      }
+      
+      // Reload data immediately for homepage refresh
+      console.log('🔄 Reloading homepage data due to product approval/publication');
+      loadData();
+    };
+
+    window.addEventListener('product-cache-invalidate', handleProductCacheInvalidate);
     
     return () => {
       if (unsubscribe) unsubscribe();
+      window.removeEventListener('product-cache-invalidate', handleProductCacheInvalidate);
     };
   }, []);
 
@@ -383,12 +417,16 @@ if (loading) {
       {deals.length > 0 && <DealsSection deals={deals} />}
 
       {/* Featured Products */}
-      <ProductGrid 
-products={featuredProducts}
+<ProductGrid 
+        products={featuredProducts}
         title="⭐ Featured Products"
         showLoadMore={true}
         initialCount={12}
-/>
+        onProductsUpdate={(updateInfo) => {
+          console.log('🔄 Featured products update requested:', updateInfo);
+          loadData(); // Refresh all data when products are updated
+        }}
+      />
 
 {/* Weather-Based Seasonal Products */}
       <ProductGrid 

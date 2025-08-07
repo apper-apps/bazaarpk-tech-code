@@ -12,11 +12,13 @@ const ProductGrid = ({
   initialCount = 12,
   gridType = "products", // "products" or "bundles"
   className,
+  onProductsUpdate, // Callback for when products need refresh
   ...props 
 }) => {
-const [visibleCount, setVisibleCount] = useState(initialCount);
+  const [visibleCount, setVisibleCount] = useState(initialCount);
   const [isLoading, setIsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [lastCacheInvalidation, setLastCacheInvalidation] = useState(null);
 
   // Detect mobile for responsive behavior
   useEffect(() => {
@@ -28,6 +30,44 @@ const [visibleCount, setVisibleCount] = useState(initialCount);
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Listen for product cache invalidation events
+  useEffect(() => {
+    const handleCacheInvalidate = (event) => {
+      const { type, timestamp, productId } = event.detail;
+      
+      console.log('🔄 ProductGrid received cache invalidation:', {
+        type,
+        productId,
+        timestamp: new Date(timestamp).toISOString()
+      });
+      
+      setLastCacheInvalidation({
+        type,
+        productId,
+        timestamp,
+        receivedAt: Date.now()
+      });
+      
+      // Notify parent component to refresh products
+      if (onProductsUpdate && typeof onProductsUpdate === 'function') {
+        setTimeout(() => {
+          onProductsUpdate({
+            reason: 'cache_invalidation',
+            type,
+            productId,
+            timestamp
+          });
+        }, 100); // Small delay to ensure state updates complete
+      }
+    };
+
+    window.addEventListener('product-cache-invalidate', handleCacheInvalidate);
+    
+    return () => {
+      window.removeEventListener('product-cache-invalidate', handleCacheInvalidate);
+    };
+  }, [onProductsUpdate]);
 
   const visibleProducts = products.slice(0, visibleCount);
   const hasMore = visibleCount < products.length;

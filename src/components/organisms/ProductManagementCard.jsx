@@ -20,7 +20,7 @@ const ProductManagementCard = ({
   onEdit,
   onView,
   onDelete,
-  loading = false,
+loading = false,
   currentUser,
   showApprovalStatus = false
 }) => {
@@ -37,7 +37,7 @@ const isVisible = product.visibility === 'published';
   // Product can only be featured if approved AND published
   const isActuallyVisible = isVisible && isApproved;
   const canBeFeatured = isApproved && isVisible;
-  const needsApproval = isPending && !isVisible;
+const needsApproval = isPending && !isVisible;
   const isOutOfStock = product.stock === 0;
   const adminRating = product.adminRating || 0;
 
@@ -166,21 +166,21 @@ if (viewMode === 'list') {
             </div>
             
             {/* Actions - Responsive */}
-            <div className="flex items-center justify-start space-x-1 pt-2 border-t border-gray-100">
+<div className="flex items-center justify-start space-x-1 pt-2 border-t border-gray-100">
               <Button
                 variant="ghost"
                 size="sm"
-onClick={() => onToggleVisibility(product.Id)}
+                onClick={() => onToggleVisibility(product.Id)}
                 disabled={loading || (isVisible && !isApproved)}
                 title={
-                  needsApproval ? "Approve and publish product" :
-                  isActuallyVisible ? "Hide product from customers" : 
+                  needsApproval ? "Approve and publish product - will appear on homepage immediately" :
+                  isActuallyVisible ? "Hide product from customers and homepage" : 
                   isVisible ? "Product needs approval to be visible" :
-                  "Publish product"
+                  "Publish product to homepage and customer view"
                 }
                 className={cn(
                   "p-2",
-                  needsApproval && "text-primary-600 bg-primary-50",
+                  needsApproval && "text-primary-600 bg-primary-50 hover:bg-primary-100",
                   isVisible && !isApproved && "text-orange-600 opacity-75"
                 )}
               >
@@ -188,7 +188,7 @@ onClick={() => onToggleVisibility(product.Id)}
                   needsApproval ? "CheckCircle" :
                   isActuallyVisible ? "EyeOff" : "Eye"
                 } className="w-4 h-4" />
-</Button>
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -398,21 +398,21 @@ return (
         </div>
         
         {/* Actions - Mobile optimized */}
-        <div className="grid grid-cols-5 gap-1 pt-2 border-t border-gray-100">
-<Button
+<div className="grid grid-cols-5 gap-1 pt-2 border-t border-gray-100">
+          <Button
             variant="ghost"
             size="sm"
             onClick={() => onToggleVisibility(product.Id)}
             disabled={loading || (isVisible && !isApproved)}
             title={
-              needsApproval ? "Approve and publish product" :
-              isActuallyVisible ? "Hide product from customers" : 
+              needsApproval ? "Approve and publish product - will appear on homepage immediately" :
+              isActuallyVisible ? "Hide product from customers and homepage" : 
               isVisible ? "Product needs approval to be visible" :
-              "Publish product"
+              "Publish product to homepage and customer view"
             }
             className={cn(
               "p-2 flex items-center justify-center",
-              needsApproval && "text-primary-600 bg-primary-50",
+              needsApproval && "text-primary-600 bg-primary-50 hover:bg-primary-100",
               isVisible && !isApproved && "text-orange-600 opacity-75"
             )}
           >

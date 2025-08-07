@@ -132,7 +132,7 @@ class CacheManager {
    * Cache invalidation middleware equivalent
    * Called after admin actions that affect product visibility
    */
-  invalidateProductCaches(context = {}) {
+invalidateProductCaches(context = {}) {
     const keysToInvalidate = [
       CACHE_KEYS.HOMEPAGE_PRODUCTS,
       CACHE_KEYS.STORE_PRODUCTS,
@@ -146,16 +146,57 @@ class CacheManager {
       context,
       keysCleared: keysToInvalidate,
       clearedCount: cleared,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      cacheHeaders: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
     
     // Trigger storage event for cross-tab synchronization
     this._triggerStorageEvent('cache_invalidated', {
       keys: keysToInvalidate,
       reason: 'product_approval',
-      context
+      context,
+      cacheHeaders: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
     
+// Trigger direct DOM event for immediate UI updates
+    if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('product-cache-invalidate', {
+        detail: {
+          type: 'cache_manager_invalidation',
+          keys: keysToInvalidate,
+          context,
+          timestamp: Date.now(),
+          cacheHeaders: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
+      }));
+    } else if (typeof window !== 'undefined' && window.Event) {
+      // Fallback for environments without CustomEvent
+      const event = new Event('product-cache-invalidate');
+      event.detail = {
+        type: 'cache_manager_invalidation',
+        keys: keysToInvalidate,
+        context,
+        timestamp: Date.now(),
+        cacheHeaders: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      };
+      window.dispatchEvent(event);
+    }
     return cleared;
   }
 
@@ -281,6 +322,7 @@ class CacheManager {
   }
 
   /**
+/**
    * Listen for cache invalidation events from other tabs
    */
   onInvalidation(callback) {
@@ -289,6 +331,21 @@ class CacheManager {
         try {
           const { type, data } = JSON.parse(event.newValue);
           if (type === 'cache_invalidated') {
+            // Set cache headers for fresh content
+            if (data.cacheHeaders && typeof document !== 'undefined') {
+              const meta = document.createElement('meta');
+              meta.httpEquiv = 'Cache-Control';
+              meta.content = data.cacheHeaders['Cache-Control'];
+              document.getElementsByTagName('head')[0].appendChild(meta);
+              
+              // Clean up after a short delay
+              setTimeout(() => {
+                if (meta.parentNode) {
+                  meta.parentNode.removeChild(meta);
+                }
+              }, 2000);
+            }
+            
             callback(data);
           }
         } catch (error) {
