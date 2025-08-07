@@ -69,9 +69,8 @@ export const sanitizeInput = (input, options = {}) => {
       .replace(/\//g, '&#x2F;');
   }
   
-  // Remove potentially dangerous characters
-  sanitized = sanitized.replace(/[<>\"']/g, '');
-  
+// Remove potentially dangerous characters
+  sanitized = sanitized.replace(/[<>"']/g, '');
   // Length limitation
   if (sanitized.length > maxLength) {
     sanitized = sanitized.substring(0, maxLength);
@@ -102,8 +101,7 @@ export const sanitizeEmail = (email) => {
   if (!emailRegex.test(sanitized)) {
     return '';
   }
-  
-  return sanitized.replace(/[<>\"']/g, '');
+return sanitized.replace(/[<>"']/g, '');
 };
 
 // URL sanitization
@@ -119,8 +117,8 @@ export const sanitizeURL = (url) => {
     }
     
     // Allow only http, https, and relative URLs
-    if (sanitized.match(/^(https?:\/\/|\/)/)) {
-      return sanitized.replace(/[<>\"']/g, '');
+if (sanitized.match(/^(https?:\/\/|\/)/)) {
+      return sanitized.replace(/[<>"']/g, '');
     }
     
     return '';
@@ -133,8 +131,8 @@ export const sanitizeURL = (url) => {
 export const sanitizePhoneNumber = (phone) => {
   if (typeof phone !== 'string') return '';
   
-  // Allow only digits, spaces, hyphens, parentheses, and plus sign
-  return phone.replace(/[^0-9\s\-\(\)\+]/g, '').trim();
+// Allow only digits, spaces, hyphens, parentheses, and plus sign
+  return phone.replace(/[^0-9\s\-()+]/g, '').trim();
 };
 
 // SQL injection prevention for search terms
