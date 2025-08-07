@@ -11,12 +11,12 @@ import ProductGrid from "@/components/organisms/ProductGrid";
 import CategoryCarousel from "@/components/organisms/CategoryCarousel";
 import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
-
 const Home = () => {
 const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+const [categories, setCategories] = useState([]);
   const [deals, setDeals] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
   const [recipeBundles, setRecipeBundles] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
   const [weatherData, setWeatherData] = useState(null);
@@ -37,28 +37,27 @@ const loadData = async () => {
       }
 
 // Initialize all data promises
-const [categoriesData, productsData, trendingData, recipeBundlesData] = await Promise.all([
+const [categoriesData, productsData, trendingData, featuredData, recipeBundlesData] = await Promise.all([
         CategoryService.getAll(),
         ProductService.getAll(),
         ProductService.getTrendingByLocation(location),
+        ProductService.getFeaturedProducts(),
         RecipeBundleService.getFeatured(6)
       ]);
 
-      // Set basic data
+setCategories(categoriesData);
       setProducts(productsData);
-      setCategories(categoriesData);
       setTrendingProducts(trendingData);
+      setFeaturedProducts(featuredData);
       setRecipeBundles(recipeBundlesData);
       
-      // Get weather-based seasonal products with null checks
-      if (location?.weather) {
-        const seasonalProductNames = LocationService.getSeasonalProducts(location.weather) || [];
-        const weatherFilteredProducts = productsData?.filter(product => 
-          product?.name && seasonalProductNames.some(name => 
-            name && product.name.toLowerCase().includes(name.toLowerCase())
-          )
-        ) || [];
-        setSeasonalProducts(weatherFilteredProducts);
+// Set seasonal products based on weather
+      if (weatherData?.main?.temp) {
+        const temp = weatherData.main.temp;
+        const seasonal = temp > 25 ? 
+          productsData.filter(p => ['beverages', 'frozen'].includes(p.category?.toLowerCase())) :
+          productsData.filter(p => ['hot-foods', 'snacks'].includes(p.category?.toLowerCase()));
+        setSeasonalProducts(seasonal);
         
         // Update location message based on weather
         const weatherMessage = LocationService.getLocationMessage(location);
@@ -280,8 +279,8 @@ if (loading) {
 
       {/* Featured Products */}
       <ProductGrid 
-        products={products}
-        title="Featured Products"
+products={featuredProducts}
+        title="⭐ Featured Products"
         showLoadMore={true}
         initialCount={12}
 />

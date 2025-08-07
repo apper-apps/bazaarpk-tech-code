@@ -24,7 +24,7 @@ const ProductManagementCard = ({
   currentUser,
   showApprovalStatus = false
 }) => {
-  const isVisible = product.visibility === 'published';
+const isVisible = product.visibility === 'published';
   const isFeatured = product.featured;
   const isLowStock = product.stock < 10;
   
@@ -34,9 +34,10 @@ const ProductManagementCard = ({
   const isPending = approvalStatus === 'pending' || !product.status;
   const isRejected = approvalStatus === 'rejected';
   
-  // Product can only be visible if approved
+  // Product can only be featured if approved AND published
   const isActuallyVisible = isVisible && isApproved;
-const needsApproval = isPending && !isVisible;
+  const canBeFeatured = isApproved && isVisible;
+  const needsApproval = isPending && !isVisible;
   const isOutOfStock = product.stock === 0;
   const adminRating = product.adminRating || 0;
 
@@ -143,9 +144,9 @@ if (viewMode === 'list') {
                 </Badge>
                 
                 {/* Featured Badge */}
-                {product.featured && isActuallyVisible && (
-                  <Badge variant="accent" size="sm" className="flex items-center text-xs">
-                    <ApperIcon name="Star" className="w-3 h-3 mr-1" />
+{product.featured && canBeFeatured && (
+                  <Badge variant="accent" size="sm" className="flex items-center text-xs bg-gradient-to-r from-yellow-400 to-yellow-600 text-white">
+                    <ApperIcon name="Star" className="w-3 h-3 mr-1 fill-current" />
                     Featured
                   </Badge>
                 )}
@@ -187,24 +188,27 @@ onClick={() => onToggleVisibility(product.Id)}
                   needsApproval ? "CheckCircle" :
                   isActuallyVisible ? "EyeOff" : "Eye"
                 } className="w-4 h-4" />
-              </Button>
+</Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onToggleFeatured(product.Id)}
-                disabled={loading || !isActuallyVisible}
+                disabled={loading || !canBeFeatured}
                 title={
-                  !isActuallyVisible ? "Product must be approved and published to be featured" :
+                  !canBeFeatured ? "Product must be approved and published to be featured" :
                   isFeatured ? "Remove from featured section" : 
                   "Feature on homepage"
                 }
                 className={cn(
-                  "p-2", 
-                  isFeatured && "text-yellow-600",
-                  !isActuallyVisible && "opacity-50"
+                  "p-2 transition-colors", 
+                  isFeatured && canBeFeatured && "text-yellow-500 hover:text-yellow-600",
+                  !canBeFeatured && "opacity-40 cursor-not-allowed"
                 )}
               >
-                <ApperIcon name="Star" className={cn("w-4 h-4", isFeatured && "fill-current")} />
+                <ApperIcon name="Star" className={cn(
+                  "w-4 h-4 transition-all", 
+                  isFeatured && canBeFeatured && "fill-current text-yellow-500"
+                )} />
               </Button>
               <Button
                 variant="ghost"
@@ -371,9 +375,9 @@ return (
           </Badge>
           
           {/* Featured Badge - only for live products */}
-          {product.featured && isActuallyVisible && (
-            <Badge variant="accent" size="sm" className="flex items-center text-xs">
-              <ApperIcon name="Star" className="w-3 h-3 mr-1" />
+{product.featured && canBeFeatured && (
+            <Badge variant="accent" size="sm" className="flex items-center text-xs bg-gradient-to-r from-yellow-400 to-yellow-600 text-white">
+              <ApperIcon name="Star" className="w-3 h-3 mr-1 fill-current" />
               <span className="hidden sm:inline">Featured</span>
             </Badge>
           )}
@@ -418,22 +422,25 @@ return (
             } className="w-4 h-4" />
           </Button>
           <Button
-            variant="ghost"
+variant="ghost"
             size="sm"
             onClick={() => onToggleFeatured(product.Id)}
-            disabled={loading || !isActuallyVisible}
+            disabled={loading || !canBeFeatured}
             title={
-              !isActuallyVisible ? "Product must be approved and published to be featured" :
+              !canBeFeatured ? "Product must be approved and published to be featured" :
               isFeatured ? "Remove from featured section" : 
               "Feature on homepage"
             }
             className={cn(
-              "p-2 flex items-center justify-center", 
-              isFeatured && "text-yellow-600",
-              !isActuallyVisible && "opacity-50"
+              "p-2 flex items-center justify-center transition-colors", 
+              isFeatured && canBeFeatured && "text-yellow-500 hover:text-yellow-600",
+              !canBeFeatured && "opacity-40 cursor-not-allowed"
             )}
           >
-            <ApperIcon name="Star" className={cn("w-4 h-4", isFeatured && "fill-current")} />
+            <ApperIcon name="Star" className={cn(
+              "w-4 h-4 transition-all", 
+              isFeatured && canBeFeatured && "fill-current text-yellow-500"
+            )} />
           </Button>
           <Button
             variant="ghost"

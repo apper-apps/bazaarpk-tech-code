@@ -1126,14 +1126,18 @@ bulkPriceAdjustment: async (ids, adjustment) => {
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
     if (index === -1) {
-      return null;
+      throw new Error('Product not found');
     }
     
     const product = productsData[index];
     
-    // Only allow featuring approved, published products
-    if (product.status !== 'approved' || product.visibility !== 'published') {
-      throw new Error('Only approved and published products can be featured');
+    // Strict validation: Only allow featuring approved, published products
+    if (product.status !== 'approved') {
+      throw new Error('Only approved products can be featured');
+    }
+    
+    if (product.visibility !== 'published') {
+      throw new Error('Only published products can be featured');
     }
     
     const wasFeatured = product.featured;
@@ -1151,11 +1155,11 @@ bulkPriceAdjustment: async (ids, adjustment) => {
         {
           action: 'featured_toggled',
           timestamp,
-          user: 'system',
+          user: 'admin',
           details: `Product ${!product.featured ? 'marked as featured' : 'removed from featured'}`,
           oldValue: wasFeatured,
           newValue: !product.featured,
-          workflowCompliant: product.status === 'approved' && product.visibility === 'published'
+          workflowCompliant: true
         }
       ]
     };
@@ -1220,10 +1224,10 @@ bulkPriceAdjustment: async (ids, adjustment) => {
       .filter(product => 
         product.featured && 
         product.visibility === 'published' && 
-        (product.status === 'approved' || !product.status) // backward compatibility
+        product.status === 'approved' // strict approval check
       )
       .sort((a, b) => (b.priority || 0) - (a.priority || 0))
-      .slice(0, 8)
+      .slice(0, 12) // Show more featured products on homepage
       .map(product => ({ ...product }));
   },
 
@@ -1393,18 +1397,18 @@ filterProducts: async (filters) => {
     const scoredProducts = productsData
       .filter(product => 
         product.visibility === 'published' && 
-        (product.status === 'approved' || !product.status) && // ensure approved
+        product.status === 'approved' && // strict approval requirement
         !excludeIds.includes(product.Id) &&
         (category ? product.category.toLowerCase() === category.toLowerCase() : true)
       )
       .map(product => {
         let score = 0;
         
+        // Featured status gets highest priority
+        if (product.featured) score += 30;
+        
         // Approval status scoring
         if (product.status === 'approved') score += 25;
-        
-        // Featured status scoring
-        if (product.featured) score += 20;
         
         // Badge-based scoring
         if (product.badges?.includes("BESTSELLER")) score += 15;
