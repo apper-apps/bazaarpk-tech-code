@@ -991,14 +991,12 @@ const renderBasicInfo = () => (
               </p>
             )}
           </div>
-        </div>
+</div>
         <div className="mt-3 text-xs text-gray-500">
-<div className="mt-3 text-xs text-gray-500">
           <strong>Category helps with:</strong> Customer navigation, search filtering, and product organization
         </div>
       </div>
 
-      <div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Detailed Description *
