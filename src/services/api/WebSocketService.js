@@ -196,11 +196,10 @@ class WebSocketService {
           const safeErrorData = {
             error: errorMessage,
             code: errorCode,
-            details: errorDetails,
+details: errorDetails,
             timestamp: Date.now(),
-readyState: readyState
+            readyState: readyState
           };
-          
           // Emit the safe error data
           this.emit('connection', { 
             status: 'error', 
