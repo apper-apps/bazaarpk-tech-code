@@ -83,9 +83,9 @@ class WebSocketService {
           if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
             this.scheduleReconnect();
           }
-        };
+};
 
-this.socket.onerror = (error) => {
+        this.socket.onerror = (error) => {
           console.error('WebSocket error:', error);
           this.isConnecting = false;
           
@@ -96,158 +96,121 @@ this.socket.onerror = (error) => {
           // Initialize readyState in function scope to prevent reference errors
           let readyState = 3; // Default to CLOSED state
           
-          if (error instanceof Event) {
-            // Handle WebSocket Event objects with enhanced information extraction
-            const target = error.target;
-            readyState = target?.readyState ?? 3; // Use nullish coalescing for safety
-            
-            // Map WebSocket readyState to meaningful messages
-            const readyStateMessages = {
-              0: 'connecting', // CONNECTING
-              1: 'connected',  // OPEN
-              2: 'closing',    // CLOSING
-              3: 'disconnected' // CLOSED
-            };
-            
-            const readyStateText = readyStateMessages[readyState] || 'unknown';
-            
-            // Create detailed error message based on event type and readyState
-            if (error.type === 'error') {
-              errorMessage = `WebSocket connection failed (state: ${readyStateText})`;
-              errorCode = readyState === 3 ? 'CONNECTION_CLOSED' : 'CONNECTION_ERROR';
-            } else {
-              errorMessage = `WebSocket ${error.type} event (state: ${readyStateText})`;
-              errorCode = `WEBSOCKET_${error.type.toUpperCase()}`;
+          // Comprehensive error information extraction from WebSocket Event objects
+          try {
+            if (error instanceof Event) {
+              // Handle WebSocket Event objects with enhanced information extraction
+              const target = error.target;
+              readyState = target?.readyState ?? 3; // Use nullish coalescing for safety
+              
+              // Extract detailed error information from the WebSocket target
+              if (target instanceof WebSocket) {
+                errorDetails.url = target.url;
+                errorDetails.protocol = target.protocol;
+                errorDetails.extensions = target.extensions;
+                errorDetails.readyState = readyState;
+                
+                // Map WebSocket readyState to meaningful messages with enhanced context
+                switch (readyState) {
+                  case WebSocket.CONNECTING:
+                    errorMessage = 'Failed to establish WebSocket connection';
+                    errorCode = 'CONNECTION_FAILED';
+                    break;
+                  case WebSocket.OPEN:
+                    errorMessage = 'WebSocket connection encountered an error';
+                    errorCode = 'CONNECTION_ERROR';
+                    break;
+                  case WebSocket.CLOSING:
+                    errorMessage = 'WebSocket connection closing with error';
+                    errorCode = 'CONNECTION_CLOSING_ERROR';
+                    break;
+                  case WebSocket.CLOSED:
+                  default:
+                    errorMessage = 'WebSocket connection closed due to error';
+                    errorCode = 'CONNECTION_CLOSED';
+                    break;
+                }
+              }
+              
+              // Extract additional event information safely
+              if (error.type) {
+                errorDetails.eventType = error.type;
+              }
+              
+              if (error.timeStamp) {
+                errorDetails.timestamp = error.timeStamp;
+              }
+              
+              // Check for browser-specific error information
+              if (error.reason) {
+                errorMessage = error.reason;
+                errorDetails.reason = error.reason;
+              }
+              
+              if (error.code) {
+                errorDetails.closeCode = error.code;
+                errorCode = `CLOSE_${error.code}`;
+              }
+              
+            } else if (error instanceof Error) {
+              // Handle standard Error objects
+              errorMessage = error.message || 'WebSocket error occurred';
+              errorCode = error.name || 'WEBSOCKET_ERROR';
+              errorDetails.stack = error.stack;
+              
+            } else if (typeof error === 'string') {
+              // Handle string errors
+              errorMessage = error;
+              errorCode = 'STRING_ERROR';
+              
+            } else if (error && typeof error === 'object') {
+              // Handle other object types safely
+              if (error.message) {
+                errorMessage = error.message;
+              }
+              if (error.code) {
+                errorCode = error.code;
+              }
+              // Attempt to extract any other useful properties
+              Object.keys(error).forEach(key => {
+                try {
+                  const value = error[key];
+                  if (typeof value === 'string' || typeof value === 'number') {
+                    errorDetails[key] = value;
+                  }
+                } catch (e) {
+                  // Ignore properties that can't be accessed
+                }
+              });
             }
             
-            errorDetails = {
-              type: error.type || 'error',
-              readyState: readyState,
-              readyStateText: readyStateText,
-              timestamp: error.timeStamp || Date.now(),
-              url: target?.url || this.url || 'unknown',
-              protocol: target?.protocol || 'unknown',
-              code: errorCode,
-              // Prevent Event object serialization issues
-              eventConstructor: error.constructor.name
-            };
-          } else if (error instanceof Error) {
-            // Handle regular Error objects
-            errorMessage = error.message || 'Connection error';
-            errorCode = error.name || 'ERROR';
-            errorDetails = {
-              name: error.name,
-              stack: error.stack,
-              code: errorCode
-            };
-          } else if (typeof error === 'string') {
-            errorMessage = error;
-            errorCode = 'STRING_ERROR';
-            errorDetails = { code: errorCode };
-          } else {
-            // Handle any other error types
-            errorMessage = 'Unknown WebSocket error occurred';
-            errorCode = 'UNKNOWN_ERROR';
-            errorDetails = { 
-              code: errorCode,
-              errorType: typeof error,
-              errorConstructor: error?.constructor?.name || 'unknown'
-            };
+          } catch (parseError) {
+            // Ultimate fallback if error processing fails
+            console.warn('Error processing WebSocket error:', parseError);
+            errorMessage = 'WebSocket connection error - unable to determine details';
+            errorCode = 'ERROR_PARSE_FAILED';
+            errorDetails.parseError = parseError.message;
           }
           
-          // Enhanced connection status emission with better error context
+          // Ensure we never serialize Event objects or other problematic types
+          const safeErrorData = {
+            error: errorMessage,
+            code: errorCode,
+            details: errorDetails,
+            timestamp: Date.now(),
+readyState: readyState
+          };
+          
+          // Emit the safe error data
           this.emit('connection', { 
             status: 'error', 
             error: errorMessage,
             code: errorCode,
             details: errorDetails,
-            timestamp: new Date().toISOString(),
-            // Add retry information
-            retryable: !['PROTOCOL_ERROR', 'SECURITY_ERROR'].includes(errorCode),
-            severity: readyState === 3 ? 'high' : 'medium'
+            timestamp: new Date().toISOString()
           });
           
-// Create a proper, serializable Error object for rejection
-          const rejectError = new Error(errorMessage);
-          rejectError.code = errorCode;
-          rejectError.details = errorDetails;
-          rejectError.timestamp = new Date().toISOString();
-          
-          // Enhanced serialization with deep cloning for nested objects
-          const safeDetails = {};
-          try {
-            // Safely copy details with fallbacks for non-serializable properties
-            for (const [key, value] of Object.entries(errorDetails)) {
-              if (value !== null && value !== undefined) {
-                if (typeof value === 'object') {
-                  // Handle nested objects safely
-                  safeDetails[key] = JSON.parse(JSON.stringify(value));
-                } else if (typeof value === 'function') {
-                  safeDetails[key] = value.name || 'function';
-                } else {
-                  safeDetails[key] = value;
-                }
-              }
-            }
-          } catch (detailsError) {
-            // Fallback if details serialization fails
-            safeDetails.serialization_error = 'Details could not be serialized';
-            safeDetails.original_error_type = typeof errorDetails;
-          }
-          
-          rejectError.details = safeDetails;
-          
-          // Enhanced toJSON method with comprehensive error handling
-          Object.defineProperty(rejectError, 'toJSON', {
-            value: function() {
-              const result = {
-                message: this.message || 'Unknown WebSocket error',
-                code: this.code || 'WEBSOCKET_ERROR',
-                timestamp: this.timestamp || new Date().toISOString(),
-                name: this.name || 'WebSocketError'
-              };
-              
-              // Safely include details
-              if (this.details && typeof this.details === 'object') {
-                try {
-                  result.details = JSON.parse(JSON.stringify(this.details));
-                } catch {
-                  result.details = { error: 'Details serialization failed' };
-                }
-              }
-// Include stack trace if available and in development
-              const isDevelopment = typeof window !== 'undefined' && 
-                (window.location?.hostname === 'localhost' || 
-                 window.location?.hostname === '127.0.0.1' ||
-                 window.location?.hostname === '' ||
-                 window.location?.port);
-              
-              if (this.stack && isDevelopment) {
-                result.stack = this.stack.split('\n').slice(0, 10); // Limit stack trace length
-              }
-              return result;
-            },
-            enumerable: false,
-            configurable: true
-          });
-          
-          // Add valueOf method for primitive conversion
-          Object.defineProperty(rejectError, 'valueOf', {
-            value: function() {
-              return this.message;
-            },
-            enumerable: false
-          });
-          
-          // Ensure toString works correctly
-          Object.defineProperty(rejectError, 'toString', {
-            value: function() {
-              return `${this.name}: ${this.message}${this.code ? ` (${this.code})` : ''}`;
-            },
-            enumerable: false
-          });
-          
-          reject(rejectError);
+          reject(new Error(errorMessage));
         };
 
       } catch (error) {
@@ -366,6 +329,42 @@ this.socket.onerror = (error) => {
     }
   }
 
+  flushMessageQueue() {
+if (!this.messageQueue.length) return;
+    
+    const messages = [...this.messageQueue];
+    this.messageQueue = [];
+    
+    for (const message of messages) {
+      try {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+          this.socket.send(JSON.stringify(message));
+        } else {
+          this.messageQueue.push(message);
+          break;
+        }
+      } catch (error) {
+        console.error('WebSocket: Failed to send queued message', error);
+      }
+    }
+  }
+
+  getConnectionStatus() {
+    if (!this.socket) return 'disconnected';
+    
+    switch (this.socket.readyState) {
+      case WebSocket.CONNECTING: return 'connecting';
+      case WebSocket.OPEN: return 'connected';
+      case WebSocket.CLOSING: return 'closing';
+      case WebSocket.CLOSED: return 'disconnected';
+      default: return 'unknown';
+    }
+  }
+}
+
+// Export singleton instance
+export const webSocketService = new WebSocketService();
+export default webSocketService;
 flushMessageQueue() {
     if (!this.messageQueue.length) return;
     
