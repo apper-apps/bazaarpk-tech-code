@@ -999,6 +999,7 @@ const renderBasicInfo = () => (
       </div>
 
       <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Detailed Description *
           <span className="text-gray-500 text-xs ml-1">(WYSIWYG ready - supports rich formatting)</span>
         </label>
