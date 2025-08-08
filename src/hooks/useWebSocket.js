@@ -142,12 +142,24 @@ try {
         showToast(userMessage, toastType);
       }
       
-      console.error('WebSocket connection failed:', {
+console.error('WebSocket connection failed:', {
         originalError: error,
         processedMessage: userMessage,
         errorType: typeof error,
-        errorConstructor: error?.constructor?.name
+        errorConstructor: error?.constructor?.name,
+        category: error?.category,
+        suggestion: error?.suggestion,
+        canRetry: error?.canRetry,
+        url: error?.url,
+        isDevelopment: error?.isDevelopment
       });
+      
+      // Show user-friendly error message
+      if (error?.suggestion) {
+        showToast.error(`${userMessage}: ${error.suggestion}`);
+      } else {
+        showToast.error(userMessage);
+      }
     }
   }, [isOnline, showConnectionToasts, showToast, url]);
 

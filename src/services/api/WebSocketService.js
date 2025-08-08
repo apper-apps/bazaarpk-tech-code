@@ -104,21 +104,22 @@ this.socket.onerror = (event) => {
           this.errorEmitted = true;
           this.isConnecting = false;
           
-          // Simple, bulletproof error message generation
-          let errorMessage = 'Connection unavailable';
-          
-          // Only extract simple string properties, never serialize objects
-// Categorize error based on connection state and event details
+          // Enhanced error message generation with environment context
+          let errorMessage = 'WebSocket connection failed';
           let errorCategory = 'network';
           let userMessage = 'Connection lost';
-          let suggestion = 'Please check your internet connection';
+          let suggestion = 'Please check your internet connection and try again';
+          
+          // Determine if we're in development or production
+          const isDev = import.meta.env.MODE === 'development';
+          const wsUrl = this.url || import.meta.env.VITE_WS_URL || 'ws://localhost:8080';
           
           if (event?.reason && typeof event.reason === 'string' && event.reason.trim()) {
             const reason = event.reason.toLowerCase();
             if (reason.includes('server') || reason.includes('503') || reason.includes('502')) {
               errorCategory = 'server';
               userMessage = 'Server temporarily unavailable';
-              suggestion = 'Please try again in a few moments';
+              suggestion = 'The server is currently unavailable. Please try again in a few moments.';
             } else if (reason.includes('unauthorized') || reason.includes('403') || reason.includes('401')) {
               errorCategory = 'auth';
               userMessage = 'Authentication required';
@@ -126,10 +127,15 @@ this.socket.onerror = (event) => {
             } else if (reason.includes('timeout') || reason.includes('etimedout')) {
               errorCategory = 'timeout';
               userMessage = 'Connection timed out';
-              suggestion = 'Check your internet connection and try again';
+              suggestion = 'Connection timed out. Check your internet connection and try again';
+            } else if (reason.includes('refused') || reason.includes('econnrefused')) {
+              errorCategory = 'server';
+              userMessage = isDev ? 'Development server not running' : 'Server unavailable';
+              suggestion = isDev ? 'Please start the WebSocket server' : 'Server is temporarily unavailable';
             } else {
               userMessage = reason.substring(0, 100);
             }
+            errorMessage = `WebSocket error: ${reason}`;
           } else if (event?.type === 'error') {
             // Check connection state for more context
             const readyState = this.socket?.readyState ?? 3;
@@ -140,7 +146,9 @@ this.socket.onerror = (event) => {
             } else if (readyState === 3) { // CLOSED
               errorCategory = 'network';
               userMessage = 'Unable to connect to server';
-              suggestion = 'Check your internet connection';
+              suggestion = isDev 
+                ? `Cannot connect to ${wsUrl}. Ensure WebSocket server is running.`
+                : 'Unable to establish connection. Please check your internet connection.';
             }
           }
           
@@ -156,22 +164,36 @@ this.socket.onerror = (event) => {
             error: errorMessage,
             code: 'WEBSOCKET_ERROR',
             readyState: readyState,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            url: wsUrl,
+            isDevelopment: isDev
           };
           
-          // Simple logging
-          console.error('WebSocket connection failed:', errorMessage);
+          // Enhanced logging with more context
+          console.error('WebSocket connection failed:', {
+            message: errorMessage,
+            category: errorCategory,
+            url: wsUrl,
+            readyState: readyState,
+            suggestion: suggestion
+          });
           
-          // Emit clean error data
-this.emit('connection', errorData);
+          // Emit error event (not connection event for errors)
+          this.emit('error', errorData);
           
-// Create consistent error object with both Error instance properties and structured data
+          // Create consistent error object with both Error instance properties and structured data
           const connectionError = new Error(errorMessage);
           connectionError.category = errorData.category;
           connectionError.suggestion = errorData.suggestion;
           connectionError.timestamp = errorData.timestamp;
-          connectionError.canRetry = errorData.canRetry; // Fixed: was errorData.retryable
-          connectionError.retryable = errorData.canRetry; // Added for backward compatibility
+          connectionError.canRetry = errorData.canRetry;
+          connectionError.retryable = errorData.canRetry; // Backward compatibility
+          connectionError.url = wsUrl;
+          
+          // Schedule automatic reconnection if retryable
+          if (errorData.canRetry && !this.isDestroyed) {
+            this.scheduleReconnect();
+          }
           
           reject(connectionError);
         };
@@ -185,19 +207,22 @@ this.emit('connection', errorData);
           structuredError.category = 'connection';
           structuredError.suggestion = 'Check your internet connection';
           structuredError.retryable = true;
+          structuredError.canRetry = true;
           reject(structuredError);
         } else {
           // Add missing properties to existing Error instances
           if (!error.category) error.category = 'connection';
           if (!error.suggestion) error.suggestion = 'Try refreshing the page';
           if (error.retryable === undefined) error.retryable = true;
+          if (error.canRetry === undefined) error.canRetry = true;
           reject(error);
-}
+        }
       }
     });
   }
 
   disconnect() {
+    this.isDestroyed = true; // Prevent reconnection attempts
     this.stopHeartbeat();
     if (this.socket) {
       this.socket.close(1000, 'Client disconnect');
