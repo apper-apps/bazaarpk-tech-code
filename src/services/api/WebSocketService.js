@@ -154,10 +154,43 @@ this.socket.onerror = (event) => {
             readyState: readyState,
             timestamp: new Date().toISOString()
           };
+// Enhanced error message extraction for Event objects
+          let logMessage = errorMessage;
+          let eventDetails = '';
           
-          // Simple logging with primitive values only
-          console.error('WebSocket error:', errorMessage, `(state: ${readyState})`, event);
+          // Extract meaningful information from WebSocket Event objects
+          if (event && typeof event === 'object') {
+            if (event.type) {
+              eventDetails += `type: ${event.type}`;
+            }
+            if (event.code) {
+              eventDetails += eventDetails ? `, code: ${event.code}` : `code: ${event.code}`;
+            }
+            if (event.reason && typeof event.reason === 'string') {
+              eventDetails += eventDetails ? `, reason: ${event.reason}` : `reason: ${event.reason}`;
+            }
+            if (event.wasClean !== undefined) {
+              eventDetails += eventDetails ? `, clean: ${event.wasClean}` : `clean: ${event.wasClean}`;
+            }
+          }
           
+          // Add connection state context for better debugging
+          let stateDescription = '';
+          switch (readyState) {
+            case 0: stateDescription = 'CONNECTING'; break;
+            case 1: stateDescription = 'OPEN'; break;
+            case 2: stateDescription = 'CLOSING'; break;
+            case 3: stateDescription = 'CLOSED'; break;
+            default: stateDescription = 'UNKNOWN';
+          }
+          
+          // Enhanced logging with extracted event details
+          console.error('WebSocket error:', {
+            message: logMessage,
+            state: `${readyState} (${stateDescription})`,
+            eventDetails: eventDetails || 'none',
+            timestamp: new Date().toISOString()
+          });
           // Emit guaranteed clean error data
           this.emit('connection', errorData);
           
