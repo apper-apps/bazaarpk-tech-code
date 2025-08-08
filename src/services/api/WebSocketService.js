@@ -39,9 +39,25 @@ class WebSocketService {
     });
 
     // Global error handler for WebSocket errors
+// Environment-based WebSocket configuration
+    this.getWebSocketUrl = () => {
+      // Check for environment variable first
+      if (import.meta.env.VITE_WS_URL) {
+        return import.meta.env.VITE_WS_URL;
+      }
+      
+      // Only use localhost in development and when explicitly enabled
+      if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_WS !== 'false') {
+        return 'ws://localhost:8080';
+      }
+      
+      // In production or when WebSocket disabled, return null for graceful degradation
+      return null;
+    };
+
     window.addEventListener('error', (globalError) => {
       if (globalError.message && globalError.message.includes('WebSocket')) {
-        console.error('Global WebSocket error intercepted:', globalError.message);
+        console.warn('WebSocket error intercepted, switching to offline mode:', globalError.message);
         globalError.preventDefault();
       }
     });
@@ -286,70 +302,63 @@ this.emit('connection', {
           this.handleMessage(event.data);
         };
 
-      } catch (error) {
-        console.error('WebSocket connection failed:', {
+} catch (error) {
+        console.warn('WebSocket connection unavailable:', {
           url: this.url,
           error: error.message || 'Connection failed',
           timestamp: new Date().toISOString()
         });
         
+        // Get the WebSocket URL to determine connection strategy
+        const wsUrl = this.getWebSocketUrl();
+        
+        if (!wsUrl) {
+          // WebSocket disabled or not configured - graceful degradation
+          console.info('WebSocket not configured, running in offline mode');
+          this.emit('connection', { 
+            status: 'offline', 
+            message: 'Running in offline mode',
+            code: 'WS_DISABLED',
+            category: 'offline',
+            canRetry: false
+          });
+          return;
+        }
+
         // Check if server is available before attempting connection
         this.checkServerAvailability(url)
           .then(isServerAvailable => {
             if (!isServerAvailable) {
-              const serverUnavailableError = {
-                message: 'Server is currently unavailable',
-                category: 'server_unavailable', 
-                canRetry: false,
-                url: url,
-                code: 'SERVER_DOWN',
-                timestamp: new Date().toISOString()
-              };
+              console.info('WebSocket server not available, switching to offline mode');
               
-this.emit('connection', { 
-                status: 'error', 
-                error: 'Server temporarily unavailable - working offline',
-                code: 'SERVER_DOWN',
-                category: 'server_unavailable',
-                canRetry: false
+              this.emit('connection', { 
+                status: 'offline', 
+                message: 'Working offline - real-time features disabled',
+                code: 'SERVER_OFFLINE',
+                category: 'offline',
+                canRetry: true
               });
               return;
             }
             
-            // If server is available but connection still fails, it's a connection issue
-            const connectionError = {
-              message: 'Unable to establish connection',
-              category: 'connection',
-              canRetry: true,
-              url: url,
-              code: error.code || 'CONNECTION_FAILED',
-              timestamp: new Date().toISOString()
-            };
-            
-this.emit('connection', { 
+            // Server available but connection failed - network issue
+            console.warn('Network connection issue, will retry');
+            this.emit('connection', { 
               status: 'error', 
-              error: 'Connection lost - working offline',
+              error: 'Connection interrupted - retrying',
               code: 'CONNECTION_FAILED', 
               category: 'connection',
               canRetry: true
             });
           })
           .catch(checkError => {
-            // If server availability check fails, treat as connection issue
-            const connectionError = {
-              message: 'Unable to establish connection',
-              category: 'connection',
-              canRetry: true,
-              url: url,
-              code: error.code || 'CONNECTION_FAILED',
-              timestamp: new Date().toISOString()
-            };
-            
-this.emit('connection', { 
-              status: 'error', 
-              error: 'Connection lost - working offline',
-              code: 'CONNECTION_FAILED',
-              category: 'connection', 
+            // Cannot reach server - treat as offline
+            console.info('Cannot reach WebSocket server, working offline');
+            this.emit('connection', { 
+              status: 'offline', 
+              message: 'Working offline - real-time features disabled',
+              code: 'SERVER_UNREACHABLE',
+              category: 'offline', 
               canRetry: true
             });
           });
