@@ -65,79 +65,66 @@ const connect = useCallback(async () => {
       }
       
       await webSocketService.connect(url);
-    } catch (error) {
-      // Enhanced error handling with server availability distinction
+} catch (error) {
+      // Enhanced error handling with cleaner user feedback
       let userMessage = 'Working in offline mode';
       let toastType = 'info';
       let shouldRetry = true;
+      let isServerDown = false;
       
       // Categorize errors for appropriate user feedback
       if (error?.category === 'server_unavailable' || error?.code === 'SERVER_DOWN') {
-        userMessage = 'Server is currently down - all features available offline';
+        userMessage = 'Server unavailable - all features work offline';
         toastType = 'info';
-        shouldRetry = false; // Don't retry if server is confirmed down
+        shouldRetry = false;
+        isServerDown = true;
       } else if (error?.category === 'connection' || error?.code === 'CONNECTION_FAILED') {
-        userMessage = 'Connection issue - working in offline mode';
-        toastType = 'warning';
+        userMessage = 'Working in offline mode';
+        toastType = 'info';
         shouldRetry = true;
       } else if (error?.category === 'timeout') {
-        userMessage = 'Connection timeout - trying offline mode';
-        toastType = 'warning';
+        userMessage = 'Connection timeout - offline mode active';
+        toastType = 'info';
         shouldRetry = true;
       } else {
-        // Generic handling for unknown errors
-        if (error?.message && typeof error.message === 'string') {
-          userMessage = error.message;
-        } else if (typeof error === 'string') {
-          userMessage = error;
-        } else if (error instanceof Error) {
-          userMessage = error.message || 'Connection unavailable';
-        }
+        // Generic handling with cleaner user messaging
+        userMessage = 'Working in offline mode';
+        toastType = 'info';
+        shouldRetry = true;
         
-        // Clean technical jargon and ensure reasonable length
-        userMessage = userMessage
-          .replace(/WebSocket/gi, 'Real-time updates')
-          .replace(/ECONNREFUSED|Connection refused/gi, 'Service unavailable')
-          .replace(/ETIMEDOUT/gi, 'Connection timeout')
-          .replace(/failed to connect/gi, 'unavailable')
-          .substring(0, 70);
-          
-        if (!userMessage.includes('offline') && !userMessage.includes('unavailable')) {
-          userMessage += ' - working offline';
+        // Check for specific network errors
+        if (error?.message) {
+          const errorMsg = error.message.toLowerCase();
+          if (errorMsg.includes('econnrefused') || errorMsg.includes('connection refused')) {
+            isServerDown = true;
+            shouldRetry = false;
+            userMessage = 'Server unavailable - offline mode active';
+          } else if (errorMsg.includes('timeout') || errorMsg.includes('etimedout')) {
+            userMessage = 'Connection slow - working offline';
+            toastType = 'warning';
+          }
         }
       }
       
       if (showConnectionToasts) {
         showToast(userMessage, toastType);
       }
+}
 
-      // Safe error logging with object serialization protection
-      const safeErrorLog = {
-        category: error?.category || 'unknown',
-        canRetry: shouldRetry,
+      // Simplified error logging to reduce console noise
+      const isDevelopment = import.meta.env?.DEV || false;
+      const logLevel = isDevelopment ? 'warn' : 'info';
+      console[logLevel]('WebSocket connection unavailable:', {
+        status: isServerDown ? 'server_down' : 'connection_failed',
         url: url,
+        canRetry: shouldRetry,
         timestamp: new Date().toISOString()
-      };
       
-      // Extract error message safely without "[object Object]"
-      if (error?.message && typeof error.message === 'string') {
-        safeErrorLog.error = error.message;
-      } else if (typeof error === 'string') {
-        safeErrorLog.error = error;
-      } else if (error instanceof Error) {
-        safeErrorLog.error = error.message || error.name || 'Connection Error';
-      } else if (error && typeof error === 'object') {
-        safeErrorLog.error = error.reason || error.statusText || error.type || 'Connection failed';
-      } else {
-        safeErrorLog.error = 'Unknown connection error';
-      }
-      
-      console.error('WebSocket connection failed:', safeErrorLog);
-      
-      // Store retry status for reconnection logic
-      if (!shouldRetry) {
-        // Mark connection as permanently failed to prevent reconnection attempts
+      // Set appropriate connection status
+      if (isServerDown) {
         setConnectionStatus('server_unavailable');
+      } else {
+        setConnectionStatus('disconnected');
       }
     }
   }, [isOnline, showConnectionToasts, showToast, url]);
@@ -182,81 +169,52 @@ useEffect(() => {
             onDisconnect?.(data);
             break;
 case 'error':
-case 'parse_error':
-case 'invalid':
-case 'server_unavailable':
-            // Enhanced error message handling for different error types
-            let errorMessage = 'Working offline';
+          case 'parse_error':
+          case 'invalid':
+          case 'server_unavailable':
+            // Simplified error handling with consistent user messaging
+            let errorMessage = 'Working in offline mode';
             let toastType = 'info';
-            let shouldShowToast = true;
+            let shouldShowToast = false; // Reduce toast frequency for connection errors
             
-            // Categorize and handle different error types appropriately
-            try {
-              if (data?.status === 'server_unavailable' || data?.type === 'server_unavailable') {
-                errorMessage = 'Server unavailable - all features work offline';
-                toastType = 'info';
-                shouldShowToast = true;
-              } else if (data?.status === 'parse_error') {
-                errorMessage = 'Connection unstable - working in offline mode';
-                toastType = 'warning';
-              } else if (data?.type === 'invalid') {
-                errorMessage = 'Data sync issue - offline mode active';
-                shouldShowToast = false; // Don't spam with parsing errors
-              } else if (data?.code === 'WEBSOCKET_ERROR') {
-                errorMessage = 'Real-time updates unavailable - offline mode active';
-                toastType = 'info';
-              } else {
-                // Generic connection error
-                errorMessage = 'Connection lost - working offline';
-                toastType = 'warning';
-              }
-              
-            } catch (msgError) {
-              console.warn('Error processing WebSocket status:', msgError);
-              errorMessage = 'Working in offline mode';
+            // Only show toast for significant status changes
+            if (data?.status === 'server_unavailable' && connectionStatus !== 'server_unavailable') {
+              errorMessage = 'Server unavailable - offline mode active';
               toastType = 'info';
+              shouldShowToast = true;
+            } else if (data?.status === 'error' && connectionStatus === 'connected') {
+              errorMessage = 'Connection lost - working offline';
+              toastType = 'warning';
+              shouldShowToast = true;
             }
-            
-            // Safe error logging without object serialization issues
-            const safeLogData = {
-              status: data?.status || 'unknown',
-              type: data?.type || 'unknown', 
-              code: data?.code || null,
-              hasError: !!data?.error,
-              timestamp: new Date().toISOString(),
-              url: url
-            };
-            
-            // Extract error message safely
-            if (data?.error) {
-              if (typeof data.error === 'string') {
-                safeLogData.errorMessage = data.error.substring(0, 100);
-              } else if (data.error?.message) {
-                safeLogData.errorMessage = data.error.message.substring(0, 100);
-              } else {
-                safeLogData.errorMessage = 'Error object provided but no readable message';
-              }
+// Simplified logging for development debugging only
+            const isDevelopment = import.meta.env?.DEV || false;
+            if (isDevelopment) {
+              console.info('WebSocket status change:', {
+                from: connectionStatus,
+                to: data?.status || 'unknown',
+                url: url,
+                timestamp: new Date().toISOString()
+              });
             }
-            
-            console.error('WebSocket Hook Error:', safeLogData);
             
             if (shouldShowToast) {
               showToast(errorMessage, toastType);
             }
             
-            // Safe error callback invocation with sanitized data
+            // Clean error callback with minimal data
             try {
-              const callbackData = {
-                status: data?.status,
-                type: data?.type,
-                code: data?.code,
+              onError?.({
+                status: data?.status || 'error',
                 message: errorMessage,
-                timestamp: new Date().toISOString(),
-                canRetry: data?.status !== 'server_unavailable'
-              };
-              onError?.(callbackData);
-            } catch (callbackError) {
-              console.error('Error in WebSocket error callback:', callbackError);
+                canRetry: data?.status !== 'server_unavailable',
+                timestamp: new Date().toISOString()
+              });
+} catch (callbackError) {
+              const isDevelopment = import.meta.env?.DEV || false;
+              if (isDevelopment) {
+                console.warn('Error callback failed:', callbackError.message);
+              }
             }
             break;
         }

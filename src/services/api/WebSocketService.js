@@ -255,39 +255,63 @@ this.ws.onerror = (event) => {
           };
           
           // Enhanced WebSocket error serialization
-          const serializeWebSocketError = (event) => {
+const serializeWebSocketError = (event) => {
             if (!event || typeof event !== 'object') {
-              return 'No event object provided';
+              return {
+                type: 'unknown',
+                message: 'No event object provided',
+                timestamp: new Date().toISOString()
+              };
             }
             
             try {
               const errorInfo = {
                 type: event.type || 'error',
                 message: event.message || 'WebSocket error occurred',
-                code: event.code || errorCode,
+                code: event.code || errorCode || null,
                 reason: event.reason || errorReason || 'No reason provided',
-                wasClean: event.wasClean,
-                target: event.target ? {
-                  readyState: event.target.readyState,
-                  url: event.target.url
-                } : null
+                wasClean: event.wasClean || false,
+                timestamp: new Date().toISOString(),
+                target: null
               };
               
-              // Extract additional properties that might exist
-              Object.keys(event).forEach(key => {
-                if (key !== 'target' && key !== 'currentTarget' && event[key] !== undefined) {
+              // Safely extract target information with defensive checks
+              if (event.target) {
+                try {
+                  errorInfo.target = {
+                    readyState: typeof event.target.readyState === 'number' ? event.target.readyState : null,
+                    url: typeof event.target.url === 'string' ? event.target.url : null,
+                    protocol: typeof event.target.protocol === 'string' ? event.target.protocol : null
+                  };
+                } catch (targetError) {
+                  errorInfo.target = { error: 'Could not access target properties' };
+                }
+              }
+              
+              // Safely extract additional properties without circular references
+              const safeKeys = ['type', 'message', 'code', 'reason', 'wasClean', 'timeStamp', 'isTrusted'];
+              safeKeys.forEach(key => {
+                if (key in event && event[key] !== undefined && !errorInfo.hasOwnProperty(key)) {
                   try {
-                    errorInfo[key] = typeof event[key] === 'object' ? 
-                      JSON.stringify(event[key]) : event[key];
+                    // Only include simple values to avoid circular references
+                    const value = event[key];
+                    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                      errorInfo[key] = value;
+                    }
                   } catch (e) {
-                    errorInfo[key] = `[${typeof event[key]}]`;
+                    // Skip properties that can't be safely accessed
                   }
                 }
               });
               
               return errorInfo;
             } catch (serializationError) {
-              return `Error serialization failed: ${serializationError.message}`;
+              return {
+                type: 'serialization_error',
+                message: 'Error serialization failed',
+                originalError: serializationError.message || 'Unknown serialization error',
+                timestamp: new Date().toISOString()
+              };
             }
           };
 
