@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/useToast";
 import webSocketService from "@/services/api/WebSocketService";
+import { Error } from "@/components/ui/Error";
 
 export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
@@ -40,61 +41,31 @@ export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
     }
 
 try {
-      await webSocketService.connect(url);
+await webSocketService.connect(url);
     } catch (error) {
-      console.error('WebSocket connection failed:', error);
-      
-      // Enhanced error handling with better message extraction
       let userMessage = 'Connection failed - will retry automatically';
       let toastType = 'error';
       
-      // Extract error message safely with additional checks
+      // Handle Error instances
       if (error instanceof Error) {
-        let message = '';
-        
-        // Safely extract message with fallbacks
-        if (error.message && typeof error.message === 'string') {
-          message = error.message.trim();
-        }
-        
-        // Prevent Event object string representations
-        if (message.includes('[object Event]') || message.includes('[object Object]')) {
-          message = 'WebSocket connection error';
-        }
-        
-        // Map common error patterns to user-friendly messages
-        if (message.includes('Failed to establish') || message.includes('server may be unavailable')) {
-          userMessage = 'Unable to connect to server - retrying';
-          toastType = 'warning';
-        } else if (message.includes('closed unexpectedly') || message.includes('was closed unexpectedly')) {
-          userMessage = 'Connection lost - attempting to reconnect';
-          toastType = 'warning';
-        } else if (message.includes('closing due to error')) {
-          userMessage = 'Connection interrupted - reconnecting';
-          toastType = 'warning';
-        } else if (message.includes('security') || message.includes('blocked')) {
-          userMessage = 'Connection blocked by security policy';
-          toastType = 'error';
-        } else if (message.includes('invalid connection') || message.includes('unknown error')) {
-          userMessage = 'Connection error - please try again';
-          toastType = 'error';
-        } else if (message && message.length > 0 && !message.includes('[object')) {
-          // Use the sanitized message if it's valid
-          userMessage = message;
-        }
-      } else if (error && typeof error === 'string' && error.trim()) {
-        // Handle string errors with sanitization
-        const sanitizedError = error.trim();
-        if (!sanitizedError.includes('[object')) {
-          userMessage = sanitizedError;
-        }
+        userMessage = error.message;
+      } 
+      // Handle event objects directly
+      else if (error instanceof Event) {
+        userMessage = `WebSocket error: ${error.type}`;
       }
-      
-      // Final check - ensure message is meaningful
-      if (userMessage.includes('[object') || userMessage === 'null' || userMessage === 'undefined') {
-        userMessage = 'Connection failed - will retry automatically';
+      // Handle other error types
+      else {
+        userMessage = String(error).includes('[object')
+          ? 'WebSocket connection error'
+          : String(error);
       }
-      
+
+      // Final sanitization
+      if (userMessage.includes('[object')) {
+        userMessage = 'WebSocket connection error';
+      }
+
       if (showConnectionToasts) {
         showToast(userMessage, toastType);
       }
@@ -128,67 +99,23 @@ useEffect(() => {
             onConnect?.(data);
             break;
           case 'disconnected':
-            if (data.code !== 1000) { // Not a normal closure
+if (data.code !== 1000) { // Not a normal closure
               showToast('Connection lost - attempting to reconnect', 'warning');
             }
             onDisconnect?.(data);
             break;
-case 'error':
-            // Enhanced error handling with better message sanitization
+          case 'error':
             let errorMessage = 'Connection error occurred';
-            let toastType = 'error';
             
-            // Extract and sanitize error message with multiple fallbacks
-            if (data?.code) {
-              switch (data.code) {
-                case 'CONNECTION_CLOSED':
-                  errorMessage = 'Connection unexpectedly closed';
-                  toastType = 'warning';
-                  break;
-                case 'CONNECTION_FAILED':
-                  errorMessage = 'Failed to establish connection - server may be unavailable';
-                  toastType = 'error';
-                  break;
-                case 'CONNECTION_ERROR':
-                  errorMessage = 'Connection encountered an unexpected error';
-                  toastType = 'warning';
-                  break;
-                case 'CONNECTION_CLOSING_ERROR':
-                  errorMessage = 'Connection closing due to error';
-                  toastType = 'warning';
-                  break;
-                case 'INVALID_CONNECTION':
-                  errorMessage = 'Invalid connection state detected';
-                  toastType = 'error';
-                  break;
-                case 'UNKNOWN_ERROR':
-                  errorMessage = 'Connection failed due to unknown error';
-                  toastType = 'error';
-                  break;
-                default:
-                  // Use the error message from WebSocketService with validation
-                  if (data.error && typeof data.error === 'string' && data.error.trim()) {
-                    const sanitizedError = data.error.trim();
-                    // Ensure it's not an object representation
-                    if (!sanitizedError.includes('[object') && sanitizedError !== 'null' && sanitizedError !== 'undefined') {
-                      errorMessage = sanitizedError;
-                    }
-                  }
-              }
-            } else if (data?.error && typeof data.error === 'string' && data.error.trim()) {
-              // Direct error message with sanitization
+            // Use the error message from WebSocketService with sanitization
+            if (data?.error && typeof data.error === 'string' && data.error.trim()) {
               const sanitizedError = data.error.trim();
-              if (!sanitizedError.includes('[object') && sanitizedError !== 'null' && sanitizedError !== 'undefined') {
+              if (!sanitizedError.includes('[object')) {
                 errorMessage = sanitizedError;
               }
             }
             
-            // Final validation - ensure we never show Event object representations
-            if (errorMessage.includes('[object Event]') || errorMessage.includes('[object Object]')) {
-              errorMessage = 'WebSocket connection error occurred';
-            }
-            
-            showToast(errorMessage, toastType);
+            showToast(errorMessage, 'error');
             onError?.(data);
             break;
         }

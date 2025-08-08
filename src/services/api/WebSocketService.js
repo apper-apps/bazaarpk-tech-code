@@ -10,7 +10,7 @@ class WebSocketService {
     this.heartbeatInterval = null;
     this.messageQueue = [];
     this.isOnline = navigator.onLine;
-    
+    this.errorEmitted = false;
     // Listen for online/offline events
     window.addEventListener('online', () => {
       this.isOnline = true;
@@ -41,10 +41,11 @@ class WebSocketService {
         this.socket = new WebSocket(url);
         this.connectionId = Date.now().toString();
 
-        this.socket.onopen = (event) => {
+this.socket.onopen = (event) => {
           console.log('WebSocket connected successfully');
           this.isConnecting = false;
           this.reconnectAttempts = 0;
+          this.errorEmitted = false;
           this.startHeartbeat();
           this.flushMessageQueue();
           
@@ -67,9 +68,10 @@ class WebSocketService {
           }
         };
 
-        this.socket.onclose = (event) => {
+this.socket.onclose = (event) => {
           console.log('WebSocket connection closed', event.code, event.reason);
           this.isConnecting = false;
+          this.errorEmitted = false;
           this.stopHeartbeat();
           
           this.emit('connection', { 
@@ -83,94 +85,35 @@ class WebSocketService {
           if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
             this.scheduleReconnect();
           }
-};
+        };
 
-this.socket.onerror = (error) => {
-          console.error('WebSocket error:', error);
+this.socket.onerror = (event) => {
+          console.error('WebSocket error event:', event);
+          
+          // Prevent duplicate error emissions
+          if (this.errorEmitted) return;
+          this.errorEmitted = true;
+          
           this.isConnecting = false;
           
-          // Enhanced error handling - ensure no Event objects leak through
-          let errorMessage = 'WebSocket connection error';
-          let errorCode = 'WEBSOCKET_ERROR';
-          let readyState = 3; // Default to CLOSED state
+          // Create a safe error message
+          const errorMessage = event && event.message 
+            ? event.message 
+            : `WebSocket error: ${event.type || 'unknown error'}`;
           
-          // Handle Event objects with additional safety checks
-          if (error && typeof error === 'object' && error.constructor === Event) {
-            // Safely extract WebSocket from Event
-            const ws = error.target;
-            if (ws && ws instanceof WebSocket) {
-              readyState = typeof ws.readyState === 'number' ? ws.readyState : 3;
-              
-              // Map readyState to meaningful messages with better descriptions
-              switch (readyState) {
-                case WebSocket.CONNECTING:
-                  errorMessage = 'Failed to establish WebSocket connection - server may be unavailable';
-                  errorCode = 'CONNECTION_FAILED';
-                  break;
-                case WebSocket.OPEN:
-                  errorMessage = 'WebSocket connection encountered an unexpected error';
-                  errorCode = 'CONNECTION_ERROR';
-                  break;
-                case WebSocket.CLOSING:
-                  errorMessage = 'WebSocket connection closing due to error';
-                  errorCode = 'CONNECTION_CLOSING_ERROR';
-                  break;
-                case WebSocket.CLOSED:
-                default:
-                  errorMessage = 'WebSocket connection was closed unexpectedly';
-                  errorCode = 'CONNECTION_CLOSED';
-                  break;
-              }
-            } else {
-              // Event without valid WebSocket target
-              errorMessage = 'WebSocket connection failed - invalid connection state';
-              errorCode = 'INVALID_CONNECTION';
-            }
-          } else if (error instanceof Error) {
-            // Handle standard Error objects with better message extraction
-            errorMessage = (error.message && error.message.trim()) || 'WebSocket error occurred';
-            errorCode = (error.name && error.name.trim()) || 'WEBSOCKET_ERROR';
-            
-            // Prevent "[object Object]" messages
-            if (errorMessage === '[object Object]' || errorMessage.includes('[object')) {
-              errorMessage = 'WebSocket connection error occurred';
-            }
-          } else if (typeof error === 'string' && error.trim()) {
-            // Handle string errors with sanitization
-            errorMessage = error.trim();
-            errorCode = 'STRING_ERROR';
-            
-            // Prevent generic object string representations
-            if (errorMessage.includes('[object') || errorMessage === 'null' || errorMessage === 'undefined') {
-              errorMessage = 'WebSocket connection error';
-            }
-          } else {
-            // Fallback for any other error types (null, undefined, unknown objects)
-            errorMessage = 'WebSocket connection failed - unknown error';
-            errorCode = 'UNKNOWN_ERROR';
-          }
-          
-          // Final sanitization - ensure we never send Event objects or object representations
-          if (typeof errorMessage !== 'string' || errorMessage.includes('[object')) {
-            errorMessage = 'WebSocket connection error';
-          }
-          
-          // Create completely safe error data object
+          // Create sanitized error data
           const safeErrorData = {
             status: 'error',
             error: errorMessage,
-            code: errorCode,
-            readyState: readyState,
+            code: 'WEBSOCKET_ERROR',
+            readyState: this.socket ? this.socket.readyState : 3,
             timestamp: new Date().toISOString()
           };
-          
-          // Log sanitized error for debugging
+
           console.error('Processed WebSocket error:', safeErrorData);
-          
-          // Emit safe error data
           this.emit('connection', safeErrorData);
           
-          // Create Error object with safe message
+          // Reject with proper error
           reject(new Error(errorMessage));
         };
 
