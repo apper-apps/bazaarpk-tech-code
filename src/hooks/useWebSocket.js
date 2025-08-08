@@ -41,47 +41,94 @@ const connect = useCallback(async () => {
     try {
       await webSocketService.connect(url);
 } catch (error) {
-      // Enhanced error processing with categories and suggestions
+      // Enhanced error processing with comprehensive fallback handling
       let userMessage = 'Connection issue occurred';
       let toastType = 'error';
       let shouldShowToast = showConnectionToasts;
       
-      // Handle structured error data from WebSocketService
-      if (error && typeof error === 'object' && error.message) {
-        userMessage = error.message;
-        
-        // Add suggestion if available and space permits
-        if (error.suggestion && error.message.length < 50) {
-          userMessage += ` - ${error.suggestion}`;
+      try {
+        // Handle various error object formats
+        if (error && typeof error === 'object') {
+          // Handle structured error objects (from WebSocketService)
+          if (error.message) {
+            userMessage = error.message;
+            
+            // Add suggestion if available and space permits
+            if (error.suggestion && error.message.length < 50) {
+              userMessage += ` - ${error.suggestion}`;
+            }
+            
+            // Adjust toast behavior based on error category
+            if (error.category === 'closing' || error.category === 'timeout') {
+              toastType = 'warning';
+            } else if (error.category === 'auth') {
+              toastType = 'error';
+              shouldShowToast = true; // Always show auth errors
+            } else if (error.category === 'server') {
+              // Don't spam server error toasts
+              shouldShowToast = showConnectionToasts && Math.random() > 0.7;
+            } else if (error.category === 'connection') {
+              toastType = 'warning';
+            }
+          }
+          // Handle malformed error objects that might contain nested error data
+          else if (error.error && error.error.message) {
+            userMessage = error.error.message;
+          }
+          // Handle error objects with stack property but no message
+          else if (error.stack && Array.isArray(error.stack) && error.stack.length === 0) {
+            userMessage = 'Connection unavailable';
+            toastType = 'warning';
+          }
+          // Handle serialized error objects
+          else if (typeof error === 'object' && Object.keys(error).length > 0) {
+            userMessage = JSON.stringify(error).includes('Connection unavailable') 
+              ? 'Connection unavailable' 
+              : 'Connection error occurred';
+          }
+        } 
+        // Handle Error instances
+        else if (error instanceof Error && error.message) {
+          userMessage = error.message.substring(0, 80);
+        } 
+        // Handle string errors
+        else if (typeof error === 'string') {
+          userMessage = error.substring(0, 80);
         }
-        
-        // Adjust toast behavior based on error category
-        if (error.category === 'closing' || error.category === 'timeout') {
-          toastType = 'warning';
-        } else if (error.category === 'auth') {
-          toastType = 'error';
-          shouldShowToast = true; // Always show auth errors
-        } else if (error.category === 'server') {
-          // Don't spam server error toasts
-          shouldShowToast = showConnectionToasts && Math.random() > 0.7;
+        // Handle null/undefined errors
+        else if (!error) {
+          userMessage = 'Unknown connection error';
         }
-      } else if (error instanceof Error && error.message) {
-        userMessage = error.message.substring(0, 80);
-      } else if (typeof error === 'string') {
-        userMessage = error.substring(0, 80);
+      } catch (processingError) {
+        // Fallback if error processing itself fails
+        userMessage = 'Connection processing error';
+        console.warn('Error processing WebSocket error:', processingError);
       }
       
-      // Clean up remaining technical jargon for fallback cases
+      // Clean up technical jargon for user-friendly messages
       userMessage = userMessage
         .replace(/WebSocket/gi, 'Connection')
         .replace(/ECONNREFUSED/gi, 'Server unavailable')
-        .replace(/ETIMEDOUT/gi, 'Connection timeout');
+        .replace(/ETIMEDOUT/gi, 'Connection timeout')
+        .replace(/Connection unavailable/gi, 'Connection unavailable')
+        .replace(/readyState/gi, 'connection status')
+        .replace(/\[object Object\]/gi, 'Connection error');
+      
+      // Ensure message length is reasonable
+      if (userMessage.length > 100) {
+        userMessage = userMessage.substring(0, 97) + '...';
+      }
       
       if (shouldShowToast) {
         showToast(userMessage, toastType);
       }
       
-      console.error('WebSocket connection failed:', userMessage);
+      console.error('WebSocket connection failed:', {
+        originalError: error,
+        processedMessage: userMessage,
+        errorType: typeof error,
+        errorConstructor: error?.constructor?.name
+      });
     }
   }, [isOnline, showConnectionToasts, showToast, url]);
 

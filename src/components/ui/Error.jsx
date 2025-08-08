@@ -284,17 +284,25 @@ export const Error = ({
   // Get base content
   const baseContent = getDefaultContent();
 
-// Enhanced WebSocket error detection
+// Enhanced WebSocket error detection with comprehensive pattern matching
   let errorType = type;
   if (type === 'general' || type === 'network') {
     if (message && (
       message.toLowerCase().includes('websocket') ||
       message.toLowerCase().includes('real-time') ||
       message.toLowerCase().includes('connection failed') ||
+      message.toLowerCase().includes('connection unavailable') ||
       message.toLowerCase().includes('[object object]') ||
       message.toLowerCase().includes('websocket_error') ||
       message.toLowerCase().includes('readystate') ||
-      message.includes('{"status":"error"')
+      message.toLowerCase().includes('connection status') ||
+      message.toLowerCase().includes('connection error') ||
+      message.toLowerCase().includes('connection timeout') ||
+      message.toLowerCase().includes('connection processing error') ||
+      message.includes('{"status":"error"') ||
+      message.includes('{"message":') ||
+      /connection.{0,20}(failed|unavailable|error|timeout|refused)/i.test(message) ||
+      /real.?time.{0,10}(error|failed|connection)/i.test(message)
     )) {
       errorType = 'websocket';
     }

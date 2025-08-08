@@ -1,3 +1,5 @@
+import React from "react";
+import { Error } from "@/components/ui/Error";
 class WebSocketService {
   constructor() {
     this.socket = null;
@@ -161,15 +163,35 @@ this.socket.onerror = (event) => {
           console.error('WebSocket connection failed:', errorMessage);
           
           // Emit clean error data
-          this.emit('connection', errorData);
+this.emit('connection', errorData);
           
-          // Reject with simple Error instance
-          reject(new Error(errorMessage));
+          // Create consistent error object with both Error instance properties and structured data
+          const connectionError = new Error(errorMessage);
+          connectionError.category = errorData.category;
+          connectionError.suggestion = errorData.suggestion;
+          connectionError.timestamp = errorData.timestamp;
+          connectionError.retryable = errorData.retryable;
+          
+          reject(connectionError);
         };
 
       } catch (error) {
         this.isConnecting = false;
-        reject(error);
+        
+        // Ensure all errors have consistent structure
+        if (!(error instanceof Error)) {
+          const structuredError = new Error(typeof error === 'string' ? error : 'WebSocket connection failed');
+          structuredError.category = 'connection';
+          structuredError.suggestion = 'Check your internet connection';
+          structuredError.retryable = true;
+          reject(structuredError);
+        } else {
+          // Add missing properties to existing Error instances
+          if (!error.category) error.category = 'connection';
+          if (!error.suggestion) error.suggestion = 'Try refreshing the page';
+          if (error.retryable === undefined) error.retryable = true;
+          reject(error);
+}
       }
     });
   }
