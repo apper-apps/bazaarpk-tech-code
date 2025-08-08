@@ -103,19 +103,32 @@ this.socket.onerror = (event) => {
           
           this.isConnecting = false;
           
-          // Simplified, fail-safe error message extraction
-          let errorMessage = 'Connection error';
+          // Bulletproof error message extraction - guaranteed string output
+          let errorMessage = 'WebSocket connection error';
           
-          // Simple fallback chain - guaranteed to produce a string
-          if (event) {
-            errorMessage = event.message || 
-                          event.type || 
-                          event.code || 
-                          'Connection error';
+          // Extract meaningful error information with strict string conversion
+          if (event && typeof event === 'object') {
+            // Try multiple properties, convert everything to string immediately
+            const potentialMessages = [
+              event.message,
+              event.type,
+              event.reason,
+              event.code,
+              event.toString?.()
+            ].filter(Boolean).map(msg => String(msg));
+            
+            if (potentialMessages.length > 0) {
+              errorMessage = potentialMessages[0];
+            }
+          } else if (event) {
+            // Handle non-object events
+            errorMessage = String(event);
           }
           
-          // Final safety net - ensure we have a string
-          errorMessage = String(errorMessage || 'Connection error');
+          // Ensure we never have "[object Object]" or similar
+          if (errorMessage.includes('[object') || errorMessage === '[object Object]') {
+            errorMessage = 'WebSocket connection error';
+          }
           
           const readyState = this.socket ? this.socket.readyState : 3;
           const stateName = this.getStateName(readyState);
@@ -123,19 +136,22 @@ this.socket.onerror = (event) => {
           // Create user-friendly error message
           const finalErrorMessage = `WebSocket connection failed (${stateName})`;
           
-          // Create clean error data
+          // Create clean error data - all strings guaranteed
           const errorData = {
             status: 'error',
             error: finalErrorMessage,
             code: 'WEBSOCKET_ERROR',
             readyState: readyState,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            originalMessage: errorMessage
           };
           
           console.error('WebSocket error occurred:', {
             message: errorMessage,
+            finalMessage: finalErrorMessage,
             state: stateName,
-            readyState: readyState
+            readyState: readyState,
+            eventType: typeof event
           });
           
           // Emit clean error data for listeners

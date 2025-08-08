@@ -83,7 +83,7 @@ export const Error = ({
     };
   }, []);
 
-  // Enhanced error content based on type with browser-specific messaging
+// Enhanced error content based on type with browser-specific messaging
   const getDefaultContent = () => {
     const baseContent = {
       network: {
@@ -97,6 +97,18 @@ export const Error = ({
           'Try refreshing the page',
           'Disable VPN if using one',
           'Check firewall settings'
+        ]
+      },
+      websocket: {
+        title: 'Real-time Connection Error',
+        message: 'Unable to establish real-time connection. Some features may not update automatically.',
+        icon: Wifi,
+        suggestions: [
+          'Check your internet connection stability',
+          'Try refreshing the page',
+          'Disable browser extensions that might block WebSockets',
+          'Check if your network allows WebSocket connections',
+          'Contact support if the problem persists'
         ]
       },
       validation: {
@@ -159,11 +171,26 @@ export const Error = ({
           'Try again in a few moments',
           'Contact support if the issue persists'
         ]
-      }
+}
     };
 
-    let content = baseContent[type] || baseContent.default;
+    return baseContent;
+  };
 
+    // Auto-detect WebSocket errors from message content
+    let errorType = type;
+    if (type === 'general' || type === 'network') {
+      if (message && (
+        message.toLowerCase().includes('websocket') ||
+        message.toLowerCase().includes('real-time') ||
+        message.toLowerCase().includes('connection failed') ||
+        message.toLowerCase().includes('[object object]')
+      )) {
+        errorType = 'websocket';
+      }
+    }
+
+    let content = baseContent[errorType] || baseContent.default;
     // Browser-specific modifications
     if (browserInfo) {
       if (browserInfo.mobile && type === 'network') {

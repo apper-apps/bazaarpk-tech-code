@@ -41,33 +41,45 @@ export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
 try {
       await webSocketService.connect(url);
     } catch (error) {
-      // Simplified, bulletproof error message extraction
+      // Bulletproof error message extraction - prevents "[object Object]"
       let userMessage = 'Connection failed - will retry automatically';
       
-      // Simple extraction with guaranteed string output
+      // Strict string conversion with fallback chain
       if (error instanceof Error) {
         userMessage = error.message || 'WebSocket connection error';
       } else if (typeof error === 'string') {
         userMessage = error;
       } else if (error && typeof error === 'object') {
-        // Extract common error properties with fallback
-        userMessage = error.message || 
-                     error.error || 
-                     error.type || 
-                     error.code || 
-                     'WebSocket connection error';
+        // Extract from common error properties, convert immediately to string
+        const errorProps = [
+          error.message,
+          error.error,
+          error.type,
+          error.code,
+          error.reason
+        ].filter(Boolean).map(prop => String(prop));
+        
+        if (errorProps.length > 0) {
+          userMessage = errorProps[0];
+        }
+      } else if (error) {
+        // Handle any other error types
+        userMessage = String(error);
       }
       
-      // Ensure final result is always a string
-      userMessage = String(userMessage || 'WebSocket connection failed');
+      // Final safety check - prevent object serialization artifacts
+      if (userMessage.includes('[object') || userMessage === '[object Object]') {
+        userMessage = 'WebSocket connection failed - please try again';
+      }
       
       if (showConnectionToasts) {
         showToast(userMessage, 'error');
       }
       
       console.error('WebSocket connection failed:', {
-        type: typeof error,
-        message: userMessage
+        originalError: error,
+        errorType: typeof error,
+        processedMessage: userMessage
       });
     }
   }, [isOnline, showConnectionToasts, showToast, url]);
@@ -105,7 +117,7 @@ if (data.code !== 1000) { // Not a normal closure
             onDisconnect?.(data);
             break;
 case 'error':
-            // Simple, fail-safe error handling
+            // Bulletproof error message extraction for WebSocket errors
             let errorMessage = 'Connection error occurred';
             
             if (data.error) {
@@ -114,15 +126,28 @@ case 'error':
               } else if (data.error instanceof Error) {
                 errorMessage = data.error.message || 'WebSocket error';
               } else if (typeof data.error === 'object') {
-                errorMessage = data.error.message || 
-                              data.error.type || 
-                              data.error.code || 
-                              'WebSocket connection error';
+                // Extract from multiple properties, ensure string conversion
+                const errorProps = [
+                  data.error.message,
+                  data.error.error,
+                  data.error.type,
+                  data.error.code,
+                  data.error.reason
+                ].filter(Boolean).map(prop => String(prop));
+                
+                if (errorProps.length > 0) {
+                  errorMessage = errorProps[0];
+                }
+              } else {
+                // Handle any other error types
+                errorMessage = String(data.error);
               }
             }
             
-            // Ensure we always have a string
-            errorMessage = String(errorMessage || 'Connection error occurred');
+            // Prevent object serialization artifacts
+            if (errorMessage.includes('[object') || errorMessage === '[object Object]') {
+              errorMessage = 'WebSocket connection error - please try again';
+            }
             
             setConnectionStatus('error');
             
