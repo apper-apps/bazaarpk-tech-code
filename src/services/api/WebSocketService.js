@@ -220,7 +220,7 @@ this.ws = new WebSocket(wsUrl);
           resolve();
         };
 
-        this.ws.onclose = (event) => {
+this.ws.onclose = (event) => {
           clearTimeout(this.connectionTimeout);
           this.stopHeartbeat();
           
@@ -251,7 +251,7 @@ this.ws = new WebSocket(wsUrl);
           }
         };
 
-this.ws.onerror = (event) => {
+        this.ws.onerror = (event) => {
           // Prevent duplicate error emissions
           if (this.errorEmitted) return;
           this.errorEmitted = true;
@@ -261,10 +261,11 @@ this.ws.onerror = (event) => {
           // Enhanced development detection and WebSocket disable support
           const isDev = import.meta.env.MODE === 'development' || import.meta.env.DEV;
           const isWebSocketDisabled = import.meta.env.VITE_DISABLE_WEBSOCKET === 'true';
+          const wsUrl = this.url || this.getWebSocketUrl();
           const isLocalhostFailure = wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1');
           const wsState = this.ws?.readyState ?? 3;
           
-          // Initialize error handling variables
+          // Initialize error handling variables - FIXED: Declare variables at the top
           let errorCategory = 'network';
           let userMessage = 'Connection lost';
           let suggestion = 'Please check your internet connection and try again';
@@ -275,7 +276,7 @@ this.ws.onerror = (event) => {
           if (isWebSocketDisabled && isDev) {
             errorCategory = 'disabled';
             userMessage = 'WebSocket disabled via configuration - app working offline';
-suggestion = 'Set VITE_DISABLE_WEBSOCKET=false in .env to enable WebSocket connections';
+            suggestion = 'Set VITE_DISABLE_WEBSOCKET=false in .env to enable WebSocket connections';
           } else {
             // Enhanced development localhost failure handling
             if (isLocalhostFailure && isDev && wsState === 3) {
@@ -289,7 +290,6 @@ suggestion = 'Set VITE_DISABLE_WEBSOCKET=false in .env to enable WebSocket conne
               // Process other error scenarios
               if (errorReason && typeof errorReason === 'string' && errorReason.trim()) {
                 const reason = errorReason.toLowerCase();
-                const wsUrl = this.url || this.getWebSocketUrl();
                 const isLocalhostConnection = wsUrl && (wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1'));
                 
                 if (reason.includes('server') || reason.includes('503') || reason.includes('502')) {
@@ -339,7 +339,7 @@ suggestion = 'Set VITE_DISABLE_WEBSOCKET=false in .env to enable WebSocket conne
             }
           }
 
-const error = {
+          const error = {
             message: userMessage,
             category: errorCategory,
             suggestion: suggestion,
