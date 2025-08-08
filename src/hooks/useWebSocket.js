@@ -32,70 +32,43 @@ export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
   }, []);
 
   // Connection management
-  const connect = useCallback(async () => {
+const connect = useCallback(async () => {
     if (!isOnline) {
       showToast('Cannot connect - device is offline', 'warning');
       return;
     }
 
-try {
+    try {
       await webSocketService.connect(url);
     } catch (error) {
-      // Simplified and robust error message extraction
+      // Simple, reliable error message extraction
       let userMessage = 'WebSocket connection failed';
       
-      try {
-        // Handle standard Error instances
-        if (error instanceof Error && error.message) {
-          userMessage = error.message;
-        } 
-        // Handle string errors
-        else if (typeof error === 'string' && error.trim()) {
-          userMessage = error.trim();
-        }
-        // Handle WebSocket service error objects
-        else if (error && typeof error === 'object') {
-          if (error.code === 'WEBSOCKET_ERROR') {
-            userMessage = 'Unable to establish WebSocket connection';
-          } else if (error.name === 'NetworkError') {
-            userMessage = 'Network error - check your connection';
-          } else if (error.name === 'SecurityError') {
-            userMessage = 'Connection blocked by security policy';
-          } else if (typeof error.message === 'string') {
-            userMessage = error.message;
-          }
-        }
-        
-        // Final validation and cleanup
-        if (!userMessage || 
-            typeof userMessage !== 'string' || 
-            userMessage.includes('[object') || 
-            userMessage === '[object Object]' ||
-            !userMessage.trim()) {
-          userMessage = 'WebSocket connection failed - please try again';
-        }
-        
-        // Limit message length for UI display
-        if (userMessage.length > 100) {
-          userMessage = userMessage.substring(0, 100) + '...';
-        }
-        
-      } catch (sanitizationError) {
-        console.warn('Error message extraction failed:', sanitizationError);
-        userMessage = 'Connection error occurred - will retry automatically';
+      // Handle most common error patterns
+      if (error instanceof Error && typeof error.message === 'string') {
+        userMessage = error.message;
+      } else if (typeof error === 'string') {
+        userMessage = error;
+      } else if (error?.code === 'WEBSOCKET_ERROR') {
+        userMessage = 'Unable to establish WebSocket connection';
+      }
+      
+      // Ensure message is clean and meaningful
+      if (!userMessage || userMessage.includes('[object') || userMessage.length < 3) {
+        userMessage = 'WebSocket connection failed - please try again';
+      }
+      
+      // Limit length for UI
+      if (userMessage.length > 80) {
+        userMessage = userMessage.substring(0, 80) + '...';
       }
       
       if (showConnectionToasts) {
         showToast(userMessage, 'error');
       }
       
-      // Safe error logging without complex serialization
-      console.error('WebSocket connection failed:', {
-        message: userMessage,
-        errorType: typeof error,
-        isError: error instanceof Error,
-        url: url
-      });
+      // Simple error logging
+      console.error('WebSocket connection failed:', userMessage);
     }
   }, [isOnline, showConnectionToasts, showToast, url]);
 
@@ -117,7 +90,7 @@ try {
   // Setup connection status listener
 useEffect(() => {
     const unsubscribe = webSocketService.on('connection', (data) => {
-setConnectionStatus(data.status);
+      setConnectionStatus(data.status);
       
       if (showConnectionToasts) {
         switch (data.status) {
@@ -131,22 +104,21 @@ setConnectionStatus(data.status);
             }
             onDisconnect?.(data);
             break;
-case 'error':
-            // Robust error message extraction and cleaning
-            let errorMessage = 'Connection error occurred';
+          case 'error':
+            // Simple error message handling
+            let errorMessage = 'WebSocket connection error';
             
-            if (data.error && typeof data.error === 'string') {
-              // Clean malformed object references and limit length
-              errorMessage = data.error
-                .replace(/\[object\s+\w+\]/gi, 'connection error')
-                .replace(/WebSocket error error/gi, 'WebSocket connection error')
-                .replace(/error error/gi, 'connection error')
-                .trim()
-                .substring(0, 80);
+            if (data.error && typeof data.error === 'string' && data.error.length > 0) {
+              errorMessage = data.error;
               
-              // Ensure message is meaningful
-              if (!errorMessage || errorMessage === 'error' || errorMessage.length < 5) {
+              // Basic cleanup for common issues
+              if (errorMessage.includes('[object')) {
                 errorMessage = 'WebSocket connection error';
+              }
+              
+              // Limit length
+              if (errorMessage.length > 60) {
+                errorMessage = errorMessage.substring(0, 60) + '...';
               }
             }
             

@@ -103,24 +103,26 @@ this.socket.onerror = (event) => {
           
           this.isConnecting = false;
           
-          // Simple, reliable error message generation
+          // Generate simple, guaranteed string error message
           const readyState = this.socket ? this.socket.readyState : 3;
-          const stateName = this.getStateName(readyState);
-          
-          // Generate clean error message without complex extraction
           let errorMessage = 'WebSocket connection failed';
           
-          // Only handle simple, safe properties
-          if (event && typeof event === 'object' && event.type === 'error') {
-            errorMessage = 'WebSocket connection error';
+          // Add specific context based on ready state
+          switch (readyState) {
+            case 0:
+              errorMessage = 'WebSocket connection interrupted';
+              break;
+            case 2:
+              errorMessage = 'WebSocket connection closing';
+              break;
+            case 3:
+              errorMessage = 'WebSocket connection lost';
+              break;
+            default:
+              errorMessage = 'WebSocket connection error';
           }
           
-          // Add connection state context
-          if (stateName && stateName !== 'UNKNOWN') {
-            errorMessage = `${errorMessage} (${stateName})`;
-          }
-          
-          // Create simple, serializable error data
+          // Create clean, string-only error data
           const errorData = {
             status: 'error',
             error: errorMessage,
@@ -129,17 +131,13 @@ this.socket.onerror = (event) => {
             timestamp: new Date().toISOString()
           };
           
-          // Safe logging - avoid JSON.stringify of complex objects
-          console.error('WebSocket error:', {
-            message: errorMessage,
-            readyState: readyState,
-            timestamp: errorData.timestamp
-          });
+          // Simple logging with primitive values only
+          console.error('WebSocket error:', errorMessage, `(state: ${readyState})`);
           
-          // Emit clean error data
+          // Emit guaranteed clean error data
           this.emit('connection', errorData);
           
-          // Reject with clean Error instance
+          // Reject with simple Error instance
           reject(new Error(errorMessage));
         };
 
