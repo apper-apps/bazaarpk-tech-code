@@ -214,7 +214,7 @@ this.ws.onerror = (event) => {
           }
           
           // Extract from close event if available (sometimes error events precede close events)
-if (event && typeof event === 'object') {
+          if (event && typeof event === 'object') {
             errorCode = event.code || errorCode;
             errorReason = event.reason || errorReason;
           }
@@ -254,7 +254,7 @@ if (event && typeof event === 'object') {
             }
           };
           
-// Enhanced WebSocket error serialization
+          // Enhanced WebSocket error serialization
           const serializeWebSocketError = (event) => {
             if (!event || typeof event !== 'object') {
               return 'No event object provided';
@@ -301,84 +301,15 @@ if (event && typeof event === 'object') {
             timestamp: new Date().toISOString(),
             errorCategory: event && typeof event === 'object' ? 'websocket_connection' : 'websocket_unknown'
           };
-// Safe error details logging to prevent "[object Object]" messages
+          
+          // Safe error details logging to prevent "[object Object]" messages
           console.error('WebSocket error details:', JSON.stringify(errorDetails, null, 2));
           
           // Also log the raw event for debugging if it exists
           if (event && typeof event === 'object') {
             console.error('Raw WebSocket event:', event);
           }
-        }
-      } catch (error) {
-        console.error('WebSocket connection failed:', {
-          url: this.url,
-          error: error.message || 'Connection failed',
-          timestamp: new Date().toISOString()
-        });
-        
-        // Check if server is available before attempting connection
-        const isServerAvailable = await this.checkServerAvailability(url);
-        if (!isServerAvailable) {
-          const serverUnavailableError = {
-            message: 'Server is currently unavailable',
-            category: 'server_unavailable', 
-            canRetry: false,
-            url: url,
-            code: 'SERVER_DOWN',
-            timestamp: new Date().toISOString()
-          };
           
-          this.emit('connection', { 
-            status: 'error', 
-            error: serverUnavailableError,
-            type: 'server_unavailable'
-          });
-          return;
-        }
-        
-        // If server is available but connection still fails, it's a connection issue
-        const connectionError = {
-          message: 'Unable to establish connection',
-          category: 'connection',
-          canRetry: true,
-          url: url,
-          code: error.code || 'CONNECTION_FAILED',
-          timestamp: new Date().toISOString()
-        };
-        
-        this.emit('connection', { 
-          status: 'error', 
-          error: connectionError,
-          type: 'connection_failed'
-        });
-});
-      }
-    });
-  }
-
-  // Add server availability check method
-  async checkServerAvailability(url) {
-        // Extract host and port from WebSocket URL
-        const wsUrl = new URL(url);
-        const httpUrl = `http://${wsUrl.host}/health`;
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-        
-        const response = await fetch(httpUrl, {
-          method: 'GET',
-          signal: controller.signal,
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        clearTimeout(timeoutId);
-        return response.ok;
-      } catch (error) {
-// Server is not available or not responding
-        return false;
-      }
-    }
-
           // Process error reason if available
           if (errorReason && typeof errorReason === 'string' && errorReason.trim()) {
             const reason = errorReason.toLowerCase();
@@ -474,23 +405,100 @@ if (event && typeof event === 'object') {
         };
 
       } catch (error) {
-        console.error('WebSocket connection error:', error);
-        const connectionError = {
-          message: 'Unable to establish connection',
-          category: 'connection',
-          suggestion: 'Please check your internet connection',
-          canRetry: true,
-          originalError: error.message
-        };
-        reject(connectionError);
+        console.error('WebSocket connection failed:', {
+          url: this.url,
+          error: error.message || 'Connection failed',
+          timestamp: new Date().toISOString()
+        });
+        
+        // Check if server is available before attempting connection
+        this.checkServerAvailability(url)
+          .then(isServerAvailable => {
+            if (!isServerAvailable) {
+              const serverUnavailableError = {
+                message: 'Server is currently unavailable',
+                category: 'server_unavailable', 
+                canRetry: false,
+                url: url,
+                code: 'SERVER_DOWN',
+                timestamp: new Date().toISOString()
+              };
+              
+              this.emit('connection', { 
+                status: 'error', 
+                error: serverUnavailableError,
+                type: 'server_unavailable'
+              });
+              return;
+            }
+            
+            // If server is available but connection still fails, it's a connection issue
+            const connectionError = {
+              message: 'Unable to establish connection',
+              category: 'connection',
+              canRetry: true,
+              url: url,
+              code: error.code || 'CONNECTION_FAILED',
+              timestamp: new Date().toISOString()
+            };
+            
+            this.emit('connection', { 
+              status: 'error', 
+              error: connectionError,
+              type: 'connection_failed'
+            });
+          })
+          .catch(checkError => {
+            // If server availability check fails, treat as connection issue
+            const connectionError = {
+              message: 'Unable to establish connection',
+              category: 'connection',
+              canRetry: true,
+              url: url,
+              code: error.code || 'CONNECTION_FAILED',
+              timestamp: new Date().toISOString()
+            };
+            
+            this.emit('connection', { 
+              status: 'error', 
+              error: connectionError,
+              type: 'connection_failed'
+            });
+          });
       }
     });
+  }
+
+async checkServerAvailability(url) {
+    try {
+      // Extract host and port from WebSocket URL
+      const wsUrl = new URL(url);
+      const httpUrl = `http://${wsUrl.host}/health`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      
+      const response = await fetch(httpUrl, {
+        method: 'GET',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      clearTimeout(timeoutId);
+      return response.ok;
+    } catch (error) {
+      // Server is not available or not responding
+      return false;
+    }
   }
 
   /**
    * Disconnect WebSocket
    */
-  disconnect() {
+// Add server availability check method
+}
+
+disconnect() {
     this.isManualDisconnect = true;
     this.isDestroyed = true;
     this.stopHeartbeat();
