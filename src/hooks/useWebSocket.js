@@ -63,9 +63,8 @@ const connect = useCallback(async () => {
       if (!webSocketService || typeof webSocketService.connect !== 'function') {
         throw new Error('WebSocket service is not available');
       }
-      
-      await webSocketService.connect(url);
-} catch (error) {
+await webSocketService.connect(url);
+    } catch (error) {
       // Enhanced error handling with cleaner user feedback
       let userMessage = 'Working in offline mode';
       let toastType = 'info';
@@ -111,7 +110,7 @@ const connect = useCallback(async () => {
       }
 }
 
-      // Simplified error logging to reduce console noise
+// Simplified error logging to reduce console noise
       const isDevelopment = import.meta.env?.DEV || false;
       const logLevel = isDevelopment ? 'warn' : 'info';
       console[logLevel]('WebSocket connection unavailable:', {
@@ -119,6 +118,7 @@ const connect = useCallback(async () => {
         url: url,
         canRetry: shouldRetry,
         timestamp: new Date().toISOString()
+      });
       
       // Set appropriate connection status
       if (isServerDown) {
