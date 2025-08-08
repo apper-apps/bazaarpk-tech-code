@@ -338,9 +338,33 @@ class WebSocketService {
   /**
    * Handle incoming messages
    */
-  handleMessage(data) {
+handleMessage(data) {
     try {
-      const parsed = JSON.parse(data);
+      // Comprehensive data validation before JSON parsing
+      if (typeof data !== 'string' || data.length === 0) {
+        console.warn('WebSocket received invalid data type:', typeof data);
+        this.emit('message', { type: 'error', error: 'Invalid message format', data: null });
+        return;
+      }
+
+      // Trim whitespace and check for basic JSON structure
+      const trimmedData = data.trim();
+      if (!trimmedData.startsWith('{') && !trimmedData.startsWith('[')) {
+        // Handle plain text messages gracefully
+        this.emit('message', { type: 'text', data: trimmedData });
+        return;
+      }
+
+      // Attempt JSON parsing with enhanced error context
+      const parsed = JSON.parse(trimmedData);
+      
+      // Validate parsed object structure
+      if (parsed === null || (typeof parsed !== 'object' && !Array.isArray(parsed))) {
+        console.warn('WebSocket received invalid JSON structure');
+        this.emit('message', { type: 'invalid', data: trimmedData });
+        return;
+      }
+
       this.emit('message', parsed);
       
       // Handle heartbeat responses
@@ -348,13 +372,27 @@ class WebSocketService {
         clearTimeout(this.heartbeatTimeout);
       }
       
-      // Emit specific event type
-      if (parsed.type) {
+      // Emit specific event type for valid messages
+      if (parsed.type && typeof parsed.type === 'string') {
         this.emit(parsed.type, parsed);
       }
     } catch (error) {
-      // Handle plain text messages
-      this.emit('message', { type: 'text', data });
+      // Enhanced error handling with context preservation
+      const errorContext = {
+        message: error.message || 'JSON parsing failed',
+        dataPreview: typeof data === 'string' ? data.substring(0, 50) + (data.length > 50 ? '...' : '') : 'Non-string data',
+        dataType: typeof data,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.error('WebSocket message parsing error:', errorContext);
+      
+      // Emit safe error message without potentially problematic data
+      this.emit('message', { 
+        type: 'parse_error', 
+        error: 'Message format not supported',
+        context: errorContext
+      });
     }
   }
 

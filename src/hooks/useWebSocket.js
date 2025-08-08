@@ -127,18 +127,48 @@ useEffect(() => {
             onDisconnect?.(data);
             break;
 case 'error':
-            // Simple error message - never serialize objects
+case 'parse_error':
+case 'invalid':
+            // Enhanced error message handling with validation
             let errorMessage = 'Connection error';
+            let shouldShowToast = true;
             
-            // Only use string properties, never serialize objects
-            if (typeof data?.error === 'string') {
-              errorMessage = data.error.substring(0, 50);
-            } else if (data?.code === 'WEBSOCKET_ERROR') {
-              errorMessage = 'Service unavailable';
+            // Safe error message extraction with multiple fallbacks
+            try {
+              if (data?.status === 'parse_error') {
+                errorMessage = 'Message format error - connection may be unstable';
+              } else if (data?.type === 'invalid') {
+                errorMessage = 'Received invalid data format';
+                shouldShowToast = false; // Don't spam user with parsing errors
+              } else if (typeof data?.error === 'string' && data.error.length > 0) {
+                errorMessage = data.error.substring(0, 50);
+              } else if (data?.code === 'WEBSOCKET_ERROR') {
+                errorMessage = 'Service unavailable';
+              } else if (data?.message && typeof data.message === 'string') {
+                errorMessage = data.message.substring(0, 50);
+              }
+              
+              // Clean up technical jargon for user-friendly messages
+              errorMessage = errorMessage
+                .replace(/JSON.parse|SyntaxError|parse_error/gi, 'format error')
+                .replace(/WebSocket/gi, 'Connection')
+                .trim();
+                
+            } catch (msgError) {
+              console.warn('Error processing WebSocket error message:', msgError);
+              errorMessage = 'Connection issue detected';
             }
             
-            showToast(errorMessage, 'error');
-            onError?.(data);
+            if (shouldShowToast) {
+              showToast(errorMessage, 'error');
+            }
+            
+            // Safe error callback invocation
+            try {
+              onError?.(data);
+            } catch (callbackError) {
+              console.error('Error in WebSocket error callback:', callbackError);
+            }
             break;
         }
       }
