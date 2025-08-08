@@ -1827,9 +1827,8 @@ aria-hidden="true"
 <option value="most-popular">Most Popular</option>
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
-              <option value="last-updated">Last Updated</option>
+<option value="last-updated">Last Updated</option>
             </select>
-</select>
           </div>
         </div>
       </div>
