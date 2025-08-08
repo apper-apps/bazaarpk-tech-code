@@ -284,7 +284,7 @@ export const Error = ({
   // Get base content
   const baseContent = getDefaultContent();
 
-// Enhanced WebSocket error detection with comprehensive pattern matching
+// Comprehensive WebSocket error detection with enhanced pattern matching
   let errorType = type;
   if (type === 'general' || type === 'network') {
     if (message && (
@@ -292,6 +292,9 @@ export const Error = ({
       message.toLowerCase().includes('real-time') ||
       message.toLowerCase().includes('connection failed') ||
       message.toLowerCase().includes('connection unavailable') ||
+      message.toLowerCase().includes('connection lost') ||
+      message.toLowerCase().includes('localhost:8080') ||
+      message.toLowerCase().includes('ws://localhost') ||
       message.toLowerCase().includes('[object object]') ||
       message.toLowerCase().includes('websocket_error') ||
       message.toLowerCase().includes('readystate') ||
@@ -299,10 +302,14 @@ export const Error = ({
       message.toLowerCase().includes('connection error') ||
       message.toLowerCase().includes('connection timeout') ||
       message.toLowerCase().includes('connection processing error') ||
+      message.toLowerCase().includes('server not running') ||
+      message.toLowerCase().includes('server unavailable') ||
       message.includes('{"status":"error"') ||
       message.includes('{"message":') ||
-      /connection.{0,20}(failed|unavailable|error|timeout|refused)/i.test(message) ||
-      /real.?time.{0,10}(error|failed|connection)/i.test(message)
+      /connection.{0,20}(failed|unavailable|error|timeout|refused|lost)/i.test(message) ||
+      /real.?time.{0,10}(error|failed|connection)/i.test(message) ||
+      /websocket.{0,15}(error|failed|connection|server)/i.test(message) ||
+      /ws:\/\/localhost:\d+/i.test(message)
     )) {
       errorType = 'websocket';
     }

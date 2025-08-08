@@ -227,15 +227,15 @@ this.ws.onerror = (event) => {
           if (isWebSocketDisabled && isDev) {
             errorCategory = 'disabled';
             userMessage = 'WebSocket disabled via configuration - app working offline';
-            suggestion = 'Set VITE_DISABLE_WEBSOCKET=false in .env to enable WebSocket connections';
+suggestion = 'Set VITE_DISABLE_WEBSOCKET=false in .env to enable WebSocket connections';
           } else {
-            // Handle development localhost failures gracefully
+            // Enhanced development localhost failure handling
             if (isLocalhostFailure && isDev && wsState === 3) {
-              errorCategory = 'server_unavailable';
-              userMessage = 'Working in offline mode - all features available';
-              suggestion = 'WebSocket server not running. App works fully offline.';
+              errorCategory = 'development';
+              userMessage = 'Development mode - WebSocket server not running (working offline)';
+              suggestion = 'Start WebSocket server or set VITE_WS_URL to connect to remote server. App works fully offline.';
               
-              // Minimal development logging
+              // Development-specific guidance
               console.info(`WebSocket: ${wsUrl} unavailable - offline mode active`);
             } else {
               // Process other error scenarios
@@ -291,7 +291,7 @@ this.ws.onerror = (event) => {
             }
           }
 
-          const error = {
+const error = {
             message: userMessage,
             category: errorCategory,
             suggestion: suggestion,
@@ -304,6 +304,9 @@ this.ws.onerror = (event) => {
             readyState: wsState,
             stateName: this.getStateName(wsState),
             timestamp: new Date().toISOString(),
+            serverAvailable: !isLocalhostFailure || !isDev,
+            isLocalhost: isLocalhostFailure,
+            retryDelay: this.calculateRetryDelay(),
             toString: () => userMessage,
             valueOf: () => userMessage
           };
