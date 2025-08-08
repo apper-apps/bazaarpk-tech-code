@@ -291,5 +291,51 @@ div[class*="mask"][style*="position: fixed"],
 .admin-sidebar,
 .admin-content {
   z-index: 1001;
+}
+
+.admin-content {
+  z-index: 1001;
   position: relative;
+}
+
+/* Input field normalization for spacebar functionality */
+input, textarea, [contenteditable] {
+  white-space: normal !important;
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+}
+
+/* Ensure spacebar works in all input contexts */
+input:focus, textarea:focus, [contenteditable]:focus {
+  outline-offset: 2px;
+}
+
+/* Fix for contenteditable elements */
+[contenteditable] {
+  cursor: text;
+}
+
+[contenteditable]:empty:before {
+  content: attr(placeholder);
+  color: #9CA3AF;
+  cursor: text;
+}
+
+/* Prevent spacebar from being blocked by parent elements */
+.input-wrapper, .form-field, .search-container {
+  position: relative;
+}
+
+/* Enhanced input field styling with spacebar support */
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+input[type="search"], 
+input[type="url"],
+input[type="tel"],
+textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
 }

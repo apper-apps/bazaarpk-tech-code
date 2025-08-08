@@ -166,7 +166,14 @@ const handleChange = useCallback((e) => {
   };
 
   // Handle keyboard navigation and accessibility
-  const handleKeyDown = useCallback((e) => {
+const handleKeyDown = useCallback((e) => {
+    // Handle spacebar specifically to prevent blocking
+    if (e.key === ' ') {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      // Allow the default spacebar behavior to continue
+    }
+
     // Escape key clears input
     if (e.key === 'Escape' && props.clearable !== false) {
       setInternalValue('');
