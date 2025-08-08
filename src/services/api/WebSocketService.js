@@ -355,10 +355,8 @@ this.ws.onclose = (event) => {
 stateName: this.getStateName(wsState),
             timestamp: new Date().toISOString(),
             retryDelay: this.calculateRetryDelay(),
-            
-            serverAvailable: !isLocalhostFailure || !isDev,
+serverAvailable: !isLocalhostFailure || !isDev,
             isLocalhost: isLocalhostFailure,
-            retryDelay: retryDelay,
             toString: () => userMessage,
             valueOf: () => userMessage
           };
