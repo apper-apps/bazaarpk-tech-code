@@ -357,3 +357,86 @@ form input, form textarea, form [contenteditable] {
   user-select: text !important;
   touch-action: manipulation !important;
 }
+
+/* Enhanced CSS normalization for reliable spacebar functionality */
+input, textarea, [contenteditable] {
+  white-space: pre !important; /* Preserve spaces */
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  text-transform: none !important;
+  -webkit-text-security: none !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  user-select: text !important;
+}
+
+/* Fix for specific admin fields that might have issues */
+#product-name, 
+.brand-search input, 
+.category-search input, 
+.description-editor, 
+.short-description,
+input[name*="name"],
+input[name*="title"],
+input[name*="description"],
+textarea[name*="description"] {
+  white-space: normal !important;
+  word-spacing: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+/* Ensure input containers don't interfere with keyboard events */
+.input-wrapper, 
+.form-field, 
+.search-container,
+.form-group,
+.input-group {
+  position: relative;
+  pointer-events: auto !important;
+}
+
+.input-wrapper input,
+.input-wrapper textarea,
+.form-field input,
+.form-field textarea {
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  user-select: text !important;
+}
+
+/* Prevent any CSS animations or transitions from interfering with input */
+input:focus, textarea:focus, [contenteditable]:focus {
+  animation: none !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+/* Override any global styles that might block spacebar */
+input[type="text"], 
+input[type="email"], 
+input[type="search"], 
+input[type="url"], 
+input[type="tel"], 
+textarea {
+  -webkit-appearance: none;
+  appearance: none;
+  background-clip: padding-box !important;
+  border-style: solid;
+  border-width: 1px;
+  font: inherit;
+  vertical-align: baseline;
+}
+
+/* Ensure proper text cursor behavior */
+input, textarea, [contenteditable] {
+  cursor: text !important;
+}
+
+input:focus, textarea:focus, [contenteditable]:focus {
+  cursor: text !important;
+  outline-offset: 2px;
+}

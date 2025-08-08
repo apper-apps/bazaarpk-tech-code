@@ -167,11 +167,39 @@ const handleChange = useCallback((e) => {
 
   // Handle keyboard navigation and accessibility
 const handleKeyDown = useCallback((e) => {
-    // Handle spacebar specifically to prevent blocking
-    if (e.key === ' ') {
+    // Enhanced spacebar handling with better event control
+    if (e.key === ' ' || e.keyCode === 32) {
+      // Prevent any parent event handlers from interfering
       e.stopPropagation();
       e.stopImmediatePropagation();
-      // Allow the default spacebar behavior to continue
+      
+      // Ensure the spacebar character is inserted properly
+      if (!e.defaultPrevented) {
+        // Allow natural spacebar behavior
+        const currentTarget = e.currentTarget;
+        const currentValue = currentTarget.value;
+        const selectionStart = currentTarget.selectionStart;
+        const selectionEnd = currentTarget.selectionEnd;
+        
+        // If text is selected, replace it, otherwise insert space
+        const newValue = currentValue.substring(0, selectionStart) + ' ' + currentValue.substring(selectionEnd);
+        setInternalValue(newValue);
+        
+        if (onValueChange) onValueChange(newValue);
+        if (props.onChange) {
+          const changeEvent = { ...e, target: { ...e.target, value: newValue } };
+          props.onChange(changeEvent);
+        }
+        
+        // Set cursor position after the inserted space
+        setTimeout(() => {
+          currentTarget.setSelectionRange(selectionStart + 1, selectionStart + 1);
+        }, 0);
+        
+        // Prevent default to avoid double space insertion
+        e.preventDefault();
+      }
+      return;
     }
 
     // Escape key clears input
@@ -188,7 +216,7 @@ const handleKeyDown = useCallback((e) => {
     if (props.onKeyDown) {
       props.onKeyDown(e);
     }
-  }, [props.onKeyDown, onValueChange, props.onChange, props.clearable]);
+  }, [props.onKeyDown, onValueChange, props.onChange, props.clearable, setInternalValue]);
 
   // Focus management for accessibility
   const handleFocus = useCallback((e) => {
@@ -238,7 +266,7 @@ const handleKeyDown = useCallback((e) => {
         </p>
       )}
 
-<div className="relative">
+<div className="relative input-wrapper">
         <input
           {...props}
           id={inputId}
@@ -250,6 +278,7 @@ const handleKeyDown = useCallback((e) => {
           maxLength={maxLength}
           pattern={pattern}
           autoComplete={autoComplete}
+          data-spacebar-fixed="true"
           className={cn(
             "flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-500 transition-all duration-200",
             "focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-0",
