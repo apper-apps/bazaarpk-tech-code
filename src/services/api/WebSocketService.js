@@ -103,53 +103,24 @@ this.socket.onerror = (event) => {
           
           this.isConnecting = false;
           
-          // Extract basic error information safely
-          let errorMessage = 'WebSocket connection failed';
+          // Simple, reliable error message generation
           const readyState = this.socket ? this.socket.readyState : 3;
           const stateName = this.getStateName(readyState);
           
-          // Safe error message extraction
-          try {
-            if (event && typeof event === 'object') {
-              // Try to get standard error properties
-              if (typeof event.message === 'string') {
-                errorMessage = event.message;
-              } else if (typeof event.type === 'string') {
-                errorMessage = `WebSocket ${event.type} error`;
-              }
-              
-              // Handle close codes if available
-              if (event.code) {
-                const closeCodeMessages = {
-                  1000: 'Normal closure',
-                  1001: 'Going away',
-                  1006: 'Abnormal closure',
-                  1007: 'Invalid frame payload data',
-                  1008: 'Policy violation',
-                  1009: 'Message too big',
-                  1011: 'Unexpected condition',
-                  1015: 'TLS handshake failure'
-                };
-                errorMessage = closeCodeMessages[event.code] || errorMessage;
-              }
-            }
-          } catch (e) {
-            console.warn('Error extraction failed, using fallback message')
+          // Generate clean error message without complex extraction
+          let errorMessage = 'WebSocket connection failed';
+          
+          // Only handle simple, safe properties
+          if (event && typeof event === 'object' && event.type === 'error') {
+            errorMessage = 'WebSocket connection error';
           }
           
-          // Final sanitization
-          if (typeof errorMessage !== 'string' || 
-              errorMessage.includes('[object') || 
-              errorMessage === '[object Object]') {
-            errorMessage = `WebSocket connection error (${stateName})`;
+          // Add connection state context
+          if (stateName && stateName !== 'UNKNOWN') {
+            errorMessage = `${errorMessage} (${stateName})`;
           }
           
-          // Limit message length
-          if (errorMessage.length > 150) {
-            errorMessage = errorMessage.substring(0, 150) + '...';
-          }
-          
-          // Create sanitized error data
+          // Create simple, serializable error data
           const errorData = {
             status: 'error',
             error: errorMessage,
@@ -158,13 +129,17 @@ this.socket.onerror = (event) => {
             timestamp: new Date().toISOString()
           };
           
-          // Log with safe serialization
-          console.error('WebSocket error:', JSON.stringify(errorData));
+          // Safe logging - avoid JSON.stringify of complex objects
+          console.error('WebSocket error:', {
+            message: errorMessage,
+            readyState: readyState,
+            timestamp: errorData.timestamp
+          });
           
           // Emit clean error data
           this.emit('connection', errorData);
           
-          // Reject with proper Error instance
+          // Reject with clean Error instance
           reject(new Error(errorMessage));
         };
 

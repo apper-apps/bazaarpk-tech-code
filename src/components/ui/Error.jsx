@@ -180,19 +180,21 @@ export const Error = ({
   // Get base content
   const baseContent = getDefaultContent();
 
-  // Auto-detect WebSocket errors from message content
+// Enhanced WebSocket error detection
   let errorType = type;
   if (type === 'general' || type === 'network') {
     if (message && (
       message.toLowerCase().includes('websocket') ||
       message.toLowerCase().includes('real-time') ||
       message.toLowerCase().includes('connection failed') ||
-      message.toLowerCase().includes('[object object]')
+      message.toLowerCase().includes('[object object]') ||
+      message.toLowerCase().includes('websocket_error') ||
+      message.toLowerCase().includes('readystate') ||
+      message.includes('{"status":"error"')
     )) {
       errorType = 'websocket';
     }
   }
-
   let content = baseContent[errorType] || baseContent.default;
   
   // Browser-specific modifications
