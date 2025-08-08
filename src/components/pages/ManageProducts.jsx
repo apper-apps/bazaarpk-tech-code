@@ -1828,11 +1828,11 @@ aria-hidden="true"
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
               <option value="last-updated">Last Updated</option>
-</select>
+<option value="last-updated">Last Updated</option>
+            </select>
           </div>
         </div>
       </section>
-
       {/* Products Grid/List */}
       {/* Products Grid/List */}
 {/* Products Grid/List */}
@@ -1971,7 +1971,6 @@ viewMode={viewMode}
         </>
       )}
 
-      {/* Bulk Edit Modal */}
 {/* Bulk Edit Modal */}
       <AnimatePresence>
         {showBulkEditModal && (
