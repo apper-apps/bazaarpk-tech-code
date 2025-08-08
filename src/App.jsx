@@ -134,60 +134,117 @@ const SafeAdminComponent = ({ children, componentName, fallback }) => {
 };
 // Browser detection at module level to avoid re-computation
 const detectBrowser = () => {
-  const userAgent = navigator.userAgent;
-  const browserInfo = {
-    name: 'Unknown',
-    version: 'Unknown',
-    mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
-    tablet: /iPad|Android(?=.*Tablet)|(?=.*\bTablet\b)/.test(userAgent),
-    touch: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
-    screenReader: window.speechSynthesis !== undefined,
-    reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
-    highContrast: window.matchMedia('(prefers-contrast: high)').matches,
-    viewport: {
-      width: window.innerWidth,
-      height: window.innerHeight,
-      ratio: window.devicePixelRatio || 1
-    },
-    connection: navigator.connection ? {
-      effectiveType: navigator.connection.effectiveType,
-      downlink: navigator.connection.downlink,
-      rtt: navigator.connection.rtt
-    } : null
-  };
+  try {
+    // Initialize all variables with safe defaults first
+    const userAgent = navigator?.userAgent || '';
+    const connectionStatus = navigator?.connection || null;
+    
+    const browserInfo = {
+      name: 'Unknown',
+      version: 'Unknown',
+      mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
+      tablet: /iPad|Android(?=.*Tablet)|(?=.*\bTablet\b)/.test(userAgent),
+      touch: ('ontouchstart' in window) || (navigator?.maxTouchPoints > 0) || false,
+      screenReader: (typeof window !== 'undefined' && window.speechSynthesis !== undefined),
+      reducedMotion: (typeof window !== 'undefined' && window.matchMedia) ? 
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches : false,
+      darkMode: (typeof window !== 'undefined' && window.matchMedia) ? 
+        window.matchMedia('(prefers-color-scheme: dark)').matches : false,
+      highContrast: (typeof window !== 'undefined' && window.matchMedia) ? 
+        window.matchMedia('(prefers-contrast: high)').matches : false,
+      viewport: {
+        width: (typeof window !== 'undefined') ? window.innerWidth : 1920,
+        height: (typeof window !== 'undefined') ? window.innerHeight : 1080,
+        ratio: (typeof window !== 'undefined') ? (window.devicePixelRatio || 1) : 1
+      },
+      connection: null,
+      connectionStatus: 'unknown' // Initialize connectionStatus to prevent temporal dead zone
+    };
 
-  // Enhanced browser detection with version checking
-  if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
-    browserInfo.name = 'Chrome';
-    browserInfo.version = userAgent.match(/Chrome\/(\d+)/)?.[1] || 'Unknown';
-    browserInfo.modern = parseInt(browserInfo.version) >= 88;
-  } else if (userAgent.includes('Firefox')) {
-    browserInfo.name = 'Firefox';
-    browserInfo.version = userAgent.match(/Firefox\/(\d+)/)?.[1] || 'Unknown';
-    browserInfo.modern = parseInt(browserInfo.version) >= 85;
-  } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
-    browserInfo.name = 'Safari';
-    browserInfo.version = userAgent.match(/Version\/(\d+)/)?.[1] || 'Unknown';
-    browserInfo.modern = parseInt(browserInfo.version) >= 14;
-  } else if (userAgent.includes('Edg')) {
-    browserInfo.name = 'Edge';
-    browserInfo.version = userAgent.match(/Edg\/(\d+)/)?.[1] || 'Unknown';
-    browserInfo.modern = parseInt(browserInfo.version) >= 88;
+    // Safely handle connection status
+    if (connectionStatus) {
+      browserInfo.connection = {
+        effectiveType: connectionStatus.effectiveType || 'unknown',
+        downlink: connectionStatus.downlink || 0,
+        rtt: connectionStatus.rtt || 0
+      };
+      browserInfo.connectionStatus = 'connected';
+    }
+
+    // Enhanced browser detection with version checking
+    if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+      browserInfo.name = 'Chrome';
+      browserInfo.version = userAgent.match(/Chrome\/(\d+)/)?.[1] || 'Unknown';
+      browserInfo.modern = parseInt(browserInfo.version) >= 88;
+    } else if (userAgent.includes('Firefox')) {
+      browserInfo.name = 'Firefox';
+      browserInfo.version = userAgent.match(/Firefox\/(\d+)/)?.[1] || 'Unknown';
+      browserInfo.modern = parseInt(browserInfo.version) >= 85;
+    } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+      browserInfo.name = 'Safari';
+      browserInfo.version = userAgent.match(/Version\/(\d+)/)?.[1] || 'Unknown';
+      browserInfo.modern = parseInt(browserInfo.version) >= 14;
+    } else if (userAgent.includes('Edg')) {
+      browserInfo.name = 'Edge';
+      browserInfo.version = userAgent.match(/Edg\/(\d+)/)?.[1] || 'Unknown';
+      browserInfo.modern = parseInt(browserInfo.version) >= 88;
+    }
+
+    // Device categorization for admin interfaces
+    browserInfo.deviceType = browserInfo.mobile ? 'mobile' : 
+                            browserInfo.tablet ? 'tablet' : 'desktop';
+    browserInfo.adminOptimized = (browserInfo.modern || false) && 
+                                (browserInfo.deviceType === 'desktop' || 
+                                 browserInfo.deviceType === 'tablet');
+
+    return browserInfo;
+  } catch (error) {
+    console.warn('Browser detection failed:', error);
+    // Return safe defaults if detection fails
+    return {
+      name: 'Unknown',
+      version: 'Unknown',
+      mobile: false,
+      tablet: false,
+      touch: false,
+      screenReader: false,
+      reducedMotion: false,
+      darkMode: false,
+      highContrast: false,
+      modern: false,
+      viewport: { width: 1920, height: 1080, ratio: 1 },
+      connection: null,
+      connectionStatus: 'unknown',
+      deviceType: 'desktop',
+      adminOptimized: false
+    };
   }
-
-  // Device categorization for admin interfaces
-  browserInfo.deviceType = browserInfo.mobile ? 'mobile' : 
-                          browserInfo.tablet ? 'tablet' : 'desktop';
-  browserInfo.adminOptimized = browserInfo.modern && 
-                              (browserInfo.deviceType === 'desktop' || 
-                               browserInfo.deviceType === 'tablet');
-
-  return browserInfo;
 };
 
-// Static browser info - computed once
-const BROWSER_INFO = detectBrowser();
+// Initialize browser info with error handling
+let BROWSER_INFO;
+try {
+  BROWSER_INFO = detectBrowser();
+} catch (error) {
+  console.error('Failed to initialize browser info:', error);
+  BROWSER_INFO = {
+    name: 'Unknown',
+    version: 'Unknown',
+    mobile: false,
+    tablet: false,
+    touch: false,
+    screenReader: false,
+    reducedMotion: false,
+    darkMode: false,
+    highContrast: false,
+    modern: false,
+    viewport: { width: 1920, height: 1080, ratio: 1 },
+    connection: null,
+    connectionStatus: 'unknown',
+    deviceType: 'desktop',
+    adminOptimized: false
+  };
+}
 
 function AppContent() {
   const navigate = useNavigate();
