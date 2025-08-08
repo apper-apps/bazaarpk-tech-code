@@ -8,7 +8,7 @@ import ApperIcon from "@/components/ApperIcon";
 import Category from "@/components/pages/Category";
 import ProductManagementCard from "@/components/organisms/ProductManagementCard";
 import Empty from "@/components/ui/Empty";
-import ErrorComponent, { Error } from "@/components/ui/Error";
+import ErrorComponent from '@/components/ui/Error'
 import Loading from "@/components/ui/Loading";
 import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
