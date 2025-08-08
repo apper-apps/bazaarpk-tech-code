@@ -2,83 +2,64 @@ import React from "react"
 import ReactDOM from "react-dom/client"
 import App from "./App.jsx"
 import "./index.css"
-
-// Nuclear fallback solution for spacebar functionality
-// This is the most aggressive approach to ensure spaces work in all text inputs
+// Clean spacebar functionality fix for text inputs
+// Ensures spacebar works properly without interfering with React state management
 document.addEventListener('keydown', function(e) {
-  const active = document.activeElement;
-  if (e.key === ' ' && (active.tagName === 'INPUT' || 
-                       active.tagName === 'TEXTAREA' || 
-                       active.isContentEditable)) {
-    e.stopImmediatePropagation();
-    e.preventDefault();
+  // Only handle spacebar in text input fields
+  if (e.key === ' ') {
+    const activeElement = document.activeElement;
+    const isTextInput = activeElement && (
+      activeElement.tagName === 'INPUT' || 
+      activeElement.tagName === 'TEXTAREA' || 
+      activeElement.isContentEditable
+    );
     
-    const start = active.selectionStart;
-    const end = active.selectionEnd;
-    const value = active.value || active.innerText;
-    
-    const newValue = value.substring(0, start) + ' ' + value.substring(end);
-    
-    if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') {
-      active.value = newValue;
-    } else {
-      active.innerText = newValue;
+    // For text inputs, ensure spacebar propagation is not blocked
+    if (isTextInput) {
+      e.stopImmediatePropagation();
+      // Allow default behavior - don't preventDefault
+      return true;
     }
-    
-    // Set cursor position
-    active.selectionStart = active.selectionEnd = start + 1;
-    
-    // Trigger input event for React state updates
-    const inputEvent = new Event('input', { bubbles: true });
-    active.dispatchEvent(inputEvent);
   }
-}, true);
+}, { capture: true });
 
-// Global spacebar enabler for all input fields (enhanced backup)
-function enableSpacebar() {
-  document.querySelectorAll('input, textarea, [contenteditable]').forEach(el => {
-    // Remove existing listeners to prevent duplicates
-    el.removeEventListener('keydown', handleSpacebarKeydown);
+// Backup handler to ensure spacebar works in dynamically created inputs
+function ensureSpacebarWorks() {
+  document.querySelectorAll('input, textarea, [contenteditable]').forEach(input => {
+    // Remove any conflicting event handlers
+    input.style.pointerEvents = '';
+    input.style.userSelect = '';
     
-    // Add the spacebar handler
-    el.addEventListener('keydown', handleSpacebarKeydown, true);
+    // Ensure input can receive focus and handle spacebar
+    if (!input.hasAttribute('data-spacebar-fixed')) {
+      input.setAttribute('data-spacebar-fixed', 'true');
+      
+      input.addEventListener('keydown', function(e) {
+        if (e.key === ' ') {
+          // Prevent any parent handlers from interfering
+          e.stopImmediatePropagation();
+        }
+      }, { capture: true });
+    }
   });
 }
 
-// Enhanced spacebar keydown handler
-function handleSpacebarKeydown(e) {
-  const activeElement = document.activeElement;
-  const isTextInput = activeElement.tagName === 'INPUT' || 
-                     activeElement.tagName === 'TEXTAREA' || 
-                     activeElement.isContentEditable;
-  
-  if (e.key === ' ' && isTextInput) {
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    // Allow default spacebar behavior
-    return true;
-  }
-}
+// Apply fix on DOM load and for dynamic content
+document.addEventListener('DOMContentLoaded', ensureSpacebarWorks);
+window.addEventListener('load', ensureSpacebarWorks);
 
-// Run on initial load
-document.addEventListener('DOMContentLoaded', enableSpacebar);
-
-// Handle dynamically added content
+// Monitor for dynamically added inputs
 if (typeof MutationObserver !== 'undefined') {
-  const observer = new MutationObserver(() => {
-    // Debounce the enableSpacebar calls
-    clearTimeout(window.spacebarTimeout);
-    window.spacebarTimeout = setTimeout(enableSpacebar, 100);
+  const observer = new MutationObserver(function() {
+    clearTimeout(window.spacebarFixTimeout);
+    window.spacebarFixTimeout = setTimeout(ensureSpacebarWorks, 50);
   });
   
-  // Start observing once DOM is ready
-  document.addEventListener('DOMContentLoaded', () => {
-    observer.observe(document.body, { 
-      childList: true, 
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['contenteditable']
-    });
+  observer.observe(document.body, { 
+    childList: true, 
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['contenteditable']
   });
 }
 

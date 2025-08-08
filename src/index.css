@@ -298,12 +298,15 @@ div[class*="mask"][style*="position: fixed"],
   position: relative;
 }
 
-/* Input field normalization for spacebar functionality */
+/* Enhanced input field normalization for reliable spacebar functionality */
 input, textarea, [contenteditable] {
   white-space: normal !important;
   word-spacing: normal !important;
   letter-spacing: normal !important;
   text-transform: none !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  user-select: text !important;
 }
 
 /* Ensure spacebar works in all input contexts */
@@ -311,15 +314,26 @@ input:focus, textarea:focus, [contenteditable]:focus {
   outline-offset: 2px;
 }
 
+/* Prevent any CSS that could interfere with text input */
+input, textarea {
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+}
+
 /* Fix for contenteditable elements */
 [contenteditable] {
   cursor: text;
+  pointer-events: auto !important;
+  -webkit-user-modify: read-write !important;
+  -moz-user-modify: read-write !important;
+  user-modify: read-write !important;
 }
 
 [contenteditable]:empty:before {
   content: attr(placeholder);
   color: #9CA3AF;
   cursor: text;
+  pointer-events: none;
 }
 
 /* Prevent spacebar from being blocked by parent elements */
@@ -327,15 +341,19 @@ input:focus, textarea:focus, [contenteditable]:focus {
   position: relative;
 }
 
-/* Enhanced input field styling with spacebar support */
-input[type="text"], 
-input[type="email"], 
-input[type="password"], 
-input[type="search"], 
-input[type="url"],
-input[type="tel"],
-textarea {
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  user-select: text;
+/* Override any global event blocking that might affect inputs */
+input[data-spacebar-fixed], 
+textarea[data-spacebar-fixed], 
+[contenteditable][data-spacebar-fixed] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure form fields can receive keyboard input properly */
+form input, form textarea, form [contenteditable] {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  user-select: text !important;
+  touch-action: manipulation !important;
 }
