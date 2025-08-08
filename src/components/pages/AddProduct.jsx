@@ -146,7 +146,7 @@ metaTitle: "",
   }, [showToast]);
 
   // Load subcategories when category changes
-  useEffect(() => {
+useEffect(() => {
     if (formData.category) {
       const selectedCategory = categories.find(cat => cat.name === formData.category);
       if (selectedCategory && selectedCategory.subcategories) {
@@ -154,8 +154,14 @@ metaTitle: "",
       } else {
         setSubcategories([]);
       }
-      // Reset subcategory when category changes
-      setFormData(prev => ({ ...prev, subcategory: "" }));
+      // Reset subcategory when category changes - use functional update to prevent infinite loop
+      setFormData(prev => {
+        // Only update if subcategory is not already empty to prevent unnecessary re-renders
+        if (prev.subcategory !== "") {
+          return { ...prev, subcategory: "" };
+        }
+        return prev;
+      });
     }
   }, [formData.category, categories]);
 
