@@ -146,9 +146,47 @@ useEffect(() => {
 case 'error':
 case 'parse_error':
 case 'invalid':
-            // Enhanced error message handling with validation
+            // Enhanced error message handling with object serialization safety
             let errorMessage = 'Connection error';
             let shouldShowToast = true;
+            
+            // Safe error object inspection to prevent [object Object] messages
+            const extractErrorMessage = (errorData) => {
+              if (!errorData) return 'Unknown error';
+              
+              // Handle different error data types safely
+              if (typeof errorData === 'string') {
+                return errorData.substring(0, 80);
+              }
+              
+              if (typeof errorData === 'object') {
+                // Try multiple property paths for error messages
+                const messagePaths = [
+                  'message', 'error', 'reason', 'statusText', 'description'
+                ];
+                
+                for (const path of messagePaths) {
+                  const value = errorData[path];
+                  if (typeof value === 'string' && value.length > 0) {
+                    return value.substring(0, 80);
+                  }
+                }
+                
+                // If no string message found, create descriptive message
+                if (errorData.code) {
+                  return `Connection error (${errorData.code})`;
+                }
+                
+                if (errorData.type) {
+                  return `${errorData.type} error`;
+                }
+                
+                // Last resort: indicate error type without object serialization
+                return 'Connection error (details available in console)';
+              }
+              
+              return String(errorData).substring(0, 80);
+            };
             
             // Safe error message extraction with multiple fallbacks
             try {
@@ -157,18 +195,18 @@ case 'invalid':
               } else if (data?.type === 'invalid') {
                 errorMessage = 'Received invalid data format';
                 shouldShowToast = false; // Don't spam user with parsing errors
-              } else if (typeof data?.error === 'string' && data.error.length > 0) {
-                errorMessage = data.error.substring(0, 50);
               } else if (data?.code === 'WEBSOCKET_ERROR') {
                 errorMessage = 'Service unavailable';
-              } else if (data?.message && typeof data.message === 'string') {
-                errorMessage = data.message.substring(0, 50);
+              } else {
+                // Use safe error extraction
+                errorMessage = extractErrorMessage(data?.error || data);
               }
               
               // Clean up technical jargon for user-friendly messages
               errorMessage = errorMessage
-                .replace(/JSON.parse|SyntaxError|parse_error/gi, 'format error')
+                .replace(/JSON\.parse|SyntaxError|parse_error/gi, 'format error')
                 .replace(/WebSocket/gi, 'Connection')
+                .replace(/\[object Object\]/gi, 'connection issue')
                 .trim();
                 
             } catch (msgError) {
@@ -176,13 +214,52 @@ case 'invalid':
               errorMessage = 'Connection issue detected';
             }
             
+            // Enhanced error logging without object serialization issues
+            const logError = () => {
+              try {
+                const safeLogData = {
+                  status: data?.status || 'unknown',
+                  type: data?.type || 'unknown',
+                  code: data?.code,
+                  hasError: !!data?.error,
+                  errorType: typeof data?.error,
+                  timestamp: new Date().toISOString()
+                };
+                
+                // Only log error message if it's a string
+                if (typeof data?.error === 'string') {
+                  safeLogData.errorMessage = data.error;
+                } else if (data?.error && typeof data.error === 'object') {
+                  safeLogData.errorMessage = 'Complex error object (see separate log)';
+                  console.error('WebSocket error object details:', {
+                    message: data.error.message,
+                    code: data.error.code,
+                    type: data.error.type
+                  });
+                }
+                
+                console.error('WebSocket Hook Error:', safeLogData);
+              } catch (logErr) {
+                console.error('Failed to log WebSocket error safely:', logErr);
+              }
+            };
+            
+            logError();
+            
             if (shouldShowToast) {
               showToast(errorMessage, 'error');
             }
             
-            // Safe error callback invocation
+            // Safe error callback invocation with sanitized data
             try {
-              onError?.(data);
+              const callbackData = {
+                status: data?.status,
+                type: data?.type,
+                code: data?.code,
+                message: errorMessage,
+                timestamp: new Date().toISOString()
+              };
+              onError?.(callbackData);
             } catch (callbackError) {
               console.error('Error in WebSocket error callback:', callbackError);
             }

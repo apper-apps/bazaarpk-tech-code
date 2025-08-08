@@ -1,3 +1,5 @@
+import React from "react";
+import { Error } from "@/components/ui/Error";
 /**
  * WebSocketService - Manages WebSocket connections with reconnection logic
  */
@@ -188,26 +190,77 @@ this.ws.onerror = (event) => {
           }
           
           // Extract from close event if available (sometimes error events precede close events)
-          if (event && typeof event === 'object') {
+if (event && typeof event === 'object') {
             errorCode = event.code || errorCode;
             errorReason = event.reason || errorReason;
-            
-            // Log detailed error information for debugging
-            console.error('WebSocket error details:', {
-              eventType: event.type || 'error',
-              readyState: wsState,
-              url: wsUrl_safe,
-              code: errorCode,
-              reason: errorReason,
-              timestamp: new Date().toISOString()
-            });
-          } else {
-            console.error('WebSocket error with minimal context:', {
-              readyState: wsState,
-              url: wsUrl_safe,
-              timestamp: new Date().toISOString()
-            });
           }
+          
+          // Safe error object serialization to prevent [object Object] messages
+          const serializeErrorSafely = (obj) => {
+            if (!obj || typeof obj !== 'object') return String(obj);
+            
+            try {
+              // Extract only serializable properties to avoid circular references
+              const safeObj = {};
+              const allowedKeys = ['type', 'code', 'reason', 'message', 'target', 'currentTarget'];
+              
+              allowedKeys.forEach(key => {
+                if (key in obj && obj[key] !== null && obj[key] !== undefined) {
+                  const value = obj[key];
+                  // Only include primitive values and simple objects
+                  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                    safeObj[key] = value;
+                  } else if (key === 'target' && value && typeof value === 'object') {
+                    // For WebSocket targets, extract useful info
+                    safeObj[key] = {
+                      readyState: value.readyState,
+                      url: value.url
+                    };
+                  }
+                }
+              });
+              
+              return safeObj;
+            } catch (serializationError) {
+              console.warn('Error serialization failed:', serializationError);
+              return { 
+                message: 'Error object could not be serialized',
+                originalType: Object.prototype.toString.call(obj)
+              };
+            }
+          };
+          
+          console.error('WebSocket error details:', {
+            event: serializeErrorSafely(event),
+            eventType: event?.type || 'error',
+            readyState: wsState,
+            url: wsUrl_safe,
+            code: errorCode,
+            reason: errorReason || 'No reason provided',
+timestamp: new Date().toISOString(),
+            errorCategory: 'websocket_connection'
+          });
+        
+        if (event && typeof event === 'object') {
+          console.error('WebSocket error details:', {
+            event: serializeErrorSafely(event),
+            eventType: event?.type || 'error',
+            readyState: wsState,
+            url: wsUrl_safe,
+            code: errorCode,
+            reason: errorReason || 'No reason provided',
+            timestamp: new Date().toISOString(),
+            errorCategory: 'websocket_connection'
+          });
+        } else {
+          console.error('WebSocket error details:', {
+            event: 'No event object provided',
+            readyState: wsState,
+            url: wsUrl_safe,
+            timestamp: new Date().toISOString(),
+            errorCategory: 'websocket_unknown'
+          });
+        }
           
           // Process error reason if available
           if (errorReason && typeof errorReason === 'string' && errorReason.trim()) {
