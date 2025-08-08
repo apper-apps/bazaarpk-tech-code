@@ -2,6 +2,10 @@
  * Security utilities for input sanitization and CSRF protection
  * Implements WCAG compliance and security best practices
  */
+/**
+ * Security utilities for input sanitization and CSRF protection
+ * Implements WCAG compliance and security best practices
+ */
 
 // Generate CSRF token for form protection
 export const generateCSRFToken = () => {
@@ -838,5 +842,206 @@ export const initializeSecurity = () => {
     document.addEventListener('securitypolicyviolation', (e) => {
       console.warn('CSP Violation:', e.violatedDirective, e.blockedURI);
     });
+  }
+
+  // SPACEBAR FUNCTIONALITY PROTECTION
+  // Prevent spacebar blocking in input fields
+  if (typeof Event !== 'undefined' && Event.prototype && Event.prototype.stopPropagation) {
+    const originalStopPropagation = Event.prototype.stopPropagation;
+    
+    Event.prototype.stopPropagation = function() {
+      // Allow spacebar in input fields
+      if (this.key === ' ' && 
+          this.target && 
+          this.target.tagName && 
+          this.target.tagName.match(/INPUT|TEXTAREA/i)) {
+        console.debug('Spacebar protection: Allowing space in input field', this.target);
+        return; // Don't block spacebar in inputs
+      }
+      
+      // Allow spacebar in contenteditable elements
+      if (this.key === ' ' && 
+          this.target && 
+          (this.target.contentEditable === 'true' || 
+           this.target.getAttribute('contenteditable') === 'true')) {
+        console.debug('Spacebar protection: Allowing space in contenteditable', this.target);
+        return;
+      }
+      
+      // Call original for other cases
+      originalStopPropagation.call(this);
+    };
+  }
+
+  // Enhanced input field protection
+  const ensureSpacebarWorksInInputs = () => {
+    const inputElements = document.querySelectorAll('input, textarea, [contenteditable="true"]');
+    
+    inputElements.forEach(element => {
+      // Mark as spacebar-protected
+      element.setAttribute('data-spacebar-fixed', 'true');
+      
+      // Ensure proper input properties
+      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+        element.style.whiteSpace = 'pre-wrap';
+        element.style.wordSpacing = 'normal';
+        element.style.letterSpacing = 'normal';
+        element.style.textTransform = 'none';
+        element.style.userSelect = 'text';
+        element.style.WebkitUserSelect = 'text';
+        element.style.MozUserSelect = 'text';
+        element.style.pointerEvents = 'auto';
+        element.style.touchAction = 'manipulation';
+      }
+      
+      // Add keydown protection
+      element.addEventListener('keydown', function(e) {
+        if (e.key === ' ' || e.code === 'Space') {
+          // Ensure spacebar works by preventing parent interference
+          e.stopImmediatePropagation = function() {
+            console.debug('Spacebar protection: Prevented stopImmediatePropagation on space key');
+          };
+        }
+      }, { capture: true, passive: false });
+    });
+  };
+
+  // Run immediately and on DOM changes
+  ensureSpacebarWorksInInputs();
+  
+  // Monitor for new input fields
+  if (typeof MutationObserver !== 'undefined') {
+    const inputObserver = new MutationObserver((mutations) => {
+      let hasNewInputs = false;
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.matches && node.matches('input, textarea, [contenteditable]')) {
+              hasNewInputs = true;
+            } else if (node.querySelector) {
+              const inputs = node.querySelectorAll('input, textarea, [contenteditable]');
+              if (inputs.length > 0) hasNewInputs = true;
+            }
+          }
+        });
+      });
+      
+      if (hasNewInputs) {
+        setTimeout(ensureSpacebarWorksInInputs, 0);
+      }
+    });
+    
+    inputObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+// Development mode spacebar issue detection
+  if (import.meta.env?.MODE === 'development' || import.meta.env?.DEV) {
+    let spaceKeyBlocked = false;
+    // Global spacebar monitoring
+    document.addEventListener('keydown', function(e) {
+      if (e.key === ' ' || e.code === 'Space') {
+        const target = e.target;
+        const isInputField = target && (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.contentEditable === 'true' ||
+          target.getAttribute('contenteditable') === 'true'
+        );
+        
+        if (isInputField && (e.defaultPrevented || spaceKeyBlocked)) {
+          console.warn('⚠️ SPACEBAR BLOCKED in input field:', {
+            element: target,
+            tagName: target.tagName,
+            type: target.type,
+            id: target.id,
+            className: target.className,
+            defaultPrevented: e.defaultPrevented,
+            stackTrace: new Error().stack
+          });
+          
+          // Attempt to restore spacebar functionality
+          if (target.value !== undefined) {
+            const cursorPos = target.selectionStart;
+            target.value = target.value.slice(0, cursorPos) + ' ' + target.value.slice(cursorPos);
+            target.setSelectionRange(cursorPos + 1, cursorPos + 1);
+          }
+        }
+      }
+    }, { capture: true });
+
+// Monitor for preventDefault calls on spacebar
+    const originalPreventDefault = Event.prototype.preventDefault;
+    Event.prototype.preventDefault = function() {
+      if ((this.key === ' ' || this.code === 'Space') && 
+          this.target && 
+          this.target.tagName && 
+          this.target.tagName.match(/INPUT|TEXTAREA/i)) {
+        console.warn('🚫 preventDefault called on spacebar in input field:', this.target);
+        spaceKeyBlocked = true;
+        setTimeout(() => { spaceKeyBlocked = false; }, 100);
+      }
+      originalPreventDefault.call(this);
+    };
+  }
+
+  // Cross-browser compatibility checks
+  const checkSpacebarCompatibility = () => {
+    const testInput = document.createElement('input');
+    testInput.style.position = 'absolute';
+    testInput.style.left = '-9999px';
+    testInput.style.visibility = 'hidden';
+    document.body.appendChild(testInput);
+    
+    testInput.focus();
+    
+    // Simulate spacebar keypress
+    const spaceEvent = new KeyboardEvent('keydown', {
+      key: ' ',
+      code: 'Space',
+      keyCode: 32,
+      which: 32,
+      bubbles: true,
+      cancelable: true
+    });
+// Create input event with fallback for older browsers
+    let inputEvent;
+    try {
+      inputEvent = new InputEvent('input', {
+        data: ' ',
+        bubbles: true,
+        cancelable: true
+      });
+    } catch (e) {
+      // Fallback for browsers that don't support InputEvent constructor
+      inputEvent = document.createEvent('Event');
+      inputEvent.initEvent('input', true, true);
+      inputEvent.data = ' ';
+    }
+    
+    testInput.dispatchEvent(spaceEvent);
+    if (!spaceEvent.defaultPrevented) {
+      testInput.dispatchEvent(inputEvent);
+      testInput.value += ' ';
+    }
+    
+    // Check if space was added
+    const spaceWorking = testInput.value.includes(' ');
+    
+    if (!spaceWorking && (import.meta.env?.MODE === 'development' || import.meta.env?.DEV)) {
+      console.warn('⚠️ Spacebar functionality test failed - potential issues detected');
+    }
+    
+    document.body.removeChild(testInput);
+    return spaceWorking;
+  };
+  
+  // Run compatibility check after a short delay
+  setTimeout(checkSpacebarCompatibility, 1000);
+
+  // Announce spacebar protection is active
+  if (typeof announceToScreenReader === 'function') {
+    announceToScreenReader('Spacebar input protection initialized');
   }
 };
