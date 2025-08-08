@@ -304,7 +304,8 @@ if (event && typeof event === 'object') {
             errorCategory: event && typeof event === 'object' ? 'websocket_connection' : 'websocket_unknown'
           };
           
-          console.error('WebSocket error details:', errorDetails);
+// Safe error details logging to prevent "[object Object]" messages
+          console.error('WebSocket error details:', JSON.stringify(errorDetails, null, 2));
           
           // Also log the raw event for debugging if it exists
           if (event && typeof event === 'object') {
@@ -369,7 +370,7 @@ if (event && typeof event === 'object') {
             errorMessage = `WebSocket error - State: ${this.getStateName(wsState)}, URL: ${wsUrl_safe}`;
           }
 
-          const error = {
+const error = {
             message: userMessage,
             category: errorCategory,
             suggestion: suggestion,
@@ -380,7 +381,10 @@ if (event && typeof event === 'object') {
             reason: errorReason,
             readyState: wsState,
             stateName: this.getStateName(wsState),
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            // Ensure error object can be safely serialized
+            toString: () => userMessage,
+            valueOf: () => userMessage
           };
           
           this.emit('connection', { 
