@@ -103,13 +103,38 @@ this.socket.onerror = (event) => {
           
           this.isConnecting = false;
           
-          // Extract meaningful error message
-          const eventType = event?.type || 'error';
+          // Enhanced object-safe error message extraction
+          let eventInfo = 'error';
+          if (event && typeof event === 'object') {
+            // Safe property extraction with fallbacks
+            eventInfo = event.type || event.message || 'error';
+            
+            // Handle complex event objects
+            if (typeof eventInfo === 'object') {
+              try {
+                eventInfo = JSON.stringify(eventInfo).replace(/[{}"]/g, '').trim() || 'error';
+              } catch (e) {
+                eventInfo = 'error';
+              }
+            }
+          }
+          
           const readyState = this.socket ? this.socket.readyState : 3;
           const stateName = this.getStateName(readyState);
           
+          // Multi-layer error message sanitization
+          let cleanEventInfo = String(eventInfo)
+            .replace(/\[object\s+\w+\]/gi, 'error')
+            .replace(/^\s*error\s*error/i, 'error')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+            
+          if (!cleanEventInfo || cleanEventInfo === 'undefined' || cleanEventInfo === 'null') {
+            cleanEventInfo = 'error';
+          }
+          
           // Create descriptive error message without object references
-          const errorMessage = `WebSocket ${eventType} (state: ${stateName})`;
+          const errorMessage = `WebSocket ${cleanEventInfo} (state: ${stateName})`;
           
           // Create sanitized error data with guaranteed string values
           const safeErrorData = {
@@ -120,13 +145,27 @@ this.socket.onerror = (event) => {
             timestamp: new Date().toISOString()
           };
           
-          // Log with safe serialization to prevent [object Object] display
-          console.error('WebSocket error occurred:', {
-            type: eventType,
+          // Enhanced safe serialization for logging
+          const logData = {
+            type: cleanEventInfo,
             state: stateName,
             readyState: readyState,
             timestamp: safeErrorData.timestamp
+          };
+          
+          // Convert any remaining objects in log data
+          Object.keys(logData).forEach(key => {
+            if (typeof logData[key] === 'object' && logData[key] !== null) {
+              try {
+                logData[key] = JSON.stringify(logData[key]);
+              } catch (e) {
+                logData[key] = 'object-serialization-failed';
+              }
+            }
+            logData[key] = String(logData[key]).replace(/\[object\s+\w+\]/gi, 'unknown');
           });
+          
+          console.error('WebSocket error occurred:', logData);
           
           // Emit clean error data for listeners
           this.emit('connection', safeErrorData);
