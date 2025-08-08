@@ -1,3 +1,5 @@
+import React from "react";
+import { Error } from "@/components/ui/Error";
 /**
  * Security utilities for input sanitization and CSRF protection
  * Implements WCAG compliance and security best practices
@@ -71,11 +73,15 @@ export const sanitizeInput = (input, options = {}) => {
   // Preserve original for logging
   const original = input;
   
-  // Trim excessive whitespace but preserve intentional formatting
+// Preserve intentional spacing between words while removing excessive whitespace
   if (preserveSpaces) {
-    sanitized = sanitized.replace(/\s+/g, ' ').trim();
+    // Only collapse multiple consecutive spaces to single spaces, but preserve all single spaces
+    sanitized = sanitized.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n');
+    // Only trim leading/trailing whitespace, not internal spaces
+    sanitized = sanitized.replace(/^[\s\n]+|[\s\n]+$/g, '');
   } else {
-    sanitized = sanitized.trim();
+    // For non-preserveSpaces mode, still preserve single spaces between words
+    sanitized = sanitized.replace(/[ \t]+/g, ' ').trim();
   }
   
   // Enhanced XSS protection
@@ -1008,16 +1014,28 @@ export const initializeSecurity = () => {
 // Create input event with fallback for older browsers
     let inputEvent;
     try {
-      inputEvent = new InputEvent('input', {
-        data: ' ',
-        bubbles: true,
-        cancelable: true
-      });
+      // Check if InputEvent constructor is available
+      if (typeof InputEvent !== 'undefined' && InputEvent.length > 0) {
+        inputEvent = new InputEvent('input', {
+          data: ' ',
+          bubbles: true,
+          cancelable: true
+        });
+      } else {
+        throw new Error('InputEvent constructor not available');
+      }
     } catch (e) {
       // Fallback for browsers that don't support InputEvent constructor
-      inputEvent = document.createEvent('Event');
-      inputEvent.initEvent('input', true, true);
-      inputEvent.data = ' ';
+      try {
+        inputEvent = document.createEvent('InputEvent');
+        inputEvent.initEvent('input', true, true);
+        inputEvent.data = ' ';
+      } catch (fallbackError) {
+        // Final fallback using generic Event
+        inputEvent = document.createEvent('Event');
+        inputEvent.initEvent('input', true, true);
+        inputEvent.data = ' ';
+      }
     }
     
     testInput.dispatchEvent(spaceEvent);

@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from "react";
+import React, { forwardRef, useCallback, useState } from "react";
 import { cn } from "@/utils/cn";
-import { sanitizeInput, sanitizeNumericInput, sanitizeEmail, announceToScreenReader } from "@/utils/security";
+import { announceToScreenReader, sanitizeEmail, sanitizeInput, sanitizeNumericInput } from "@/utils/security";
 
 const Input = React.forwardRef(({ 
   className, 
@@ -165,43 +165,12 @@ const handleChange = useCallback((e) => {
     return { isValid: true, error: null };
   };
 
-  // Handle keyboard navigation and accessibility
-const handleKeyDown = useCallback((e) => {
+// Handle keyboard navigation and accessibility
+  const handleKeyDown = useCallback((e) => {
     // Enhanced spacebar handling with better event control
-    if (e.key === ' ' || e.keyCode === 32) {
-      // Prevent any parent event handlers from interfering
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      
-      // Ensure the spacebar character is inserted properly
-      if (!e.defaultPrevented) {
-        // Allow natural spacebar behavior
-        const currentTarget = e.currentTarget;
-        const currentValue = currentTarget.value;
-        const selectionStart = currentTarget.selectionStart;
-        const selectionEnd = currentTarget.selectionEnd;
-        
-        // If text is selected, replace it, otherwise insert space
-        const newValue = currentValue.substring(0, selectionStart) + ' ' + currentValue.substring(selectionEnd);
-        setInternalValue(newValue);
-        
-        if (onValueChange) onValueChange(newValue);
-        if (props.onChange) {
-          const changeEvent = { ...e, target: { ...e.target, value: newValue } };
-          props.onChange(changeEvent);
-        }
-        
-        // Set cursor position after the inserted space
-        setTimeout(() => {
-          currentTarget.setSelectionRange(selectionStart + 1, selectionStart + 1);
-        }, 0);
-        
-        // Prevent default to avoid double space insertion
-        e.preventDefault();
-      }
-      return;
-    }
-
+    // Allow natural spacebar behavior - removed complex manual handling
+    // The browser handles spacebar input correctly by default
+    // CSS fixes in index.css ensure proper space preservation
     // Escape key clears input
     if (e.key === 'Escape' && props.clearable !== false) {
       setInternalValue('');

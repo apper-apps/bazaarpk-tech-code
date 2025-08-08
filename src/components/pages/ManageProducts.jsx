@@ -8,7 +8,7 @@ import ApperIcon from "@/components/ApperIcon";
 import Category from "@/components/pages/Category";
 import ProductManagementCard from "@/components/organisms/ProductManagementCard";
 import Empty from "@/components/ui/Empty";
-import ErrorComponent from '@/components/ui/Error'
+import ErrorComponent, { Error } from "@/components/ui/Error";
 import Loading from "@/components/ui/Loading";
 import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
@@ -16,7 +16,7 @@ import Badge from "@/components/atoms/Badge";
 import { cn } from "@/utils/cn";
 import { formatPrice } from "@/utils/currency";
 import cacheManager from "@/utils/cacheManager";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import useWebSocket from "@/hooks/useWebSocket";
 const ManageProducts = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -1531,7 +1531,7 @@ return (
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" 
                   aria-hidden="true"
                 />
-                <Input
+<Input
                   id="product-search"
                   type="text"
                   placeholder="Search by name, SKU, or brand..."
@@ -1539,11 +1539,13 @@ return (
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                   aria-describedby="search-help"
+                  data-spacebar-fixed="true"
+                  spellCheck="false"
+                  autoComplete="off"
                 />
                 <div id="search-help" className="sr-only">
-                  Search through product names, SKU codes, brands, and tags. Results update automatically as you type.
+                  Search through product names, SKU codes, brands, and tags. Results update automatically as you type. Spaces between words are preserved for accurate search.
                 </div>
-              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
