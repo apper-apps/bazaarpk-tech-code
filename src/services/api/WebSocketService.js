@@ -131,10 +131,25 @@ this.socket.onerror = (event) => {
                 default:
                   errorMessage = 'WebSocket connection error';
               }
+            } else {
+              // Enhanced fallback for complex error objects
+              try {
+                const errorStr = JSON.stringify(event, null, 2);
+                if (errorStr && errorStr !== '{}' && !errorStr.includes('[object Object]')) {
+                  // Extract meaningful parts from JSON
+                  const errorObj = JSON.parse(errorStr);
+                  if (errorObj.type) errorMessage = `WebSocket ${errorObj.type} error`;
+                  else if (errorObj.name) errorMessage = `WebSocket ${errorObj.name}`;
+                  else errorMessage = 'WebSocket connection failed';
+                }
+              } catch (e) {
+                // If JSON.stringify fails, use default message
+                errorMessage = 'WebSocket connection failed';
+              }
             }
           }
           
-// Comprehensive cleanup for all object serialization issues
+          // Comprehensive cleanup for all object serialization issues
           if (!errorMessage || 
               typeof errorMessage !== 'string' ||
               errorMessage.includes('[object') ||
@@ -150,12 +165,7 @@ this.socket.onerror = (event) => {
             .replace(/ECONNREFUSED/gi, 'Server unavailable')
             .replace(/ETIMEDOUT/gi, 'Connection timeout');
           
-          // Limit length for better UI display
-          if (errorMessage.length > 80) {
-            errorMessage = errorMessage.substring(0, 80) + '...';
-          }
-          
-          // Limit message length for UI display
+          // Limit length for better UI display (single cleanup)
           if (errorMessage.length > 80) {
             errorMessage = errorMessage.substring(0, 80) + '...';
           }

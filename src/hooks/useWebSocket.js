@@ -42,7 +42,7 @@ const connect = useCallback(async () => {
       await webSocketService.connect(url);
 } catch (error) {
       // Comprehensive error message extraction
-      let userMessage = 'WebSocket connection failed';
+let userMessage = 'WebSocket connection failed';
       
       // Handle all possible error object types
       if (error instanceof Error && typeof error.message === 'string' && error.message.length > 0) {
@@ -61,16 +61,30 @@ const connect = useCallback(async () => {
           userMessage = 'Unable to establish WebSocket connection';
         } else if (error.type) {
           userMessage = `WebSocket ${error.type} error`;
+        } else {
+          // Enhanced fallback for complex error objects
+          try {
+            const errorStr = JSON.stringify(error);
+            if (errorStr && errorStr !== '{}' && !errorStr.includes('[object Object]')) {
+              // Try to extract meaningful information
+              if (error.name) userMessage = `Connection error: ${error.name}`;
+              else if (error.statusText) userMessage = `Connection error: ${error.statusText}`;
+              else userMessage = 'Connection error occurred';
+            }
+          } catch (e) {
+            userMessage = 'Connection error occurred';
+          }
         }
       }
       
-// Comprehensive cleanup for all object serialization issues
+      // Comprehensive cleanup for all object serialization issues
       if (!userMessage || 
           typeof userMessage !== 'string' || 
           userMessage.includes('[object') || 
           userMessage.includes('undefined') ||
           userMessage.includes('null') ||
           userMessage.includes('[Event]') ||
+          userMessage.includes('[Object]') ||
           userMessage.length < 3) {
         userMessage = 'WebSocket connection failed - please try again';
       }
@@ -132,7 +146,7 @@ case 'error':
             let errorMessage = 'Connection error occurred';
             
             // Extract error message from various possible data structures
-            if (data && typeof data === 'object') {
+if (data && typeof data === 'object') {
               if (typeof data.error === 'string' && data.error.length > 0) {
                 errorMessage = data.error;
               } else if (typeof data.message === 'string' && data.message.length > 0) {
@@ -149,17 +163,44 @@ case 'error':
                   errorMessage = data.error.message;
                 } else if (typeof data.error.error === 'string' && data.error.error.length > 0) {
                   errorMessage = data.error.error;
+                } else {
+                  // Handle deeply nested error objects
+                  try {
+                    const errorStr = JSON.stringify(data.error);
+                    if (errorStr && errorStr !== '{}' && !errorStr.includes('[object Object]')) {
+                      if (data.error.name) errorMessage = `Connection error: ${data.error.name}`;
+                      else if (data.error.type) errorMessage = `Connection ${data.error.type} error`;
+                      else errorMessage = 'Connection service error';
+                    }
+                  } catch (e) {
+                    errorMessage = 'Connection service error';
+                  }
+                }
+              }
+              
+              // Final fallback for unhandled object cases
+              if (!errorMessage || errorMessage.includes('[object')) {
+                try {
+                  const dataStr = JSON.stringify(data);
+                  if (dataStr && dataStr !== '{}' && !dataStr.includes('[object Object]')) {
+                    errorMessage = 'Connection data error occurred';
+                  } else {
+                    errorMessage = 'Connection error - please check your internet';
+                  }
+                } catch (e) {
+                  errorMessage = 'Connection error - please check your internet';
                 }
               }
             }
             
-// Enhanced cleanup for all object serialization issues
+            // Enhanced cleanup for all object serialization issues
             if (!errorMessage || 
                 typeof errorMessage !== 'string' ||
                 errorMessage.includes('[object') ||
                 errorMessage.includes('undefined') ||
                 errorMessage.includes('null') ||
                 errorMessage.includes('[Event]') ||
+                errorMessage.includes('[Object]') ||
                 errorMessage.includes('state: 3') ||
                 errorMessage.length < 3) {
               errorMessage = 'Connection error - please check your internet';
@@ -176,7 +217,6 @@ case 'error':
             if (errorMessage.length > 60) {
               errorMessage = errorMessage.substring(0, 60) + '...';
             }
-            
             showToast(errorMessage, 'error');
             onError?.(data);
             break;
