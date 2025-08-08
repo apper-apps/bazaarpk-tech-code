@@ -230,6 +230,30 @@ case 'invalid':
             }
             
             // Enhanced error logging without object serialization issues
+// Simplified and reliable error serialization
+            const safeStringify = (obj, fallback = 'Connection error') => {
+              if (typeof obj === 'string') return obj;
+              if (obj === null || obj === undefined) return fallback;
+              
+              try {
+                // Try to get a meaningful string representation
+                if (obj.message && typeof obj.message === 'string') return obj.message;
+                if (obj.error && typeof obj.error === 'string') return obj.error;
+                if (obj.reason && typeof obj.reason === 'string') return obj.reason;
+                
+                // Safe JSON stringify with replacer to handle circular refs
+                return JSON.stringify(obj, (key, value) => {
+                  if (typeof value === 'object' && value !== null) {
+                    // Prevent circular references and complex objects
+                    return '[Object]';
+                  }
+                  return value;
+                });
+              } catch (e) {
+                return fallback;
+              }
+            };
+
             const logError = () => {
               try {
                 const safeLogData = {
@@ -241,43 +265,18 @@ case 'invalid':
                   timestamp: new Date().toISOString()
                 };
                 
-// Simplified and reliable error serialization
-                const safeStringify = (obj, fallback = 'Connection error') => {
-                  if (typeof obj === 'string') return obj;
-                  if (obj === null || obj === undefined) return fallback;
-                  
-                  try {
-                    // Try to get a meaningful string representation
-                    if (obj.message && typeof obj.message === 'string') return obj.message;
-                    if (obj.error && typeof obj.error === 'string') return obj.error;
-                    if (obj.reason && typeof obj.reason === 'string') return obj.reason;
-                    
-                    // Safe JSON stringify with replacer to handle circular refs
-                    return JSON.stringify(obj, (key, value) => {
-                      if (typeof value === 'object' && value !== null) {
-                        // Prevent circular references and complex objects
-                        return '[Object]';
-                      }
-                      return value;
-                    });
-                  } catch (e) {
-                    return fallback;
-                  }
-                };
-
-// Process error data safely
+                // Process error data safely
                 if (data?.error) {
                   safeLogData.errorMessage = safeStringify(data.error, 'Unknown error occurred');
                 }
                 
                 console.error('WebSocket Hook Error:', safeLogData);
-} catch (logErr) {
+              } catch (logErr) {
                 console.error('Failed to log WebSocket error safely:', logErr.message || logErr);
                 // Fallback logging
                 console.error('Original error data (fallback):', safeStringify(data, 'Error data unavailable'));
               }
             };
-            
             logError();
             if (shouldShowToast) {
               showToast(errorMessage, 'error');
