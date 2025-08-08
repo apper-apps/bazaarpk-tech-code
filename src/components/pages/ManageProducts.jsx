@@ -1,21 +1,22 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ProductService } from "@/services/api/ProductService";
 import { CategoryService } from "@/services/api/CategoryService";
 import { useToast } from "@/hooks/useToast";
 import ApperIcon from "@/components/ApperIcon";
-import ProductManagementCard from "@/components/organisms/ProductManagementCard";
-import Loading from "@/components/ui/Loading";
-import ErrorComponent, { Error } from "@/components/ui/Error";
-import Empty from "@/components/ui/Empty";
 import Category from "@/components/pages/Category";
-import Badge from "@/components/atoms/Badge";
+import ProductManagementCard from "@/components/organisms/ProductManagementCard";
+import Empty from "@/components/ui/Empty";
+import ErrorComponent, { Error } from "@/components/ui/Error";
+import Loading from "@/components/ui/Loading";
 import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
+import Badge from "@/components/atoms/Badge";
 import { cn } from "@/utils/cn";
 import { formatPrice } from "@/utils/currency";
-import { useWebSocket } from '@/hooks/useWebSocket';
+import cacheManager from "@/utils/cacheManager";
+import { useWebSocket } from "@/hooks/useWebSocket";
 const ManageProducts = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -75,13 +76,13 @@ const [statusFilter, setStatusFilter] = useState('all'); // all, pending, approv
   // Activity logging state
 const [activityLog, setActivityLog] = useState([]);
 
-  // Move logActivity function here to resolve temporal dead zone
-  const logActivity = (action, details) => {
+// Memoized logActivity function to prevent re-creation and potential infinite loops
+  const logActivity = useCallback((action, details) => {
     const logEntry = {
       id: Date.now(),
       timestamp: new Date(),
-      user: currentUser.role,
-      userId: currentUser.id || 'unknown',
+      user: currentUser?.role || 'unknown',
+      userId: currentUser?.id || 'unknown',
       action,
       details,
       browser: navigator.userAgent,
@@ -121,7 +122,7 @@ const [activityLog, setActivityLog] = useState([]);
     if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('event', 'admin_activity', {
         action_type: action,
-        user_role: currentUser.role,
+        user_role: currentUser?.role || 'unknown',
         browser_name: navigator.userAgent.includes('Chrome') ? 'Chrome' : 
                      navigator.userAgent.includes('Firefox') ? 'Firefox' : 
                      navigator.userAgent.includes('Safari') ? 'Safari' : 'Other',
@@ -138,7 +139,7 @@ const [activityLog, setActivityLog] = useState([]);
     } catch (error) {
       console.warn('Failed to store activity log in localStorage:', error);
     }
-  };
+  }, [currentUser?.role, currentUser?.id, connectionStatus, isConnected]);
 
 // WebSocket integration for real-time updates
   const { 

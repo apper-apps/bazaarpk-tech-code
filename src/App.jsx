@@ -88,6 +88,7 @@ function AppContent() {
   // Ref to track component mount status
   const isMountedRef = useRef(true);
   // Initialize performance monitoring only once
+// Initialize performance monitoring only once to prevent re-renders
 useEffect(() => {
     console.log('🔍 Browser Compatibility Check:', BROWSER_INFO);
     
@@ -123,11 +124,11 @@ useEffect(() => {
       }
     });
 
-    // Performance monitoring setup
+    // Performance monitoring setup - run once and cache results
     const initPerformanceMonitoring = () => {
-      if ('performance' in window) {
+      if ('performance' in window && isMountedRef.current) {
         const navigationTiming = performance.getEntriesByType('navigation')[0];
-        if (navigationTiming && isMountedRef.current) {
+        if (navigationTiming) {
           const metrics = {
             pageLoadTime: navigationTiming.loadEventEnd - navigationTiming.loadEventStart,
             domContentLoaded: navigationTiming.domContentLoadedEventEnd - navigationTiming.domContentLoadedEventStart,
@@ -145,32 +146,31 @@ useEffect(() => {
             }
           });
           
-          if (isMountedRef.current) {
-            setPerformanceMetrics(metrics);
-            console.log('📊 Performance Metrics:', metrics);
-            
-            // Track performance in analytics
-            if (typeof window !== 'undefined' && window.gtag) {
-              window.gtag('event', 'page_performance', {
-                page_load_time: Math.round(metrics.pageLoadTime),
-                dom_content_loaded: Math.round(metrics.domContentLoaded),
-                first_contentful_paint: Math.round(metrics.firstContentfulPaint),
-                browser_name: BROWSER_INFO.name || 'unknown'
-              });
-            }
+          setPerformanceMetrics(metrics);
+          console.log('📊 Performance Metrics:', metrics);
+          
+          // Track performance in analytics - only once
+          if (typeof window !== 'undefined' && window.gtag) {
+            window.gtag('event', 'page_performance', {
+              page_load_time: Math.round(metrics.pageLoadTime),
+              dom_content_loaded: Math.round(metrics.domContentLoaded),
+              first_contentful_paint: Math.round(metrics.firstContentfulPaint),
+              browser_name: BROWSER_INFO.name || 'unknown'
+            });
           }
         }
       }
     };
 
-    // Initialize performance monitoring
-    initPerformanceMonitoring();
+    // Initialize performance monitoring with delay to ensure DOM is ready
+    const timeoutId = setTimeout(initPerformanceMonitoring, 100);
 
     // Cleanup on component unmount
     return () => {
       isMountedRef.current = false;
+      clearTimeout(timeoutId);
     };
-  }, []);
+  }, []); // Empty dependency array to run only once
 
 const cleanupRef = useRef(false);
   

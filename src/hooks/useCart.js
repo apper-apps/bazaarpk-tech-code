@@ -12,13 +12,16 @@ export const useCart = () => {
     setCartItems(savedCart);
   }, []);
 
-  // Load product details for cart items
+// Load product details for cart items with optimization to prevent excessive requests
   useEffect(() => {
     const loadProductDetails = async () => {
       const productIds = [...new Set(cartItems.map(item => item.productId))];
       const products = {};
+      
+      // Only fetch products we don't already have
+      const missingProductIds = productIds.filter(id => !cartProducts[id]);
 
-      for (const productId of productIds) {
+      for (const productId of missingProductIds) {
         try {
           const product = await ProductService.getById(productId);
           if (product) {
@@ -29,17 +32,27 @@ export const useCart = () => {
         }
       }
 
-      setCartProducts(products);
+      // Only update state if we have new products
+      if (Object.keys(products).length > 0) {
+        setCartProducts(prev => ({ ...prev, ...products }));
+      }
     };
 
     if (cartItems.length > 0) {
       loadProductDetails();
+    } else if (cartItems.length === 0 && Object.keys(cartProducts).length > 0) {
+      // Clear product cache when cart is empty
+      setCartProducts({});
     }
-  }, [cartItems]);
+  }, [cartItems.map(item => item.productId).sort().join(',')]); // Optimize dependency to prevent unnecessary calls
 
-  // Save cart to storage whenever it changes
+// Save cart to storage whenever it changes with debouncing
   useEffect(() => {
-    saveCartToStorage(cartItems);
+    const timeoutId = setTimeout(() => {
+      saveCartToStorage(cartItems);
+    }, 100); // Debounce to prevent excessive storage writes
+
+    return () => clearTimeout(timeoutId);
   }, [cartItems]);
 
   // Add product details to cart items

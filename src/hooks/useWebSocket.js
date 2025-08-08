@@ -58,7 +58,7 @@ const connect = useCallback(async () => {
     
     if (isWebSocketDisabled) {
       setConnectionStatus('disabled');
-      if (showConnectionToasts && connectionStatus !== 'disabled') {
+      if (showConnectionToasts) {
         showToast('App working offline - all features available', 'info');
       }
       return;
@@ -67,7 +67,7 @@ const connect = useCallback(async () => {
     // If no WebSocket URL is configured, work in offline mode
     if (!finalUrl || finalUrl.trim() === '') {
       setConnectionStatus('disabled');
-      if (showConnectionToasts && connectionStatus !== 'disabled') {
+      if (showConnectionToasts) {
         showToast('App working offline - all features available', 'info');
       }
       return;
@@ -90,7 +90,7 @@ const connect = useCallback(async () => {
       await webSocketService.connect(finalUrl);
       setConnectionStatus('connected');
       
-      if (showConnectionToasts && (connectionStatus === 'connecting' || connectionStatus === 'disconnected')) {
+      if (showConnectionToasts) {
         showToast('Connected to real-time updates', 'success');
       }
     } catch (error) {
@@ -100,7 +100,7 @@ const connect = useCallback(async () => {
       const isServerUnavailable = errorCategory === 'server_unavailable' || errorCategory === 'development';
       
       // Enhanced toast messaging with better development context
-      if (showConnectionToasts && connectionStatus === 'connecting') {
+      if (showConnectionToasts) {
         let message = 'App running offline - all features available';
         
         if (isDevelopment && errorCategory === 'disabled') {
@@ -132,7 +132,7 @@ const connect = useCallback(async () => {
                        isServerUnavailable ? 'server_unavailable' : 'disconnected';
       setConnectionStatus(newStatus);
     }
-  }, [isOnline, showConnectionToasts, showToast, url, connectionStatus]);
+  }, [isOnline, showConnectionToasts, showToast, url]); // Removed connectionStatus to break infinite loop
 
   const disconnect = useCallback(() => {
     webSocketService.disconnect();
@@ -216,22 +216,17 @@ useEffect(() => {
                 : 'Working offline - all features available';
             }
             
-            // Enhanced toast display logic with better development experience
-            const isTransitioningFromConnected = connectionStatus === 'connected';
-            const isFirstError = connectionStatus === 'connecting';
-            const isDevelopmentError = isDevelopment && (errorCategory === 'development' || errorCategory === 'server_unavailable' || errorCategory === 'disabled');
-            
-            if (data?.status === 'error' && isTransitioningFromConnected && !isDevelopmentError) {
+            // Show toast only for significant transitions
+            if (data?.status === 'error') {
               shouldShowToast = true;
-            } else if (data?.status === 'offline' && isFirstError && !isDevelopment) {
+            } else if (data?.status === 'offline') {
               shouldShowToast = true;
-            } else if (isDevelopmentError && isFirstError) {
-              // Show informative toast for development issues
+            } else if (isDevelopment && (errorCategory === 'development' || errorCategory === 'server_unavailable' || errorCategory === 'disabled')) {
               shouldShowToast = true;
             }
             
             if (shouldShowToast) {
-              const toastType = (data?.status === 'error' && !isDevelopmentError) ? 'warning' : 'info';
+              const toastType = (data?.status === 'error' && !isDevelopment) ? 'warning' : 'info';
               showToast(errorMessage, toastType);
             }
             
@@ -255,7 +250,7 @@ useEffect(() => {
     
     unsubscribeRefs.current.push(unsubscribe);
     return unsubscribe;
-  }, [showConnectionToasts, showToast, onConnect, onDisconnect, onError, connectionStatus]);
+  }, [showConnectionToasts, showToast, onConnect, onDisconnect, onError]); // Removed connectionStatus to prevent excessive re-renders
 
   // Setup message listener
 useEffect(() => {
@@ -299,7 +294,9 @@ useEffect(() => {
       unsubscribeRefs.current = [];
       
       // Graceful disconnect
-      webSocketService.disconnect();
+      if (webSocketService && typeof webSocketService.disconnect === 'function') {
+        webSocketService.disconnect();
+      }
     };
   }, [autoConnect, isOnline, connect]);
 
