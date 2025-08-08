@@ -2,22 +2,136 @@ import '@/index.css';
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Link, Route, Routes, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
-import { initializeSecurity } from "@/utils/security";
 import ApperIcon from "@/components/ApperIcon";
-import Header from "@/components/organisms/Header";
-import CartDrawer from "@/components/organisms/CartDrawer";
-import ErrorComponent, { Error } from "@/components/ui/Error";
-import UserManagement from "@/components/pages/UserManagement";
-import AddRecipeBundle from "@/components/pages/AddRecipeBundle";
-import Home from "@/components/pages/Home";
-import AddProduct from "@/components/pages/AddProduct";
-import ProductDetail from "@/components/pages/ProductDetail";
-import OrderManagement from "@/components/pages/OrderManagement";
-import Category from "@/components/pages/Category";
-import RecipeBundlesPage from "@/components/pages/RecipeBundlesPage";
 import ManageProducts from "@/components/pages/ManageProducts";
-import Cart from "@/components/pages/Cart";
 import ReportsAnalytics from "@/components/pages/ReportsAnalytics";
+import AddProduct from "@/components/pages/AddProduct";
+import UserManagement from "@/components/pages/UserManagement";
+import Home from "@/components/pages/Home";
+import OrderManagement from "@/components/pages/OrderManagement";
+import Cart from "@/components/pages/Cart";
+import Category from "@/components/pages/Category";
+import AddRecipeBundle from "@/components/pages/AddRecipeBundle";
+import RecipeBundlesPage from "@/components/pages/RecipeBundlesPage";
+import ProductDetail from "@/components/pages/ProductDetail";
+import CartDrawer from "@/components/organisms/CartDrawer";
+import Header from "@/components/organisms/Header";
+import ErrorComponent, { Error } from "@/components/ui/Error";
+import Loading from "@/components/ui/Loading";
+import { initializeSecurity } from "@/utils/security";
+
+// Admin Error Boundary Component
+class AdminErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { 
+      hasError: false, 
+      error: null, 
+      errorInfo: null,
+      retryCount: 0 
+    };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Admin Component Error:', error);
+    console.error('Error Info:', errorInfo);
+    this.setState({
+      error: error,
+      errorInfo: errorInfo
+    });
+  }
+
+  handleRetry = () => {
+    this.setState(prevState => ({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      retryCount: prevState.retryCount + 1
+    }));
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
+            <div className="mb-4">
+              <ApperIcon name="AlertTriangle" className="w-16 h-16 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                Admin Component Error
+              </h2>
+              <p className="text-gray-600 mb-4">
+                {this.props.componentName || 'This admin component'} encountered an error and couldn't load properly.
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <button
+                onClick={this.handleRetry}
+                className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <ApperIcon name="RefreshCw" className="w-4 h-4" />
+                Try Again {this.state.retryCount > 0 && `(${this.state.retryCount})`}
+              </button>
+              
+              <Link
+                to="/admin"
+                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors inline-flex items-center justify-center gap-2"
+              >
+                <ApperIcon name="ArrowLeft" className="w-4 h-4" />
+                Back to Admin Panel
+              </Link>
+              
+              <Link
+                to="/"
+                className="w-full px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors inline-flex items-center justify-center gap-2"
+              >
+                <ApperIcon name="Home" className="w-4 h-4" />
+                Go to Homepage
+              </Link>
+</div>
+            
+            {(typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') && this.state.error && (
+              <details className="mt-4 text-left">
+                <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+                  View Error Details
+                </summary>
+                <pre className="mt-2 p-3 bg-gray-100 rounded text-xs overflow-auto max-h-32">
+                  {this.state.error.toString()}
+                  {this.state.errorInfo?.componentStack}
+                </pre>
+              </details>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Safe Component Wrapper
+const SafeAdminComponent = ({ children, componentName, fallback }) => {
+  return (
+    <AdminErrorBoundary componentName={componentName}>
+      <React.Suspense fallback={fallback || (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading {componentName}...</p>
+          </div>
+        </div>
+      )}>
+        {children}
+      </React.Suspense>
+    </AdminErrorBoundary>
+  );
+};
 // Browser detection at module level to avoid re-computation
 const detectBrowser = () => {
   const userAgent = navigator.userAgent;
@@ -495,78 +609,115 @@ return (
 </div>
               </div>
             } />
-            <Route path="/admin/*" element={
-              <Routes>
-                <Route index element={<ManageProducts />} />
-                <Route path="products" element={<ManageProducts />} />
-              <Route path="products/manage" element={<ManageProducts />} />
-              <Route path="products/add" element={<AddProduct />} />
-              <Route path="categories" element={<div className="p-6">
-                <div className="max-w-6xl mx-auto">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Categories Management</h2>
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                    <p className="text-gray-600">Category management system coming soon. This will include:</p>
-                    <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                      <li>• Multi-level category tree</li>
-                      <li>• Drag & drop category ordering</li>
-                      <li>• Category image management</li>
-                      <li>• SEO settings per category</li>
-                      <li>• Product count tracking</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>} />
-              <Route path="inventory" element={<div className="p-6">
-                <div className="max-w-6xl mx-auto">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Inventory Management</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white p-6 rounded-lg shadow-sm">
-                      <div className="flex items-center">
-                        <ApperIcon name="Package" className="w-8 h-8 text-blue-600" />
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600">Total Products</p>
-                          <p className="text-2xl font-bold text-gray-900">1,245</p>
+<Route path="/admin/*" element={
+              <SafeAdminComponent componentName="Admin Routes">
+                <Routes>
+                  <Route index element={
+                    <SafeAdminComponent componentName="ManageProducts" fallback={
+                      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="animate-spin w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full mx-auto mb-4"></div>
+                          <p className="text-gray-600">Loading Product Management...</p>
                         </div>
                       </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-lg shadow-sm">
-                      <div className="flex items-center">
-                        <ApperIcon name="AlertTriangle" className="w-8 h-8 text-orange-600" />
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600">Low Stock</p>
-                          <p className="text-2xl font-bold text-gray-900">23</p>
-                        </div>
+                    }>
+                      <ManageProducts />
+                    </SafeAdminComponent>
+                  } />
+                  <Route path="products" element={
+                    <SafeAdminComponent componentName="ManageProducts">
+                      <ManageProducts />
+                    </SafeAdminComponent>
+                  } />
+                  <Route path="products/manage" element={
+                    <SafeAdminComponent componentName="ManageProducts">
+                      <ManageProducts />
+                    </SafeAdminComponent>
+                  } />
+                  <Route path="products/add" element={
+                    <SafeAdminComponent componentName="AddProduct">
+                      <AddProduct />
+                    </SafeAdminComponent>
+                  } />
+                  <Route path="categories" element={<div className="p-6">
+                    <div className="max-w-6xl mx-auto">
+                      <h2 className="text-2xl font-bold text-gray-900 mb-6">Categories Management</h2>
+                      <div className="bg-white rounded-lg shadow-sm p-6">
+                        <p className="text-gray-600">Category management system coming soon. This will include:</p>
+                        <ul className="mt-4 space-y-2 text-sm text-gray-600">
+                          <li>• Multi-level category tree</li>
+                          <li>• Drag & drop category ordering</li>
+                          <li>• Category image management</li>
+                          <li>• SEO settings per category</li>
+                          <li>• Product count tracking</li>
+                        </ul>
                       </div>
                     </div>
-                    <div className="bg-white p-6 rounded-lg shadow-sm">
-                      <div className="flex items-center">
-                        <ApperIcon name="XCircle" className="w-8 h-8 text-red-600" />
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600">Out of Stock</p>
-                          <p className="text-2xl font-bold text-gray-900">8</p>
+                  </div>} />
+                  <Route path="inventory" element={<div className="p-6">
+                    <div className="max-w-6xl mx-auto">
+                      <h2 className="text-2xl font-bold text-gray-900 mb-6">Inventory Management</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="bg-white p-6 rounded-lg shadow-sm">
+                          <div className="flex items-center">
+                            <ApperIcon name="Package" className="w-8 h-8 text-blue-600" />
+                            <div className="ml-4">
+                              <p className="text-sm font-medium text-gray-600">Total Products</p>
+                              <p className="text-2xl font-bold text-gray-900">1,245</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-lg shadow-sm">
+                          <div className="flex items-center">
+                            <ApperIcon name="AlertTriangle" className="w-8 h-8 text-orange-600" />
+                            <div className="ml-4">
+                              <p className="text-sm font-medium text-gray-600">Low Stock</p>
+                              <p className="text-2xl font-bold text-gray-900">23</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-lg shadow-sm">
+                          <div className="flex items-center">
+                            <ApperIcon name="XCircle" className="w-8 h-8 text-red-600" />
+                            <div className="ml-4">
+                              <p className="text-sm font-medium text-gray-600">Out of Stock</p>
+                              <p className="text-2xl font-bold text-gray-900">8</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                      <div className="bg-white rounded-lg shadow-sm p-6">
+                        <p className="text-gray-600">Advanced inventory management coming soon:</p>
+                        <ul className="mt-4 space-y-2 text-sm text-gray-600">
+                          <li>• Real-time stock tracking</li>
+                          <li>• Low stock alerts & notifications</li>
+                          <li>• Bulk stock adjustments</li>
+                          <li>• Inventory history & audit trails</li>
+                          <li>• Supplier management integration</li>
+                        </ul>
+                      </div>
                     </div>
-                  </div>
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                    <p className="text-gray-600">Advanced inventory management coming soon:</p>
-                    <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                      <li>• Real-time stock tracking</li>
-                      <li>• Low stock alerts & notifications</li>
-                      <li>• Bulk stock adjustments</li>
-                      <li>• Inventory history & audit trails</li>
-                      <li>• Supplier management integration</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>} />
-              <Route path="orders" element={<OrderManagement />} />
-              <Route path="customers" element={<div className="p-6">Customer Management - Coming Soon</div>} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="marketing" element={<div className="p-6">Marketing Tools - Coming Soon</div>} />
-              <Route path="reports" element={<ReportsAnalytics />} />
-<Route path="settings" element={<div className="p-6">System Settings - Coming Soon</div>} />
-              </Routes>
+                  </div>} />
+                  <Route path="orders" element={
+                    <SafeAdminComponent componentName="OrderManagement">
+                      <OrderManagement />
+                    </SafeAdminComponent>
+                  } />
+                  <Route path="customers" element={<div className="p-6">Customer Management - Coming Soon</div>} />
+                  <Route path="users" element={
+                    <SafeAdminComponent componentName="UserManagement">
+                      <UserManagement />
+                    </SafeAdminComponent>
+                  } />
+                  <Route path="marketing" element={<div className="p-6">Marketing Tools - Coming Soon</div>} />
+                  <Route path="reports" element={
+                    <SafeAdminComponent componentName="ReportsAnalytics">
+                      <ReportsAnalytics />
+                    </SafeAdminComponent>
+                  } />
+                  <Route path="settings" element={<div className="p-6">System Settings - Coming Soon</div>} />
+                </Routes>
+              </SafeAdminComponent>
             } />
             
             {/* Legacy admin routes for backward compatibility */}
