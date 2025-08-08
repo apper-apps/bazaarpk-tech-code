@@ -1,5 +1,5 @@
 import React from "react";
-import { Error } from "@/components/ui/Error";
+import { Error as ErrorComponent } from "@/components/ui/Error";
 class WebSocketService {
   constructor() {
     this.socket = null;
