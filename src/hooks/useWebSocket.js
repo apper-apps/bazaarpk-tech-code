@@ -40,11 +40,8 @@ const connect = useCallback(async () => {
 
     try {
       await webSocketService.connect(url);
-    } catch (error) {
-      // Simple, bulletproof error message extraction
-      let userMessage = 'Connection failed';
-      
-// Enhanced error processing with categories and suggestions
+} catch (error) {
+      // Enhanced error processing with categories and suggestions
       let userMessage = 'Connection issue occurred';
       let toastType = 'error';
       let shouldShowToast = showConnectionToasts;
