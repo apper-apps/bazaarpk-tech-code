@@ -96,12 +96,27 @@ try {
       if (showConnectionToasts) {
         showToast(userMessage, toastType);
       }
-      
-      console.error('WebSocket connection failed:', {
-        error: error?.message || String(error),
+// Safe error logging with object serialization protection
+      const safeErrorLog = {
         category: error?.category,
-        canRetry: error?.canRetry
-      });
+        canRetry: error?.canRetry,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Extract error message safely without "[object Object]"
+      if (error?.message && typeof error.message === 'string') {
+        safeErrorLog.error = error.message;
+      } else if (typeof error === 'string') {
+        safeErrorLog.error = error;
+      } else if (error instanceof Error) {
+        safeErrorLog.error = error.message || error.name || 'Connection Error';
+      } else if (error && typeof error === 'object') {
+        safeErrorLog.error = error.reason || error.statusText || error.type || 'Connection failed';
+      } else {
+        safeErrorLog.error = 'Unknown connection error';
+      }
+      
+      console.error('WebSocket connection failed:', safeErrorLog);
     }
   }, [isOnline, showConnectionToasts, showToast, url]);
 
@@ -152,41 +167,40 @@ case 'invalid':
             let shouldShowToast = true;
             
             // Safe error object inspection to prevent [object Object] messages
+// Simplified error message extraction with no "[object Object]" risk
             const extractErrorMessage = (errorData) => {
               if (!errorData) return 'Unknown error';
               
-              // Handle different error data types safely
+              // Direct string handling
               if (typeof errorData === 'string') {
                 return errorData.substring(0, 80);
               }
               
-              if (typeof errorData === 'object') {
-                // Try multiple property paths for error messages
-                const messagePaths = [
-                  'message', 'error', 'reason', 'statusText', 'description'
-                ];
+              // Safe object property extraction
+              if (typeof errorData === 'object' && errorData !== null) {
+                // Check common error message properties
+                const message = errorData.message || errorData.error || errorData.reason || 
+                               errorData.statusText || errorData.description;
                 
-                for (const path of messagePaths) {
-                  const value = errorData[path];
-                  if (typeof value === 'string' && value.length > 0) {
-                    return value.substring(0, 80);
-                  }
+                if (typeof message === 'string' && message.length > 0) {
+                  return message.substring(0, 80);
                 }
                 
-                // If no string message found, create descriptive message
+                // Fallback to code or type based messages
                 if (errorData.code) {
-                  return `Connection error (${errorData.code})`;
+                  return `Connection error (code: ${errorData.code})`;
                 }
                 
                 if (errorData.type) {
-                  return `${errorData.type} error`;
+                  return `${errorData.type} connection error`;
                 }
                 
-                // Last resort: indicate error type without object serialization
-                return 'Connection error (details available in console)';
+                // Safe fallback - never return "[object Object]"
+                return 'Connection error occurred';
               }
               
-              return String(errorData).substring(0, 80);
+              // Final fallback for primitives
+              return 'Connection issue detected';
             };
             
             // Safe error message extraction with multiple fallbacks
@@ -309,7 +323,7 @@ case 'invalid':
 } catch (callbackError) {
               console.error('Error in WebSocket error callback:', callbackError);
             }
-            break;
+break;
         }
       }
     });
