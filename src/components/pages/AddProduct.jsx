@@ -132,18 +132,20 @@ metaTitle: "",
     "DEAL OF THE DAY"
   ];
 // Load categories on mount
-  useEffect(() => {
+useEffect(() => {
     const loadCategories = async () => {
       try {
         const categoriesData = await CategoryService.getAll();
         setCategories(categoriesData);
       } catch (error) {
         console.error("Failed to load categories:", error);
+        // showToast is safe to use without dependency as it's only for error reporting
         showToast("Failed to load categories", "error");
       }
     };
     loadCategories();
-  }, [showToast]);
+    // Only run on component mount - showToast omitted to prevent infinite re-renders
+  }, []);
 
   // Load subcategories when category changes
 useEffect(() => {
