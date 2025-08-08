@@ -106,23 +106,51 @@ this.socket.onerror = (event) => {
           let errorMessage = 'Connection unavailable';
           
           // Only extract simple string properties, never serialize objects
-          if (event?.reason && typeof event.reason === 'string' && event.reason.trim()) {
-            errorMessage = event.reason.substring(0, 60);
-          } else if (event?.type === 'error') {
-            errorMessage = 'Connection failed';
-          }
+// Categorize error based on connection state and event details
+          let errorCategory = 'network';
+          let userMessage = 'Connection lost';
+          let suggestion = 'Please check your internet connection';
           
-          // Clean and user-friendly message
-          errorMessage = errorMessage
-            .replace(/WebSocket/gi, 'Connection')
-            .replace(/ECONNREFUSED/gi, 'Server unavailable')
-            .replace(/ETIMEDOUT/gi, 'Connection timeout');
+          if (event?.reason && typeof event.reason === 'string' && event.reason.trim()) {
+            const reason = event.reason.toLowerCase();
+            if (reason.includes('server') || reason.includes('503') || reason.includes('502')) {
+              errorCategory = 'server';
+              userMessage = 'Server temporarily unavailable';
+              suggestion = 'Please try again in a few moments';
+            } else if (reason.includes('unauthorized') || reason.includes('403') || reason.includes('401')) {
+              errorCategory = 'auth';
+              userMessage = 'Authentication required';
+              suggestion = 'Please refresh the page and sign in again';
+            } else if (reason.includes('timeout') || reason.includes('etimedout')) {
+              errorCategory = 'timeout';
+              userMessage = 'Connection timed out';
+              suggestion = 'Check your internet connection and try again';
+            } else {
+              userMessage = reason.substring(0, 100);
+            }
+          } else if (event?.type === 'error') {
+            // Check connection state for more context
+            const readyState = this.socket?.readyState ?? 3;
+            if (readyState === 2) { // CLOSING
+              errorCategory = 'closing';
+              userMessage = 'Connection is closing';
+              suggestion = 'Reconnecting automatically...';
+            } else if (readyState === 3) { // CLOSED
+              errorCategory = 'network';
+              userMessage = 'Unable to connect to server';
+              suggestion = 'Check your internet connection';
+            }
+          }
           
           const readyState = this.socket?.readyState ?? 3;
           
-          // Simple error data object
+          // Enhanced error data object with actionable information
           const errorData = {
             status: 'error',
+            category: errorCategory,
+            message: userMessage,
+            suggestion: suggestion,
+            canRetry: errorCategory !== 'auth',
             error: errorMessage,
             code: 'WEBSOCKET_ERROR',
             readyState: readyState,

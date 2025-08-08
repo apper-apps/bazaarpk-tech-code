@@ -44,21 +44,44 @@ const connect = useCallback(async () => {
       // Simple, bulletproof error message extraction
       let userMessage = 'Connection failed';
       
-      // Only handle simple cases, never serialize objects
-      if (error instanceof Error && error.message) {
-        userMessage = error.message.substring(0, 60);
+// Enhanced error processing with categories and suggestions
+      let userMessage = 'Connection issue occurred';
+      let toastType = 'error';
+      let shouldShowToast = showConnectionToasts;
+      
+      // Handle structured error data from WebSocketService
+      if (error && typeof error === 'object' && error.message) {
+        userMessage = error.message;
+        
+        // Add suggestion if available and space permits
+        if (error.suggestion && error.message.length < 50) {
+          userMessage += ` - ${error.suggestion}`;
+        }
+        
+        // Adjust toast behavior based on error category
+        if (error.category === 'closing' || error.category === 'timeout') {
+          toastType = 'warning';
+        } else if (error.category === 'auth') {
+          toastType = 'error';
+          shouldShowToast = true; // Always show auth errors
+        } else if (error.category === 'server') {
+          // Don't spam server error toasts
+          shouldShowToast = showConnectionToasts && Math.random() > 0.7;
+        }
+      } else if (error instanceof Error && error.message) {
+        userMessage = error.message.substring(0, 80);
       } else if (typeof error === 'string') {
-        userMessage = error.substring(0, 60);
+        userMessage = error.substring(0, 80);
       }
       
-      // Clean up technical jargon
+      // Clean up remaining technical jargon for fallback cases
       userMessage = userMessage
         .replace(/WebSocket/gi, 'Connection')
         .replace(/ECONNREFUSED/gi, 'Server unavailable')
-        .replace(/ETIMEDOUT/gi, 'Timeout');
+        .replace(/ETIMEDOUT/gi, 'Connection timeout');
       
-      if (showConnectionToasts) {
-        showToast(userMessage, 'error');
+      if (shouldShowToast) {
+        showToast(userMessage, toastType);
       }
       
       console.error('WebSocket connection failed:', userMessage);
