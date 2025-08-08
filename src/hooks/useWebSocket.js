@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/useToast";
 import webSocketService from "@/services/api/WebSocketService";
-import { Error } from "@/components/ui/Error";
+import { Error as ErrorComponent } from "@/components/ui/Error";
 
 export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
