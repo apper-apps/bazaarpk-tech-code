@@ -128,7 +128,7 @@ if (this.ws?.readyState === WebSocket.CONNECTING) {
       });
     }
 
-    return new Promise((resolve, reject) => {
+return new Promise((resolve, reject) => {
       try {
         // Validate URL before attempting connection
         if (!wsUrl || (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://'))) {
@@ -232,7 +232,10 @@ this.ws.onerror = (event) => {
           } else {
             // Process other error scenarios
             if (errorReason && typeof errorReason === 'string' && errorReason.trim()) {
-              const reason = errorReason.toLowerCase();
+const reason = errorReason.toLowerCase();
+              const wsUrl = this.url || this.getWebSocketUrl();
+              const isLocalhostConnection = wsUrl && (wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1'));
+              
               if (reason.includes('server') || reason.includes('503') || reason.includes('502')) {
                 errorCategory = 'server';
                 userMessage = 'Server temporarily unavailable';
@@ -247,17 +250,25 @@ this.ws.onerror = (event) => {
                 suggestion = 'Connection timed out. Check your internet connection and try again';
               } else if (reason.includes('refused') || reason.includes('econnrefused')) {
                 errorCategory = 'server';
-                userMessage = isDev ? 'Development server not running' : 'Server unavailable';
-                suggestion = isDev ? 'Please start the WebSocket server' : 'Server is temporarily unavailable';
+                if (isDev && isLocalhostConnection) {
+                  userMessage = 'Development mode - WebSocket server not running';
+                  suggestion = 'WebSocket server not available. All features work offline.';
+                } else {
+                  userMessage = isDev ? 'Development server not running' : 'Server unavailable';
+                  suggestion = isDev ? 'Please start the WebSocket server' : 'Server is temporarily unavailable';
+                }
               }
             } else {
               // State-based error handling
               if (wsState === 0) { // CONNECTING
                 errorCategory = 'connection';
-                userMessage = 'Failed to establish connection';
-                suggestion = isLocalhostFailure && isDev
-                  ? 'Cannot connect to WebSocket server. Check if it\'s running.'
-                  : 'Unable to connect to server. Check your internet connection.';
+                if (isDev && isLocalhostFailure) {
+                  userMessage = 'Development mode - working offline';
+                  suggestion = 'WebSocket server not available. All features work without it.';
+                } else {
+                  userMessage = 'Failed to establish connection';
+                  suggestion = 'Unable to connect to server. Check your internet connection.';
+                }
               } else if (wsState === 2) { // CLOSING
                 errorCategory = 'closing';
                 userMessage = 'Connection is closing';
@@ -293,7 +304,8 @@ this.emit('connection', {
             code: 'WEBSOCKET_ERROR',
             category: errorCategory,
             canRetry: error.canRetry,
-            isDevelopment: isDev
+            isDevelopment: isDev,
+            suggestion: suggestion
           });
           
           // Schedule automatic reconnection if retryable
@@ -301,7 +313,7 @@ this.emit('connection', {
             this.scheduleReconnect();
           }
           
-          reject(error);
+reject(error);
         };
 
         this.ws.onmessage = (event) => {
@@ -309,14 +321,17 @@ this.emit('connection', {
         };
 
 } catch (error) {
+        const isDev = import.meta.env?.DEV || false;
+        const wsUrl = this.getWebSocketUrl();
+        const isLocalhost = wsUrl && (wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1'));
+        
         console.warn('WebSocket connection unavailable:', {
           url: this.url,
           error: error.message || 'Connection failed',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          isDevelopment: isDev,
+          isLocalhost: isLocalhost
         });
-        
-        // Get the WebSocket URL to determine connection strategy
-        const wsUrl = this.getWebSocketUrl();
         
         if (!wsUrl) {
           // WebSocket disabled or not configured - graceful degradation
@@ -335,14 +350,18 @@ this.emit('connection', {
         this.checkServerAvailability(wsUrl)
           .then(isServerAvailable => {
             if (!isServerAvailable) {
+              const message = isDev && isLocalhost 
+                ? 'Development mode - WebSocket server not running, all features available offline'
+                : 'Working offline - all features available';
+              
               console.info('WebSocket server not available, switching to offline mode');
               
               this.emit('connection', { 
                 status: 'offline', 
-                message: 'Working offline - all features available',
+                message: message,
                 code: 'SERVER_OFFLINE',
-                category: 'server_unavailable',
-                canRetry: true
+                category: isDev && isLocalhost ? 'development' : 'server_unavailable',
+                canRetry: !isDev || !isLocalhost
               });
               return;
             }
@@ -359,18 +378,17 @@ this.emit('connection', {
           })
           .catch(checkError => {
             // Cannot reach server - treat as offline with appropriate category
-            const isDevelopment = import.meta.env?.DEV || false;
-            const isLocalhost = wsUrl.includes('localhost');
+            const message = isDev && isLocalhost 
+              ? 'Development mode - all features available offline' 
+              : 'Working offline - all features available';
             
             console.info('Cannot reach WebSocket server, working offline');
             this.emit('connection', { 
               status: 'offline', 
-              message: isDevelopment && isLocalhost 
-                ? 'Development mode - all features available offline' 
-                : 'Working offline - all features available',
+              message: message,
               code: 'SERVER_UNREACHABLE',
-              category: isDevelopment && isLocalhost ? 'development' : 'server_unavailable', 
-              canRetry: !isDevelopment || !isLocalhost
+              category: isDev && isLocalhost ? 'development' : 'server_unavailable', 
+              canRetry: !isDev || !isLocalhost
             });
           });
       }
