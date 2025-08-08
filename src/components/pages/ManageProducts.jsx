@@ -72,11 +72,26 @@ const [statusFilter, setStatusFilter] = useState('all'); // all, pending, approv
     status: '',
     tags: { action: 'add', values: [] }
   });
-
-  // Activity logging state
+// Activity logging state
 const [activityLog, setActivityLog] = useState([]);
 
-// Memoized logActivity function to prevent re-creation and potential infinite loops
+// WebSocket integration for real-time updates - Initialize FIRST
+  const { 
+    connectionStatus, 
+    isConnected, 
+    subscribe, 
+    sendMessage 
+  } = useWebSocket(import.meta.env.VITE_WS_URL, {
+    showConnectionToasts: true,
+    onMessage: (data) => {
+      // Defensive check - logActivity will be available after this hook
+      if (typeof logActivity === 'function') {
+        logActivity('WebSocket Message Received', { type: data.type, data });
+      }
+    }
+  });
+
+// Memoized logActivity function - Now connectionStatus and isConnected are initialized
   const logActivity = useCallback((action, details) => {
     const logEntry = {
       id: Date.now(),
@@ -112,8 +127,8 @@ const [activityLog, setActivityLog] = useState([]);
         rtt: navigator.connection.rtt
       } : 'unknown',
       websocket: {
-        status: connectionStatus,
-        connected: isConnected
+        status: connectionStatus || 'unknown', // Defensive null check
+        connected: isConnected || false // Defensive null check
       }
     });
     console.groupEnd();
@@ -140,19 +155,6 @@ const [activityLog, setActivityLog] = useState([]);
       console.warn('Failed to store activity log in localStorage:', error);
     }
   }, [currentUser?.role, currentUser?.id, connectionStatus, isConnected]);
-
-// WebSocket integration for real-time updates
-  const { 
-    connectionStatus, 
-    isConnected, 
-    subscribe, 
-    sendMessage 
-  } = useWebSocket(import.meta.env.VITE_WS_URL, {
-    showConnectionToasts: true,
-    onMessage: (data) => {
-      logActivity('WebSocket Message Received', { type: data.type, data });
-    }
-  });
 
   // Load data
   useEffect(() => {
