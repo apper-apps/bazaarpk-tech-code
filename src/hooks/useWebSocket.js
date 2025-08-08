@@ -306,10 +306,10 @@ case 'invalid':
                 timestamp: new Date().toISOString()
               };
               onError?.(callbackData);
-            } catch (callbackError) {
+} catch (callbackError) {
               console.error('Error in WebSocket error callback:', callbackError);
             }
-break;
+            break;
         }
       }
     });
