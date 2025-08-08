@@ -681,10 +681,10 @@ const validateForm = () => {
     const newErrors = {};
     const warnings = {};
     
-    // Enhanced Basic Information validation
+    // Enhanced Basic Information validation with consistent messaging
     if (!formData.title?.trim()) {
       newErrors.title = "Product name is required and cannot be empty";
-    } else if (formData.title.length < 3) {
+    } else if (formData.title.trim().length < 3) {
       newErrors.title = "Product name must be at least 3 characters for searchability";
     } else if (formData.title.length > 100) {
       newErrors.title = "Product name cannot exceed 100 characters";
@@ -692,14 +692,16 @@ const validateForm = () => {
       newErrors.title = "Product name contains invalid characters. Use only letters, numbers, spaces, and basic punctuation";
     }
     
-    if (!formData.category) {
-      newErrors.category = "Category selection is required for proper product classification";
+    // Category validation - ensure consistent with backend
+    if (!formData.category || formData.category.trim() === '') {
+      newErrors.category = "Category is required and cannot be empty";
     }
     
+    // Description validation - ensure consistent with backend  
     if (!formData.description?.trim()) {
-      newErrors.description = "Product description is required to help customers understand your product";
-    } else if (formData.description.length < 20) {
-      newErrors.description = "Description should be at least 20 characters to provide meaningful information to customers";
+      newErrors.description = "Description is required and cannot be empty";
+    } else if (formData.description.trim().length < 20) {
+      newErrors.description = "Description must be at least 20 characters to provide meaningful information to customers";
     } else if (formData.description.length > 2000) {
       newErrors.description = "Description cannot exceed 2000 characters";
     }
@@ -708,14 +710,14 @@ const validateForm = () => {
       newErrors.shortDescription = "Short description should be at least 10 characters if provided";
     }
     
-    // Enhanced Pricing validation with profitability checks
+    // Enhanced Pricing validation with consistent messaging
     const sellingPrice = parseFloat(formData.sellingPrice) || 0;
     const buyingPrice = parseFloat(formData.buyingPrice) || 0;
     const discountAmount = parseFloat(formData.discountAmount) || 0;
     const finalPrice = parseFloat(formData.discountedPrice) || sellingPrice;
     
-    if (!formData.sellingPrice || sellingPrice <= 0) {
-      newErrors.sellingPrice = "Selling price is required and must be greater than 0";
+    if (!formData.sellingPrice || formData.sellingPrice.toString().trim() === '' || sellingPrice <= 0) {
+      newErrors.sellingPrice = "Selling Price is required and cannot be empty";
     } else if (sellingPrice < 1) {
       warnings.sellingPrice = "Very low selling price - please verify this is correct";
     } else if (sellingPrice > 1000000) {

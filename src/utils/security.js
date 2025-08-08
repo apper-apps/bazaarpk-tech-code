@@ -1,5 +1,4 @@
 /**
-/**
  * Security utilities for input sanitization and CSRF protection
  * Implements WCAG compliance and security best practices
  */
@@ -487,12 +486,12 @@ export const validateFormData = (formData, validationRules = {}) => {
     
     const stringValue = value ? value.toString().trim() : '';
     
-    // Required field validation with enhanced messaging
+// Required field validation with enhanced messaging
     if (rules.required && (!value || stringValue === '')) {
-      errors[field] = rules.requiredError || `${formatFieldName(field)} is required and cannot be empty`;
+      const fieldDisplayName = formatFieldName(field);
+      errors[field] = rules.requiredError || `${fieldDisplayName} is required and cannot be empty`;
       continue;
     }
-    
     // Skip other validations if field is empty and not required
     if (!value || stringValue === '') {
       // Add suggestions for optional but recommended fields
@@ -665,6 +664,20 @@ export const validateFormData = (formData, validationRules = {}) => {
 
 // Helper function to format field names for user display
 const formatFieldName = (fieldName) => {
+  // Handle specific field name mappings
+  const fieldMappings = {
+    'sellingPrice': 'Selling Price',
+    'buyingPrice': 'Buying Price',
+    'stockQuantity': 'Stock Quantity',
+    'shortDescription': 'Short Description',
+    'metaTitle': 'Meta Title',
+    'metaDescription': 'Meta Description'
+  };
+  
+  if (fieldMappings[fieldName]) {
+    return fieldMappings[fieldName];
+  }
+  
   return fieldName
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, str => str.toUpperCase())
@@ -820,10 +833,10 @@ export const initializeSecurity = () => {
     createScreenReaderAnnouncer();
   }
   
-  // Set up CSP headers if supported
+// Set up CSP headers if supported
   if ('SecurityPolicyViolationEvent' in window) {
     document.addEventListener('securitypolicyviolation', (e) => {
       console.warn('CSP Violation:', e.violatedDirective, e.blockedURI);
-});
+    });
   }
 };

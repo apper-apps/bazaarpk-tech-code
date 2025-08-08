@@ -8,17 +8,23 @@ const validateProductData = async (product) => {
   const errors = [];
   
   if (!product.title || product.title.trim().length < 3) {
-    errors.push('Title must be at least 3 characters long');
+    errors.push('Product name is required and must be at least 3 characters long');
   }
-  if (!product.sellingPrice || isNaN(parseFloat(product.sellingPrice)) || parseFloat(product.sellingPrice) <= 0) {
-    errors.push('Selling price must be a positive number');
+  
+  if (!product.sellingPrice || product.sellingPrice.toString().trim() === '' || isNaN(parseFloat(product.sellingPrice)) || parseFloat(product.sellingPrice) <= 0) {
+    errors.push('Selling Price is required and cannot be empty');
   }
-  if (!product.category) {
-    errors.push('Category is required');
+  
+  if (!product.category || product.category.trim() === '') {
+    errors.push('Category is required and cannot be empty');
   }
-  if (!product.description || product.description.trim().length < 20) {
+  
+  if (!product.description || product.description.trim() === '') {
+    errors.push('Description is required and cannot be empty');
+  } else if (product.description.trim().length < 20) {
     errors.push('Description must be at least 20 characters long');
   }
+  
   if (product.stockQuantity === undefined || isNaN(parseInt(product.stockQuantity)) || parseInt(product.stockQuantity) < 0) {
     errors.push('Stock quantity must be a non-negative number');
   }
@@ -32,7 +38,8 @@ const validateProductData = async (product) => {
 const sanitizeAndValidateText = (text, options = {}) => {
   if (!text && options.required !== false) {
     if (options.required === false) return '';
-    throw new Error('Text is required');
+    const fieldName = options.fieldName || 'Text';
+    throw new Error(`${fieldName} is required and cannot be empty`);
   }
   
   if (!text) return options.defaultValue || '';
@@ -40,10 +47,12 @@ const sanitizeAndValidateText = (text, options = {}) => {
   const sanitized = text.toString().trim();
   
   if (options.minLength && sanitized.length < options.minLength) {
-    throw new Error(`Text must be at least ${options.minLength} characters long`);
+    const fieldName = options.fieldName || 'Text';
+    throw new Error(`${fieldName} must be at least ${options.minLength} characters long`);
   }
   if (options.maxLength && sanitized.length > options.maxLength) {
-    throw new Error(`Text must not exceed ${options.maxLength} characters`);
+    const fieldName = options.fieldName || 'Text';
+    throw new Error(`${fieldName} must not exceed ${options.maxLength} characters`);
   }
   
   return sanitized;
@@ -907,9 +916,9 @@ if (!Array.isArray(ids) || ids.length === 0) {
 console.log(`🗑️ Cache Invalidation: ${homepageAffectedCount} products affect homepage`);
         
         // Set cache headers for fresh content
-        if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+        if (typeof window !== 'undefined' && window.CustomEvent) {
           // Trigger cache invalidation event for listening components
-          window.dispatchEvent(new CustomEvent('product-cache-invalidate', {
+          window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
             detail: {
               type: 'bulk_approval',
               affectedCount: homepageAffectedCount,
@@ -1214,8 +1223,8 @@ throw new Error('Invalid product IDs provided');
       
 // Trigger cache invalidation for homepage
       try {
-        if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('product-cache-invalidate', {
+        if (typeof window !== 'undefined' && window.CustomEvent) {
+          window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
             detail: {
               type: 'auto_approve_publish',
               productId: parseInt(id),
@@ -1267,8 +1276,8 @@ throw new Error('Invalid product IDs provided');
 // Cache invalidation for homepage-affecting changes
     if (affectsHomepage) {
       try {
-        if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('product-cache-invalidate', {
+        if (typeof window !== 'undefined' && window.CustomEvent) {
+          window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
             detail: {
               type: 'visibility_toggle',
               productId: parseInt(id),
@@ -1336,8 +1345,8 @@ toggleFeatured: async (id) => {
     
 // Cache invalidation for featured changes (affects homepage)
     try {
-      if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('product-cache-invalidate', {
+      if (typeof window !== 'undefined' && window.CustomEvent) {
+        window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
           detail: {
             type: 'featured_toggle',
             productId: parseInt(id),
@@ -1429,8 +1438,8 @@ toggleFeatured: async (id) => {
 // Cache invalidation for homepage-affecting status changes
     if (affectsHomepage) {
       try {
-        if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('product-cache-invalidate', {
+        if (typeof window !== 'undefined' && window.CustomEvent) {
+          window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
             detail: {
               type: 'status_update',
               productId: parseInt(id),
