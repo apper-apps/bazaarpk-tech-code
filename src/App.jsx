@@ -435,6 +435,7 @@ useEffect(() => {
     initializeInputFields();
     
     // Observer for dynamically added inputs
+// Observer for dynamically added inputs
     const inputObserver = new MutationObserver((mutations) => {
       let hasNewInputs = false;
       mutations.forEach((mutation) => {
@@ -453,11 +454,11 @@ useEffect(() => {
       });
       
       if (hasNewInputs) {
-        setTimeout(initializeInputFields, 100); // Delay to ensure elements are fully rendered
+        initializeInputFields(); // Direct call for immediate response
       }
     });
 
-    inputObserver.observe(document.body, {
+inputObserver.observe(document.body, {
       childList: true,
       subtree: true
     });

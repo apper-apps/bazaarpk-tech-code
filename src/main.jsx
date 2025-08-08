@@ -1,7 +1,7 @@
-import React from "react"
-import ReactDOM from "react-dom/client"
-import App from "./App.jsx"
 import "./index.css"
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "@/App";
 // Clean spacebar functionality fix for text inputs
 // Ensures spacebar works properly without interfering with React state management
 document.addEventListener('keydown', function(e) {
@@ -49,20 +49,20 @@ document.addEventListener('DOMContentLoaded', ensureSpacebarWorks);
 window.addEventListener('load', ensureSpacebarWorks);
 
 // Monitor for dynamically added inputs
+// Monitor for dynamically added inputs
 if (typeof MutationObserver !== 'undefined') {
-  const observer = new MutationObserver(function() {
-    clearTimeout(window.spacebarFixTimeout);
-    window.spacebarFixTimeout = setTimeout(ensureSpacebarWorks, 50);
-  });
-  
-  observer.observe(document.body, { 
+  // Add MutationObserver for dynamic content
+  const observer = new MutationObserver(ensureSpacebarWorks);
+  observer.observe(document.body, {
     childList: true, 
     subtree: true,
     attributes: true,
     attributeFilter: ['contenteditable']
-  });
+});
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <App />
-)
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
