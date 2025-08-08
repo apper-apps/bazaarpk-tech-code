@@ -171,50 +171,49 @@ export const Error = ({
           'Try again in a few moments',
           'Contact support if the issue persists'
         ]
-}
+      }
     };
 
     return baseContent;
   };
 
-    // Auto-detect WebSocket errors from message content
-    let errorType = type;
-    if (type === 'general' || type === 'network') {
-      if (message && (
-        message.toLowerCase().includes('websocket') ||
-        message.toLowerCase().includes('real-time') ||
-        message.toLowerCase().includes('connection failed') ||
-        message.toLowerCase().includes('[object object]')
-      )) {
-        errorType = 'websocket';
-      }
+  // Get base content
+  const baseContent = getDefaultContent();
+
+  // Auto-detect WebSocket errors from message content
+  let errorType = type;
+  if (type === 'general' || type === 'network') {
+    if (message && (
+      message.toLowerCase().includes('websocket') ||
+      message.toLowerCase().includes('real-time') ||
+      message.toLowerCase().includes('connection failed') ||
+      message.toLowerCase().includes('[object object]')
+    )) {
+      errorType = 'websocket';
     }
+  }
 
-    let content = baseContent[errorType] || baseContent.default;
-    // Browser-specific modifications
-    if (browserInfo) {
-      if (browserInfo.mobile && type === 'network') {
-        content.suggestions.unshift('Switch to Wi-Fi if on mobile data');
-      }
-      
-      if (browserInfo.name === 'Safari' && parseInt(browserInfo.version) < 14) {
-        content.message += ' Note: Some features may not work properly in older Safari versions.';
-        content.suggestions.push('Update Safari to the latest version');
-      }
-      
-      if (browserInfo.name === 'Chrome' && parseInt(browserInfo.version) < 80) {
-        content.suggestions.push('Update Chrome for better security and performance');
-      }
+  let content = baseContent[errorType] || baseContent.default;
+  
+  // Browser-specific modifications
+  if (browserInfo) {
+    if (browserInfo.mobile && type === 'network') {
+      content.suggestions.unshift('Switch to Wi-Fi if on mobile data');
     }
-
-    return content;
-  };
-
-  const defaultContent = getDefaultContent();
-  const errorTitle = title || defaultContent.title;
-  const errorMessage = message || defaultContent.message;
-  const IconComponent = defaultContent.icon || AlertTriangle;
-  const suggestions = defaultContent.suggestions || [];
+    
+    if (browserInfo.name === 'Safari' && parseInt(browserInfo.version) < 14) {
+      content.message += ' Note: Some features may not work properly in older Safari versions.';
+      content.suggestions.push('Update Safari to the latest version');
+    }
+    
+    if (browserInfo.name === 'Chrome' && parseInt(browserInfo.version) < 80) {
+content.suggestions.push('Update Chrome for better security and performance');
+    }
+  }
+  const errorTitle = title || content.title;
+  const errorMessage = message || content.message;
+  const IconComponent = content.icon || AlertTriangle;
+  const suggestions = content.suggestions || [];
 
   // Enhanced retry handler with analytics
   const handleRetry = useCallback(() => {
