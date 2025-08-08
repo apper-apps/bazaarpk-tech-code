@@ -53,9 +53,10 @@ export const useWebSocket = (url, options = {}) => {
 const connect = useCallback(async () => {
     // Check if WebSocket is intentionally disabled
     const isWebSocketDisabled = import.meta.env.VITE_DISABLE_WEBSOCKET === 'true';
-    const defaultUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080';
+    const defaultUrl = import.meta.env.VITE_WS_URL || 'wss://echo.websocket.org/';
     const finalUrl = url || defaultUrl;
-if (isWebSocketDisabled) {
+    
+    if (isWebSocketDisabled) {
       setConnectionStatus('disabled');
       if (showConnectionToasts && connectionStatus === 'connecting') {
         showToast('WebSocket disabled - app working offline (all features available)', 'info');
@@ -64,6 +65,7 @@ if (isWebSocketDisabled) {
     }
 
     if (!isOnline) {
+      setConnectionStatus('offline');
       if (showConnectionToasts) {
         showToast('Cannot connect - device is offline', 'warning');
       }
@@ -75,14 +77,20 @@ if (isWebSocketDisabled) {
       if (!webSocketService || typeof webSocketService.connect !== 'function') {
         throw new Error('WebSocket service is not available');
       }
-await webSocketService.connect(finalUrl);
+      
+      await webSocketService.connect(finalUrl);
+      setConnectionStatus('connected');
+      
+      if (showConnectionToasts && (connectionStatus === 'connecting' || connectionStatus === 'disconnected')) {
+        showToast('Connected to real-time updates', 'success');
+      }
     } catch (error) {
       // Enhanced error handling for better UX
       const isDevelopment = import.meta.env?.DEV || false;
       const errorCategory = error?.category || 'unknown';
       const isServerUnavailable = errorCategory === 'server_unavailable' || errorCategory === 'development';
       
-// Enhanced toast messaging with better development context
+      // Enhanced toast messaging with better development context
       if (showConnectionToasts && connectionStatus === 'connecting') {
         let message = 'App running offline - all features available';
         
@@ -94,6 +102,8 @@ await webSocketService.connect(finalUrl);
           message = 'Development mode - WebSocket server unavailable (working offline)';
         } else if (isServerUnavailable) {
           message = 'Working offline - all features available';
+        } else if (errorCategory === 'offline') {
+          message = 'Device is offline - working in offline mode';
         }
         
         showToast(message, 'info');
@@ -102,15 +112,14 @@ await webSocketService.connect(finalUrl);
       // Enhanced development logging with actionable guidance
       if (isDevelopment && errorCategory === 'disabled') {
         console.info('📡 WebSocket disabled via VITE_DISABLE_WEBSOCKET=true');
-      } else if (isDevelopment && !finalUrl) {
-        console.info('📡 WebSocket disabled - set VITE_WS_URL in .env to enable');
       } else if (isDevelopment && (isServerUnavailable || errorCategory === 'development')) {
-        console.info(`📡 WebSocket server unavailable: ${finalUrl || 'No URL configured'}\n💡 Start WebSocket server or configure VITE_WS_URL for remote connection`);
+        console.info(`📡 WebSocket server unavailable: ${finalUrl || 'No URL configured'}\n💡 Start WebSocket server or set VITE_DISABLE_WEBSOCKET=true in .env`);
       }
       
       // Enhanced connection status with more specific states
       const newStatus = errorCategory === 'disabled' ? 'disabled' : 
                        errorCategory === 'development' ? 'development' :
+                       errorCategory === 'offline' ? 'offline' :
                        isServerUnavailable ? 'server_unavailable' : 'disconnected';
       setConnectionStatus(newStatus);
     }

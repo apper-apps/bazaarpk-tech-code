@@ -72,13 +72,26 @@ class WebSocketService {
   /**
    * Connect to WebSocket server
    */
-  async connect(url) {
-    // Determine WebSocket URL with proper fallback strategy
+async connect(url) {
+    // Check if WebSocket is disabled via environment variable
+    const isWebSocketDisabled = import.meta.env.VITE_DISABLE_WEBSOCKET === 'true';
+    
+    if (isWebSocketDisabled) {
+      const error = new Error('WebSocket disabled - app working offline (all features available)');
+      error.category = 'disabled';
+      error.canRetry = false;
+      return Promise.reject(error);
+    }
+
+    // Determine WebSocket URL with improved fallback strategy
     const wsUrl = url || import.meta.env.VITE_WS_URL || 'wss://echo.websocket.org/';
     
     if (!this.isOnline) {
       console.warn('WebSocket: Cannot connect - offline');
-      return Promise.reject(new Error('Device is offline'));
+      const error = new Error('Device is offline');
+      error.category = 'offline';
+      error.canRetry = true;
+      return Promise.reject(error);
     }
 
     if (this.ws?.readyState === WebSocket.OPEN) {
@@ -86,7 +99,7 @@ class WebSocketService {
       return Promise.resolve();
     }
 
-if (this.ws?.readyState === WebSocket.CONNECTING) {
+    if (this.ws?.readyState === WebSocket.CONNECTING) {
       console.log('WebSocket connection in progress');
       return new Promise((resolve, reject) => {
         let timeoutCount = 0;
@@ -135,14 +148,49 @@ return new Promise((resolve, reject) => {
           throw new Error('Invalid WebSocket URL provided');
         }
 
-        this.url = wsUrl;
+this.url = wsUrl;
+        
+        // Enhanced error handling for development environments
+        const isDevelopment = import.meta.env?.DEV || false;
+        const isLocalhost = wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1');
+        
+        if (isDevelopment && isLocalhost && wsUrl.includes('8080')) {
+          console.info('📡 WebSocket attempting connection to development server:', wsUrl);
+          console.info('💡 If connection fails, the app will work offline with all features available');
+        }
         this.isManualDisconnect = false;
         this.errorEmitted = false;
         
         // Clear any existing connection
         this.cleanup();
         
-        this.ws = new WebSocket(wsUrl);
+this.ws = new WebSocket(wsUrl);
+        
+        // Enhanced connection error handling
+        this.ws.onerror = (error) => {
+          console.warn('WebSocket connection error:', error);
+          
+          // Categorize errors for better UX
+          let errorCategory = 'connection';
+          const isDevelopment = import.meta.env?.DEV || false;
+          const isLocalhost = wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1');
+          
+          if (isDevelopment && isLocalhost) {
+            errorCategory = 'development';
+          } else if (!this.isOnline) {
+            errorCategory = 'offline';
+          } else if (wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1')) {
+            errorCategory = 'server_unavailable';
+          }
+          
+          // Emit categorized error for better handling
+          this.emit('error', { 
+            originalError: error, 
+            category: errorCategory,
+            url: wsUrl,
+            canRetry: errorCategory !== 'disabled'
+          });
+        };
         
         // Connection timeout
         this.connectionTimeout = setTimeout(() => {
