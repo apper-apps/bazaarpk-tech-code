@@ -42,36 +42,50 @@ export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
 
 try {
       await webSocketService.connect(url);
-} catch (error) {
-      // Extract clean error message
+    } catch (error) {
+      // Extract clean error message with comprehensive type checking
       let userMessage = 'Connection failed - will retry automatically';
       
+      // Handle Error instances
       if (error instanceof Error) {
-        userMessage = error.message;
-} 
-// Handle DOMException separately
-else if (typeof window !== 'undefined' && window.DOMException && error instanceof window.DOMException) {
-  userMessage = `Network error: ${error.message}`;
-}
-// Handle primitive errors
+        userMessage = error.message || 'WebSocket connection error';
+      } 
+      // Handle DOMException separately
+      else if (typeof window !== 'undefined' && window.DOMException && error instanceof window.DOMException) {
+        userMessage = `Network error: ${error.message || 'Connection failed'}`;
+      }
+      // Handle string errors
       else if (typeof error === 'string') {
         userMessage = error;
       }
+      // Handle object errors with safe property access
+      else if (error && typeof error === 'object') {
+        userMessage = error.message || error.error || error.type || 'WebSocket connection error';
+      }
       
-      // Final sanitization to prevent object leakage
-      userMessage = userMessage.replace(/\[object\s+\w+\]/g, 'WebSocket error');
+      // Comprehensive sanitization to prevent object leakage
+      userMessage = String(userMessage)
+        .replace(/\[object\s+\w+\]/gi, 'WebSocket connection error')
+        .replace(/^\s*error\s*error/i, 'WebSocket error')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+      
+      // Fallback for empty messages
+      if (!userMessage) {
+        userMessage = 'WebSocket connection failed';
+      }
       
       if (showConnectionToasts) {
         showToast(userMessage, 'error');
       }
-// Log with safe serialization to prevent [object Object] display
-      const errorDetails = {
-        message: userMessage,
-        errorType: typeof error,
-        constructor: error?.constructor?.name
-      };
-      const errorLogMessage = `WebSocket connection error: ${JSON.stringify(errorDetails, null, 2)}`;
-      console.error(errorLogMessage);
+      
+      // Safe error logging
+      console.error('WebSocket connection failed:', {
+        originalErrorType: typeof error,
+        errorConstructor: error?.constructor?.name || 'Unknown',
+        cleanMessage: userMessage,
+        timestamp: new Date().toISOString()
+      });
     }
   }, [url, isOnline, showConnectionToasts, showToast]);
 
@@ -116,21 +130,29 @@ case 'error':
                 safeError = data.error;
               } else if (data.error instanceof Error) {
                 safeError = data.error.message || 'WebSocket error';
-              } else if (typeof data.error === 'object') {
-                safeError = data.error.message || data.error.type || 'WebSocket connection error';
+              } else if (typeof data.error === 'object' && data.error !== null) {
+                // Safe property access for objects
+                safeError = data.error.message || 
+                           data.error.type || 
+                           data.error.code ||
+                           'WebSocket connection error';
               }
             }
             
-            // Clean any remaining object representations
-            const cleanError = safeError
-              .replace(/\[object\s+\w+\]/gi, 'WebSocket error')
+            // Comprehensive cleaning of error messages
+            const cleanError = String(safeError)
+              .replace(/\[object\s+\w+\]/gi, 'WebSocket connection error')
+              .replace(/^\s*error\s*error/i, 'WebSocket error')
               .replace(/\s{2,}/g, ' ')
               .trim();
               
             setConnectionStatus('error');
             
+            // Ensure we have a valid error message
+            const finalError = cleanError || 'Connection error occurred';
+            
             if (showConnectionToasts) {
-              showToast(cleanError || 'Connection error occurred', 'error');
+              showToast(finalError, 'error');
             }
             onError?.(data);
             break;

@@ -377,7 +377,7 @@ export const Error = ({
           {retryCount >= 3 && (
             <Button
               onClick={() => {
-                const mailtoUrl = `mailto:support@bazaarpk.com?subject=Error Report&body=Error Type: ${type}%0ABrowser: ${browserInfo?.name} ${browserInfo?.version}%0AError Message: ${encodeURIComponent(errorMessage)}`;
+const mailtoUrl = `mailto:support@bazaarpk.com?subject=Error Report&body=Error Type: ${type}%0ABrowser: ${browserInfo?.name} ${browserInfo?.version}%0AError Message: ${encodeURIComponent(errorMessage)}`;
                 window.location.href = mailtoUrl;
               }}
               variant="outline"
@@ -385,7 +385,7 @@ export const Error = ({
               className="flex items-center gap-2 text-blue-600 border-blue-600 hover:bg-blue-50"
               aria-label="Contact support for help"
             >
-              <ApperIcon name="Mail" className="w-4 h-4" />
+<Headphones className="w-4 h-4" />
               Contact Support
             </Button>
           )}
