@@ -728,6 +728,24 @@ handleMessage(data) {
   /**
    * Cleanup resources
    */
+calculateRetryDelay() {
+    // Implement exponential backoff with jitter
+    const baseDelay = 1000; // 1 second
+    const maxDelay = 30000; // 30 seconds
+    const retryAttempt = this.retryCount || 0;
+    
+    // Calculate exponential backoff: baseDelay * 2^retryAttempt
+    const exponentialDelay = baseDelay * Math.pow(2, retryAttempt);
+    
+    // Cap at maximum delay
+    const cappedDelay = Math.min(exponentialDelay, maxDelay);
+    
+    // Add jitter (random factor between 0.8 and 1.2) to prevent thundering herd
+    const jitter = 0.8 + (Math.random() * 0.4);
+    
+    return Math.floor(cappedDelay * jitter);
+  }
+
   cleanup() {
     this.stopHeartbeat();
     clearTimeout(this.connectionTimeout);
