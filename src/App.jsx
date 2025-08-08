@@ -268,6 +268,200 @@ useEffect(() => {
       console.warn('⚠️ Chrome version may have compatibility issues');
     }
 
+    // Browser Extension Detection and Disabling
+    const badExtensions = [
+      'grammarly', 'languagetool', 'text-enhancer',
+      'autocorrect', 'keyboard-manager', 'writing-assistant'
+    ];
+
+    console.log('🔧 Checking for problematic browser extensions...');
+    
+    badExtensions.forEach(ext => {
+      // Check body classes
+      if (document.body.classList.contains(ext + '-extension')) {
+        document.body.classList.remove(ext + '-extension');
+        console.warn(`🚫 Disabled ${ext} extension interference from body class`);
+      }
+      
+      // Check for extension-injected elements
+      const extElements = document.querySelectorAll(`[class*="${ext}"], [data-${ext}]`);
+      extElements.forEach(element => {
+        if (element && element.parentNode) {
+          element.style.display = 'none';
+          element.style.pointerEvents = 'none';
+          console.warn(`🚫 Hidden ${ext} extension element`);
+        }
+      });
+    });
+
+    // Add CSS override for extension conflicts
+    const extensionOverrideStyle = document.createElement('style');
+    extensionOverrideStyle.id = 'extension-conflict-override';
+    extensionOverrideStyle.textContent = `
+      /* Extension Conflict Overrides */
+      .grammarly-extension, .languagetool-extension, 
+      ._1Rkub, .gr-tooltip, .gr_overlay,
+      [data-grammarly-part], [data-gramm], [data-gramm-editor],
+      grammarly-extension, grammarly-popups {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        z-index: -9999 !important;
+      }
+      
+      /* Prevent extension CSS from interfering with inputs */
+      input, textarea, [contenteditable] {
+        -webkit-user-modify: read-write !important;
+        -moz-user-modify: read-write !important;
+        user-modify: read-write !important;
+        white-space: pre-wrap !important;
+        word-spacing: normal !important;
+        letter-spacing: normal !important;
+      }
+      
+      /* Override extension-injected styles */
+      input:not([readonly]):not([disabled]), 
+      textarea:not([readonly]):not([disabled]),
+      [contenteditable="true"] {
+        background: inherit !important;
+        color: inherit !important;
+        font: inherit !important;
+        border: inherit !important;
+        outline: inherit !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+      }
+    `;
+    
+    if (!document.head.querySelector('#extension-conflict-override')) {
+      document.head.appendChild(extensionOverrideStyle);
+      console.log('✅ Extension conflict CSS overrides applied');
+    }
+
+    // Nuclear Option - Fallback Spacebar Handler
+    const nuclearSpacebarHandler = function(e) {
+      if (e.key === ' ' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const active = document.activeElement;
+        
+        // Only handle for text input elements
+        if (active && (
+          active.tagName === 'INPUT' && ['text', 'email', 'search', 'url', 'tel'].includes(active.type) ||
+          active.tagName === 'TEXTAREA' ||
+          active.isContentEditable
+        )) {
+          
+          // Check if space was actually prevented
+          setTimeout(() => {
+            const currentValue = active.value || active.innerText || '';
+            const cursorPos = active.selectionStart !== undefined ? active.selectionStart : 0;
+            
+            // If no space was inserted where expected, force it
+            if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') {
+              const beforeCursor = currentValue.substring(0, cursorPos);
+              const afterCursor = currentValue.substring(active.selectionEnd || cursorPos);
+              
+              // Check if we need to insert a space
+              if (beforeCursor && !beforeCursor.endsWith(' ') && afterCursor && !afterCursor.startsWith(' ')) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                
+                const newValue = beforeCursor + ' ' + afterCursor;
+                active.value = newValue;
+                active.selectionStart = active.selectionEnd = cursorPos + 1;
+                
+                // Trigger input events for React reactivity
+                const inputEvent = new Event('input', { bubbles: true });
+                const changeEvent = new Event('change', { bubbles: true });
+                active.dispatchEvent(inputEvent);
+                active.dispatchEvent(changeEvent);
+                
+                console.log('🚀 Nuclear option: Space inserted manually');
+              }
+            } else if (active.isContentEditable) {
+              // Handle contentEditable elements
+              const selection = window.getSelection();
+              if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const textNode = document.createTextNode(' ');
+                range.insertNode(textNode);
+                range.setStartAfter(textNode);
+                range.setEndAfter(textNode);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                console.log('🚀 Nuclear option: Space inserted in contentEditable');
+              }
+            }
+          }, 1); // Minimal delay to check if space was inserted naturally
+        }
+      }
+    };
+
+    // Add nuclear option handler with highest priority
+    document.addEventListener('keydown', nuclearSpacebarHandler, {
+      capture: true,
+      passive: false
+    });
+
+    // Enhanced input field initialization
+    const initializeInputFields = () => {
+      const inputs = document.querySelectorAll('input, textarea, [contenteditable]');
+      inputs.forEach(input => {
+        // Add spacebar-fixed attribute for CSS targeting
+        input.setAttribute('data-spacebar-fixed', 'true');
+        
+        // Ensure proper event handling
+        input.addEventListener('keydown', function(e) {
+          if (e.key === ' ') {
+            e.stopPropagation();
+          }
+        }, { passive: false });
+        
+        // Fix any extension-modified attributes
+        if (input.hasAttribute('data-gramm_editor')) {
+          input.removeAttribute('data-gramm_editor');
+        }
+        if (input.hasAttribute('data-gramm')) {
+          input.removeAttribute('data-gramm');
+        }
+      });
+      
+      console.log(`✅ Initialized ${inputs.length} input fields with spacebar fixes`);
+    };
+
+    // Initialize existing fields and observe for new ones
+    initializeInputFields();
+    
+    // Observer for dynamically added inputs
+    const inputObserver = new MutationObserver((mutations) => {
+      let hasNewInputs = false;
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) { // Element node
+            if (node.matches && node.matches('input, textarea, [contenteditable]')) {
+              hasNewInputs = true;
+            } else if (node.querySelectorAll) {
+              const newInputs = node.querySelectorAll('input, textarea, [contenteditable]');
+              if (newInputs.length > 0) {
+                hasNewInputs = true;
+              }
+            }
+          }
+        });
+      });
+      
+      if (hasNewInputs) {
+        setTimeout(initializeInputFields, 100); // Delay to ensure elements are fully rendered
+      }
+    });
+
+    inputObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
     // Override mask functions globally
     window.showMask = function() { 
       console.log("Mask disabled"); 
@@ -326,7 +520,8 @@ useEffect(() => {
               page_load_time: Math.round(metrics.pageLoadTime),
               dom_content_loaded: Math.round(metrics.domContentLoaded),
               first_contentful_paint: Math.round(metrics.firstContentfulPaint),
-              browser_name: BROWSER_INFO.name || 'unknown'
+              browser_name: BROWSER_INFO.name || 'unknown',
+              spacebar_fixes_applied: true
             });
           }
         }
@@ -336,13 +531,30 @@ useEffect(() => {
     // Initialize performance monitoring with delay to ensure DOM is ready
     const timeoutId = setTimeout(initPerformanceMonitoring, 100);
 
+    console.log('🎯 Comprehensive spacebar fixes initialized successfully');
+
     // Cleanup on component unmount
     return () => {
       isMountedRef.current = false;
       clearTimeout(timeoutId);
+      
+      // Remove nuclear option handler
+      document.removeEventListener('keydown', nuclearSpacebarHandler, {
+        capture: true
+      });
+      
+      // Disconnect input observer
+      inputObserver.disconnect();
+      
+      // Remove extension override styles
+      const overrideStyle = document.head.querySelector('#extension-conflict-override');
+      if (overrideStyle) {
+        overrideStyle.remove();
+      }
+      
+      console.log('🧹 Spacebar fixes cleanup completed');
     };
   }, []); // Empty dependency array to run only once
-
 const cleanupRef = useRef(false);
   
 const handleAdminAccess = useCallback(async () => {

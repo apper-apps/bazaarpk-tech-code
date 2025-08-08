@@ -298,35 +298,48 @@ div[class*="mask"][style*="position: fixed"],
   position: relative;
 }
 
+/* COMPREHENSIVE SPACEBAR FUNCTIONALITY FIXES */
+
 /* Enhanced input field normalization for reliable spacebar functionality */
 input, textarea, [contenteditable] {
-  white-space: normal !important;
+  white-space: pre-wrap !important; /* Preserve spaces and allow wrapping */
   word-spacing: normal !important;
   letter-spacing: normal !important;
   text-transform: none !important;
   -webkit-user-select: text !important;
   -moz-user-select: text !important;
   user-select: text !important;
+  -webkit-user-modify: read-write !important;
+  -moz-user-modify: read-write !important;
+  user-modify: read-write !important;
 }
 
 /* Ensure spacebar works in all input contexts */
 input:focus, textarea:focus, [contenteditable]:focus {
   outline-offset: 2px;
+  cursor: text !important;
 }
 
 /* Prevent any CSS that could interfere with text input */
 input, textarea {
   pointer-events: auto !important;
   touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Fix for contenteditable elements */
 [contenteditable] {
-  cursor: text;
+  cursor: text !important;
   pointer-events: auto !important;
   -webkit-user-modify: read-write !important;
   -moz-user-modify: read-write !important;
   user-modify: read-write !important;
+  outline: none;
+}
+
+[contenteditable]:focus {
+  outline: 2px solid #4CAF50;
+  outline-offset: 1px;
 }
 
 [contenteditable]:empty:before {
@@ -334,11 +347,13 @@ input, textarea {
   color: #9CA3AF;
   cursor: text;
   pointer-events: none;
+  font-style: italic;
 }
 
 /* Prevent spacebar from being blocked by parent elements */
 .input-wrapper, .form-field, .search-container {
   position: relative;
+  pointer-events: auto !important;
 }
 
 /* Override any global event blocking that might affect inputs */
@@ -348,6 +363,11 @@ textarea[data-spacebar-fixed],
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
+  background-color: inherit !important;
+  color: inherit !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
 }
 
 /* Ensure form fields can receive keyboard input properly */
@@ -356,20 +376,6 @@ form input, form textarea, form [contenteditable] {
   -moz-user-select: text !important;
   user-select: text !important;
   touch-action: manipulation !important;
-}
-
-/* Enhanced CSS normalization for reliable spacebar functionality */
-input, textarea, [contenteditable] {
-  white-space: pre !important; /* Preserve spaces */
-  word-spacing: normal !important;
-  letter-spacing: normal !important;
-  font-family: inherit !important;
-  font-size: inherit !important;
-  text-transform: none !important;
-  -webkit-text-security: none !important;
-  -webkit-user-select: text !important;
-  -moz-user-select: text !important;
-  user-select: text !important;
 }
 
 /* Fix for specific admin fields that might have issues */
@@ -381,11 +387,14 @@ input, textarea, [contenteditable] {
 input[name*="name"],
 input[name*="title"],
 input[name*="description"],
-textarea[name*="description"] {
-  white-space: normal !important;
+textarea[name*="description"],
+input[placeholder*="search"],
+input[placeholder*="Search"] {
+  white-space: pre-wrap !important;
   word-spacing: normal !important;
   word-break: normal !important;
   overflow-wrap: normal !important;
+  text-overflow: clip !important;
 }
 
 /* Ensure input containers don't interfere with keyboard events */
@@ -421,6 +430,7 @@ input[type="email"],
 input[type="search"], 
 input[type="url"], 
 input[type="tel"], 
+input[type="password"],
 textarea {
   -webkit-appearance: none;
   appearance: none;
@@ -429,6 +439,7 @@ textarea {
   border-width: 1px;
   font: inherit;
   vertical-align: baseline;
+  resize: vertical; /* Only for textarea */
 }
 
 /* Ensure proper text cursor behavior */
@@ -440,3 +451,153 @@ input:focus, textarea:focus, [contenteditable]:focus {
   cursor: text !important;
   outline-offset: 2px;
 }
+
+/* BROWSER EXTENSION CONFLICT PREVENTION */
+
+/* Disable Grammarly and similar extensions from interfering */
+.grammarly-extension, 
+.languagetool-extension, 
+.text-enhancer-extension,
+._1Rkub, 
+.gr-tooltip, 
+.gr_overlay,
+[data-grammarly-part], 
+[data-gramm], 
+[data-gramm-editor],
+grammarly-extension, 
+grammarly-popups {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: -9999 !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+}
+
+/* Override extension-modified input styles */
+input:not([readonly]):not([disabled]):not(.extension-blocked), 
+textarea:not([readonly]):not([disabled]):not(.extension-blocked),
+[contenteditable="true"]:not(.extension-blocked) {
+  background: inherit !important;
+  color: inherit !important;
+  font: inherit !important;
+  border: inherit !important;
+  outline: inherit !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  -webkit-user-modify: read-write !important;
+  -moz-user-modify: read-write !important;
+  user-modify: read-write !important;
+}
+
+/* CROSS-BROWSER COMPATIBILITY FIXES */
+
+/* Firefox specific fixes */
+@-moz-document url-prefix() {
+  input, textarea, [contenteditable] {
+    -moz-user-input: enabled !important;
+    -moz-user-focus: normal !important;
+  }
+}
+
+/* WebKit/Safari specific fixes */
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+  input, textarea, [contenteditable] {
+    -webkit-user-modify: read-write-plaintext-only !important;
+    -webkit-nbsp-mode: space !important;
+    -webkit-line-break: after-white-space !important;
+  }
+}
+
+/* Edge/IE specific fixes */
+@supports (-ms-ime-align: auto) {
+  input, textarea, [contenteditable] {
+    -ms-user-select: text !important;
+    -ms-touch-action: manipulation !important;
+  }
+}
+
+/* PERFORMANCE OPTIMIZATIONS */
+
+/* Reduce reflows during typing */
+input, textarea {
+  contain: layout style !important;
+  will-change: auto !important;
+}
+
+/* Prevent unnecessary repaints */
+input:focus, textarea:focus, [contenteditable]:focus {
+  contain: layout style paint !important;
+}
+
+/* ACCESSIBILITY ENHANCEMENTS */
+
+/* Ensure screen readers can interact properly */
+input[aria-label], 
+textarea[aria-label], 
+[contenteditable][aria-label] {
+  speak: normal !important;
+  speak-as: normal !important;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  input:focus, textarea:focus, [contenteditable]:focus {
+    outline: 3px solid buttontext !important;
+    outline-offset: 2px !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  input, textarea, [contenteditable] {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* MOBILE DEVICE OPTIMIZATIONS */
+
+/* Touch device specific enhancements */
+@media (hover: none) and (pointer: coarse) {
+  input, textarea, [contenteditable] {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+  }
+  
+  input:focus, textarea:focus, [contenteditable]:focus {
+    transform: none !important; /* Prevent layout shifts */
+  }
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-overflow-scrolling: touch) {
+  input, textarea {
+    -webkit-appearance: none !important;
+    border-radius: 0 !important;
+    -webkit-transform: translateZ(0) !important; /* Force hardware acceleration */
+  }
+}
+
+/* DEBUGGING HELPERS (only in development) */
+
+/* Uncomment for debugging spacebar issues */
+/*
+input[data-spacebar-debug], 
+textarea[data-spacebar-debug], 
+[contenteditable][data-spacebar-debug] {
+  background: linear-gradient(45deg, rgba(255, 0, 0, 0.1) 25%, transparent 25%, transparent 75%, rgba(255, 0, 0, 0.1) 75%) !important;
+  background-size: 4px 4px !important;
+  border: 2px dashed red !important;
+}
+
+input[data-spacebar-debug]:focus, 
+textarea[data-spacebar-debug]:focus, 
+[contenteditable][data-spacebar-debug]:focus {
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.5) !important;
+}
+*/
