@@ -1,3 +1,5 @@
+import React from "react";
+import { Error } from "@/components/ui/Error";
 /**
  * WebSocketService - Manages WebSocket connections with reconnection logic
  */
@@ -350,11 +352,13 @@ this.ws.onclose = (event) => {
             code: errorCode,
             reason: errorReason,
             readyState: wsState,
-            stateName: this.getStateName(wsState),
+stateName: this.getStateName(wsState),
             timestamp: new Date().toISOString(),
+            retryDelay: this.calculateRetryDelay(),
+            
             serverAvailable: !isLocalhostFailure || !isDev,
             isLocalhost: isLocalhostFailure,
-            retryDelay: this.calculateRetryDelay(),
+            retryDelay: retryDelay,
             toString: () => userMessage,
             valueOf: () => userMessage
           };
