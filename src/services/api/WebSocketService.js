@@ -256,37 +256,60 @@ if (event && typeof event === 'object') {
             }
           };
           
-          console.error('WebSocket error details:', {
-            event: serializeErrorSafely(event),
-            eventType: event?.type || 'error',
-            readyState: wsState,
-            url: wsUrl_safe,
-            code: errorCode,
-            reason: errorReason || 'No reason provided',
-timestamp: new Date().toISOString(),
-            errorCategory: 'websocket_connection'
-          });
-        
-        if (event && typeof event === 'object') {
-          console.error('WebSocket error details:', {
-            event: serializeErrorSafely(event),
+// Enhanced WebSocket error serialization
+          const serializeWebSocketError = (event) => {
+            if (!event || typeof event !== 'object') {
+              return 'No event object provided';
+            }
+            
+            try {
+              const errorInfo = {
+                type: event.type || 'error',
+                message: event.message || 'WebSocket error occurred',
+                code: event.code || errorCode,
+                reason: event.reason || errorReason || 'No reason provided',
+                wasClean: event.wasClean,
+                target: event.target ? {
+                  readyState: event.target.readyState,
+                  url: event.target.url
+                } : null
+              };
+              
+              // Extract additional properties that might exist
+              Object.keys(event).forEach(key => {
+                if (key !== 'target' && key !== 'currentTarget' && event[key] !== undefined) {
+                  try {
+                    errorInfo[key] = typeof event[key] === 'object' ? 
+                      JSON.stringify(event[key]) : event[key];
+                  } catch (e) {
+                    errorInfo[key] = `[${typeof event[key]}]`;
+                  }
+                }
+              });
+              
+              return errorInfo;
+            } catch (serializationError) {
+              return `Error serialization failed: ${serializationError.message}`;
+            }
+          };
+
+          const errorDetails = {
+            event: serializeWebSocketError(event),
             eventType: event?.type || 'error',
             readyState: wsState,
             url: wsUrl_safe,
             code: errorCode,
             reason: errorReason || 'No reason provided',
             timestamp: new Date().toISOString(),
-            errorCategory: 'websocket_connection'
-          });
-        } else {
-          console.error('WebSocket error details:', {
-            event: 'No event object provided',
-            readyState: wsState,
-            url: wsUrl_safe,
-            timestamp: new Date().toISOString(),
-            errorCategory: 'websocket_unknown'
-          });
-        }
+            errorCategory: event && typeof event === 'object' ? 'websocket_connection' : 'websocket_unknown'
+          };
+          
+          console.error('WebSocket error details:', errorDetails);
+          
+          // Also log the raw event for debugging if it exists
+          if (event && typeof event === 'object') {
+            console.error('Raw WebSocket event:', event);
+          }
           
           // Process error reason if available
           if (errorReason && typeof errorReason === 'string' && errorReason.trim()) {

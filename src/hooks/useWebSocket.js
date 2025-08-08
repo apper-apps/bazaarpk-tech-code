@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useToast } from '@/hooks/useToast'
-import webSocketService from '@/services/api/WebSocketService'
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useToast } from "@/hooks/useToast";
+import webSocketService from "@/services/api/WebSocketService";
+import { Error } from "@/components/ui/Error";
 
 // Enhanced error logging for WebSocket hook
 const logWebSocketError = (error, context = '') => {
@@ -226,23 +227,68 @@ case 'invalid':
                   timestamp: new Date().toISOString()
                 };
                 
-                // Only log error message if it's a string
+// Enhanced error object serialization
+                const serializeComplexError = (errorObj) => {
+                  if (!errorObj || typeof errorObj !== 'object') {
+                    return errorObj;
+                  }
+                  
+                  try {
+                    const serialized = {};
+                    
+                    // Extract common error properties
+                    ['message', 'code', 'type', 'name', 'stack', 'cause'].forEach(prop => {
+                      if (errorObj[prop] !== undefined) {
+                        serialized[prop] = errorObj[prop];
+                      }
+                    });
+                    
+                    // Extract WebSocket specific properties
+                    ['readyState', 'url', 'protocol', 'extensions'].forEach(prop => {
+                      if (errorObj[prop] !== undefined) {
+                        serialized[prop] = errorObj[prop];
+                      }
+                    });
+                    
+                    // Handle nested objects safely
+                    Object.keys(errorObj).forEach(key => {
+                      if (serialized[key] === undefined && errorObj[key] !== undefined) {
+                        try {
+                          if (typeof errorObj[key] === 'object' && errorObj[key] !== null) {
+                            serialized[key] = JSON.stringify(errorObj[key]);
+                          } else {
+                            serialized[key] = errorObj[key];
+                          }
+                        } catch (e) {
+                          serialized[key] = `[${typeof errorObj[key]}]`;
+                        }
+                      }
+                    });
+                    
+                    return serialized;
+                  } catch (e) {
+                    return `Error serialization failed: ${e.message}`;
+                  }
+                };
+
+                // Process error data with enhanced serialization
                 if (typeof data?.error === 'string') {
                   safeLogData.errorMessage = data.error;
                 } else if (data?.error && typeof data.error === 'object') {
-                  safeLogData.errorMessage = 'Complex error object (see separate log)';
-                  console.error('WebSocket error object details:', {
-                    message: data.error.message,
-                    code: data.error.code,
-                    type: data.error.type
-                  });
+                  const serializedError = serializeComplexError(data.error);
+                  safeLogData.errorMessage = 'Complex error object (see details below)';
+                  safeLogData.errorDetails = serializedError;
+                  
+                  // Separate detailed log for complex errors
+                  console.error('WebSocket error object details:', serializedError);
                 }
                 
                 console.error('WebSocket Hook Error:', safeLogData);
               } catch (logErr) {
-                console.error('Failed to log WebSocket error safely:', logErr);
+                console.error('Failed to log WebSocket error safely:', logErr.message || logErr);
+                // Fallback logging
+                console.error('Original error data (fallback):', data);
               }
-            };
             
             logError();
             
@@ -263,7 +309,7 @@ case 'invalid':
             } catch (callbackError) {
               console.error('Error in WebSocket error callback:', callbackError);
             }
-            break;
+break;
         }
       }
     });
