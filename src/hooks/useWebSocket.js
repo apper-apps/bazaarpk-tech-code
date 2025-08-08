@@ -64,13 +64,14 @@ else if (typeof window !== 'undefined' && window.DOMException && error instanceo
       if (showConnectionToasts) {
         showToast(userMessage, 'error');
       }
-      
-      // Log with safe serialization
-      console.error('WebSocket connection error:', {
+// Log with safe serialization to prevent [object Object] display
+      const errorDetails = {
         message: userMessage,
         errorType: typeof error,
         constructor: error?.constructor?.name
-      });
+      };
+      const errorLogMessage = `WebSocket connection error: ${JSON.stringify(errorDetails, null, 2)}`;
+      console.error(errorLogMessage);
     }
   }, [url, isOnline, showConnectionToasts, showToast]);
 

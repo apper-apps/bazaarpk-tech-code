@@ -120,7 +120,9 @@ this.socket.onerror = (event) => {
 timestamp: new Date().toISOString()
           };
           
-          console.error('Processed WebSocket error:', safeErrorData);
+          // Serialize error data for console output to prevent [object Object]
+          const errorLogMessage = `Processed WebSocket error: ${JSON.stringify(safeErrorData, null, 2)}`;
+          console.error(errorLogMessage);
           
           // Ensure error message is clean string before emitting
           const cleanErrorForEmit = {
