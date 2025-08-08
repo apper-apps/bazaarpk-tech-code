@@ -66,15 +66,41 @@ class WebSocketService {
       return Promise.resolve();
     }
 
-    if (this.ws?.readyState === WebSocket.CONNECTING) {
+if (this.ws?.readyState === WebSocket.CONNECTING) {
       console.log('WebSocket connection in progress');
       return new Promise((resolve, reject) => {
+        let timeoutCount = 0;
+        const maxTimeout = 100; // 10 seconds maximum wait
+        
         const checkConnection = () => {
-          if (this.ws?.readyState === WebSocket.OPEN) {
+          // Defensive check: ensure WebSocket still exists
+          if (!this.ws) {
+            const error = new Error('Connection lost during setup');
+            error.category = 'connection';
+            error.canRetry = true;
+            error.code = 'CONNECTION_LOST';
+            reject(error);
+            return;
+          }
+          
+          if (this.ws.readyState === WebSocket.OPEN) {
             resolve();
-          } else if (this.ws?.readyState === WebSocket.CLOSED) {
-            reject(new Error('Connection failed'));
+          } else if (this.ws.readyState === WebSocket.CLOSED) {
+            const error = new Error('Connection failed - server not responding');
+            error.category = 'connection';
+            error.canRetry = true;
+            error.code = 'CONNECTION_REFUSED';
+            error.url = this.ws.url || 'unknown';
+            reject(error);
+          } else if (timeoutCount >= maxTimeout) {
+            const error = new Error('Connection timeout - taking too long to establish');
+            error.category = 'timeout';
+            error.canRetry = true;
+            error.code = 'CONNECTION_TIMEOUT';
+            error.timeout = maxTimeout * 100; // ms
+            reject(error);
           } else {
+            timeoutCount++;
             setTimeout(checkConnection, 100);
           }
         };
