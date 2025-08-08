@@ -1,41 +1,56 @@
-import React from "react";
-import { Error as ErrorComponent } from "@/components/ui/Error";
+/**
+ * WebSocketService - Manages WebSocket connections with reconnection logic
+ */
 class WebSocketService {
   constructor() {
-    this.socket = null;
+    this.ws = null;
+    this.url = null;
     this.listeners = new Map();
+    this.messageQueue = [];
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
-    this.reconnectInterval = 1000;
-    this.isConnecting = false;
-    this.connectionId = null;
+    this.reconnectDelay = 1000;
     this.heartbeatInterval = null;
-    this.messageQueue = [];
+    this.heartbeatTimeout = null;
+    this.connectionTimeout = null;
+    this.isManualDisconnect = false;
     this.isOnline = navigator.onLine;
     this.errorEmitted = false;
+    this.isDestroyed = false;
+    
+    // Connection states
+    this.CONNECTING = 0;
+    this.OPEN = 1;
+    this.CLOSING = 2;
+    this.CLOSED = 3;
+
     // Listen for online/offline events
     window.addEventListener('online', () => {
       this.isOnline = true;
-      if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-        this.connect();
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        if (this.url) {
+          this.connect(this.url);
+        }
       }
     });
     
-window.addEventListener('offline', () => {
+    window.addEventListener('offline', () => {
       this.isOnline = false;
     });
 
     // Global error handler for WebSocket errors
     window.addEventListener('error', (globalError) => {
-      if (globalError.message.includes('WebSocket')) {
+      if (globalError.message && globalError.message.includes('WebSocket')) {
         console.error('Global WebSocket error intercepted:', globalError.message);
-        // Prevent default handling
         globalError.preventDefault();
       }
     });
   }
 
-connect(url) {
+  /**
+   * Connect to WebSocket server
+   */
+  async connect(url) {
     // Determine WebSocket URL with proper fallback strategy
     const wsUrl = url || import.meta.env.VITE_WS_URL || 'wss://echo.websocket.org/';
     
@@ -44,74 +59,109 @@ connect(url) {
       return Promise.reject(new Error('Device is offline'));
     }
 
-    if (this.isConnecting || (this.socket && this.socket.readyState === WebSocket.OPEN)) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      console.log('WebSocket already connected');
       return Promise.resolve();
     }
 
-    this.isConnecting = true;
-    this.url = wsUrl; // Store URL for error reporting
-    
+    if (this.ws?.readyState === WebSocket.CONNECTING) {
+      console.log('WebSocket connection in progress');
+      return new Promise((resolve, reject) => {
+        const checkConnection = () => {
+          if (this.ws?.readyState === WebSocket.OPEN) {
+            resolve();
+          } else if (this.ws?.readyState === WebSocket.CLOSED) {
+            reject(new Error('Connection failed'));
+          } else {
+            setTimeout(checkConnection, 100);
+          }
+        };
+        checkConnection();
+      });
+    }
+
     return new Promise((resolve, reject) => {
       try {
         // Validate URL before attempting connection
         if (!wsUrl || (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://'))) {
           throw new Error('Invalid WebSocket URL provided');
         }
-        
-        this.socket = new WebSocket(wsUrl);
-        this.connectionId = Date.now().toString();
 
-this.socket.onopen = (event) => {
-          console.log('WebSocket connected successfully');
-          this.isConnecting = false;
+        this.url = wsUrl;
+        this.isManualDisconnect = false;
+        this.errorEmitted = false;
+        
+        // Clear any existing connection
+        this.cleanup();
+        
+        this.ws = new WebSocket(wsUrl);
+        
+        // Connection timeout
+        this.connectionTimeout = setTimeout(() => {
+          if (this.ws?.readyState !== WebSocket.OPEN) {
+            this.ws?.close();
+            const error = {
+              message: 'Connection timeout',
+              category: 'timeout',
+              suggestion: 'Please check your internet connection and try again',
+              canRetry: true,
+              url: wsUrl
+            };
+            reject(error);
+          }
+        }, 10000);
+
+        this.ws.onopen = () => {
+          clearTimeout(this.connectionTimeout);
           this.reconnectAttempts = 0;
-          this.errorEmitted = false;
-          this.startHeartbeat();
-          this.flushMessageQueue();
-          
-          // Notify all listeners about connection
           this.emit('connection', { 
             status: 'connected', 
-            connectionId: this.connectionId,
+            url: wsUrl,
             timestamp: new Date().toISOString()
           });
-          
-          resolve(event);
+          this.startHeartbeat();
+          this.flushMessageQueue();
+          resolve();
         };
 
-        this.socket.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            this.handleMessage(data);
-          } catch (error) {
-            console.error('WebSocket: Invalid JSON received', error);
-          }
-        };
-
-this.socket.onclose = (event) => {
-          console.log('WebSocket connection closed', event.code, event.reason);
-          this.isConnecting = false;
-          this.errorEmitted = false;
+        this.ws.onclose = (event) => {
+          clearTimeout(this.connectionTimeout);
           this.stopHeartbeat();
           
+          const status = this.isManualDisconnect ? 'disconnected' : 'error';
           this.emit('connection', { 
-            status: 'disconnected', 
-            code: event.code,
+            status, 
+            code: event.code, 
             reason: event.reason,
+            wasClean: event.wasClean,
             timestamp: new Date().toISOString()
           });
 
-          // Attempt to reconnect if not a normal closure
-          if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+          // Auto-reconnect if not manual disconnect
+          if (!this.isManualDisconnect && event.code !== 1000 && !this.isDestroyed) {
             this.scheduleReconnect();
+          }
+
+          if (this.ws?.readyState !== WebSocket.OPEN) {
+            const error = {
+              message: this.isManualDisconnect ? 'Disconnected' : 'Connection lost',
+              category: this.isManualDisconnect ? 'closing' : 'connection',
+              suggestion: this.isManualDisconnect ? null : 'Attempting to reconnect...',
+              canRetry: !this.isManualDisconnect,
+              code: event.code,
+              reason: event.reason
+            };
+            reject(error);
           }
         };
 
-this.socket.onerror = (event) => {
+        this.ws.onerror = (event) => {
           // Prevent duplicate error emissions
           if (this.errorEmitted) return;
           this.errorEmitted = true;
-          this.isConnecting = false;
+          
+          clearTimeout(this.connectionTimeout);
+          console.error('WebSocket error:', event);
           
           // Enhanced error message generation with environment context
           let errorMessage = 'WebSocket connection failed';
@@ -119,12 +169,12 @@ this.socket.onerror = (event) => {
           let userMessage = 'Connection lost';
           let suggestion = 'Please check your internet connection and try again';
           
-// Determine if we're in development or production
+          // Determine if we're in development or production
           const isDev = import.meta.env.MODE === 'development';
-          const wsUrl = this.url || import.meta.env.VITE_WS_URL || 'wss://echo.websocket.org/';
           
           // Check if this is a localhost connection failure
           const isLocalhostFailure = wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1');
+          
           if (event?.reason && typeof event.reason === 'string' && event.reason.trim()) {
             const reason = event.reason.toLowerCase();
             if (reason.includes('server') || reason.includes('503') || reason.includes('502')) {
@@ -147,14 +197,14 @@ this.socket.onerror = (event) => {
               userMessage = reason.substring(0, 100);
             }
             errorMessage = `WebSocket error: ${reason}`;
-          } else if (event?.type === 'error') {
+          } else {
             // Check connection state for more context
-            const readyState = this.socket?.readyState ?? 3;
+            const readyState = this.ws?.readyState ?? 3;
             if (readyState === 2) { // CLOSING
               errorCategory = 'closing';
               userMessage = 'Connection is closing';
               suggestion = 'Reconnecting automatically...';
-} else if (readyState === 3) { // CLOSED
+            } else if (readyState === 3) { // CLOSED
               if (isLocalhostFailure && isDev) {
                 errorCategory = 'server';
                 userMessage = 'Development WebSocket server not running';
@@ -168,244 +218,270 @@ this.socket.onerror = (event) => {
               }
             }
           }
-          
-          const readyState = this.socket?.readyState ?? 3;
-          
-          // Enhanced error data object with actionable information
-          const errorData = {
-            status: 'error',
-            category: errorCategory,
+
+          const error = {
             message: userMessage,
+            category: errorCategory,
             suggestion: suggestion,
             canRetry: errorCategory !== 'auth',
-            error: errorMessage,
-            code: 'WEBSOCKET_ERROR',
-            readyState: readyState,
-            timestamp: new Date().toISOString(),
+            isDevelopment: isDev,
             url: wsUrl,
-            isDevelopment: isDev
+            timestamp: new Date().toISOString()
           };
           
-          // Enhanced logging with more context
-          console.error('WebSocket connection failed:', {
-            message: errorMessage,
-            category: errorCategory,
-            url: wsUrl,
-            readyState: readyState,
-            suggestion: suggestion
-          });
-          
-          // Emit error event (not connection event for errors)
-          this.emit('error', errorData);
-          
-          // Create consistent error object with both Error instance properties and structured data
-          const connectionError = new Error(errorMessage);
-          connectionError.category = errorData.category;
-          connectionError.suggestion = errorData.suggestion;
-          connectionError.timestamp = errorData.timestamp;
-          connectionError.canRetry = errorData.canRetry;
-          connectionError.retryable = errorData.canRetry; // Backward compatibility
-          connectionError.url = wsUrl;
+          this.emit('connection', { status: 'error', error: error.message, code: 'WEBSOCKET_ERROR' });
           
           // Schedule automatic reconnection if retryable
-          if (errorData.canRetry && !this.isDestroyed) {
+          if (error.canRetry && !this.isDestroyed) {
             this.scheduleReconnect();
           }
           
-          reject(connectionError);
+          reject(error);
+        };
+
+        this.ws.onmessage = (event) => {
+          this.handleMessage(event.data);
         };
 
       } catch (error) {
-        this.isConnecting = false;
-        
-        // Ensure all errors have consistent structure
-        if (!(error instanceof Error)) {
-          const structuredError = new Error(typeof error === 'string' ? error : 'WebSocket connection failed');
-          structuredError.category = 'connection';
-          structuredError.suggestion = 'Check your internet connection';
-          structuredError.retryable = true;
-          structuredError.canRetry = true;
-          reject(structuredError);
-        } else {
-          // Add missing properties to existing Error instances
-          if (!error.category) error.category = 'connection';
-          if (!error.suggestion) error.suggestion = 'Try refreshing the page';
-          if (error.retryable === undefined) error.retryable = true;
-          if (error.canRetry === undefined) error.canRetry = true;
-          reject(error);
-        }
+        console.error('WebSocket connection error:', error);
+        const connectionError = {
+          message: 'Unable to establish connection',
+          category: 'connection',
+          suggestion: 'Please check your internet connection',
+          canRetry: true,
+          originalError: error.message
+        };
+        reject(connectionError);
       }
     });
   }
 
+  /**
+   * Disconnect WebSocket
+   */
   disconnect() {
-    this.isDestroyed = true; // Prevent reconnection attempts
+    this.isManualDisconnect = true;
+    this.isDestroyed = true;
     this.stopHeartbeat();
-    if (this.socket) {
-      this.socket.close(1000, 'Client disconnect');
-      this.socket = null;
+    clearTimeout(this.connectionTimeout);
+    
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.close(1000, 'Manual disconnect');
     }
+    
+    this.cleanup();
     this.listeners.clear();
     this.messageQueue = [];
   }
 
+  /**
+   * Send message through WebSocket
+   */
   send(message) {
-    const messageWithId = {
-      ...message,
-      messageId: Date.now() + Math.random(),
-      timestamp: new Date().toISOString(),
-      connectionId: this.connectionId
-    };
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      // Queue message for when connection is restored
+      this.messageQueue.push(message);
+      return false;
+    }
 
-    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify(messageWithId));
+    try {
+      const payload = typeof message === 'string' ? message : JSON.stringify(message);
+      this.ws.send(payload);
       return true;
-    } else {
-      // Queue message for later sending
-      this.messageQueue.push(messageWithId);
-      console.warn('WebSocket: Message queued - connection not ready');
+    } catch (error) {
+      console.error('Failed to send WebSocket message:', error);
       return false;
     }
   }
 
+  /**
+   * Subscribe to events
+   */
   on(event, callback) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
     this.listeners.get(event).add(callback);
-    
+
     // Return unsubscribe function
-    return () => {
-      const callbacks = this.listeners.get(event);
-      if (callbacks) {
-        callbacks.delete(callback);
-      }
-    };
+    return () => this.off(event, callback);
   }
 
+  /**
+   * Unsubscribe from events
+   */
   off(event, callback) {
-    const callbacks = this.listeners.get(event);
-    if (callbacks) {
-      callbacks.delete(callback);
+    if (this.listeners.has(event)) {
+      this.listeners.get(event).delete(callback);
+      if (this.listeners.get(event).size === 0) {
+        this.listeners.delete(event);
+      }
     }
   }
 
+  /**
+   * Emit events to subscribers
+   */
   emit(event, data) {
-    const callbacks = this.listeners.get(event);
-    if (callbacks) {
-      callbacks.forEach(callback => {
+    if (this.listeners.has(event)) {
+      this.listeners.get(event).forEach(callback => {
         try {
           callback(data);
         } catch (error) {
-          console.error(`WebSocket listener error for event ${event}:`, error);
+          console.error(`Error in WebSocket event listener for ${event}:`, error);
         }
       });
     }
   }
 
+  /**
+   * Handle incoming messages
+   */
   handleMessage(data) {
-    const { type, ...payload } = data;
-    
-    // Emit specific event type
-    if (type) {
-      this.emit(type, payload);
+    try {
+      const parsed = JSON.parse(data);
+      this.emit('message', parsed);
+      
+      // Handle heartbeat responses
+      if (parsed.type === 'pong') {
+        clearTimeout(this.heartbeatTimeout);
+      }
+      
+      // Emit specific event type
+      if (parsed.type) {
+        this.emit(parsed.type, parsed);
+      }
+    } catch (error) {
+      // Handle plain text messages
+      this.emit('message', { type: 'text', data });
     }
-    
-    // Emit generic message event
-    this.emit('message', data);
   }
 
-scheduleReconnect() {
-    if (!this.isOnline || this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('WebSocket: Max reconnect attempts reached or offline');
+  /**
+   * Schedule reconnection attempt
+   */
+  scheduleReconnect() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts || this.isManualDisconnect || this.isDestroyed || !this.isOnline) {
+      console.log('Max reconnection attempts reached, manual disconnect, destroyed, or offline');
       return;
     }
-    
-    const delay = Math.min(
-      this.reconnectInterval * Math.pow(2, this.reconnectAttempts), 
-      30000
-    );
-    
+
+    const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts), 30000);
     this.reconnectAttempts++;
-    console.log(`WebSocket: Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+
+    console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
     
-    this.reconnectTimer = setTimeout(() => {
-      if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-        this.connect().catch(error => {
-          console.error('WebSocket: Reconnection failed', error.message);
+    setTimeout(() => {
+      if (!this.isManualDisconnect && !this.isDestroyed && this.url) {
+        this.connect(this.url).catch(error => {
+          console.log('Reconnection failed:', error);
         });
       }
     }, delay);
   }
 
-startHeartbeat() {
+  /**
+   * Start heartbeat mechanism
+   */
+  startHeartbeat() {
     this.stopHeartbeat();
     
     // Guard against multiple heartbeats
     if (this.heartbeatInterval) return;
     
     this.heartbeatInterval = setInterval(() => {
-      // Check connection status before sending
-      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-        try {
-          this.send({ type: 'ping', timestamp: Date.now() });
-        } catch (e) {
-          console.error('Heartbeat send error:', e.message);
-        }
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.send({ type: 'ping', timestamp: Date.now() });
+        
+        // Set timeout for pong response
+        this.heartbeatTimeout = setTimeout(() => {
+          console.log('Heartbeat timeout - closing connection');
+          this.ws?.close();
+        }, 5000);
       }
-    }, 30000); // Send ping every 30 seconds
+    }, 30000);
   }
 
+  /**
+   * Stop heartbeat mechanism
+   */
   stopHeartbeat() {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
+    if (this.heartbeatTimeout) {
+      clearTimeout(this.heartbeatTimeout);
+      this.heartbeatTimeout = null;
+    }
   }
 
-flushMessageQueue() {
-    if (!this.messageQueue.length || !this.socket) return;
+  /**
+   * Flush queued messages
+   */
+  flushMessageQueue() {
+    if (!this.messageQueue.length || !this.ws) return;
     
     const tempQueue = [...this.messageQueue];
     this.messageQueue = [];
     
     for (const message of tempQueue) {
-      if (this.socket.readyState === WebSocket.OPEN) {
+      if (this.ws.readyState === WebSocket.OPEN) {
         try {
-          this.socket.send(JSON.stringify(message));
+          const payload = typeof message === 'string' ? message : JSON.stringify(message);
+          this.ws.send(payload);
         } catch (error) {
           console.warn('Failed to send queued message, discarding');
         }
       } else {
         // Requeue only if connection is expected to recover
-        if (this.socket.readyState === WebSocket.CONNECTING) {
+        if (this.ws.readyState === WebSocket.CONNECTING) {
           this.messageQueue.push(message);
         }
       }
     }
   }
-getStateName(state) {
-    switch(state) {
-      case 0: return 'CONNECTING';
-      case 1: return 'OPEN';
-      case 2: return 'CLOSING';
-      case 3: return 'CLOSED';
-      default: return 'UNKNOWN';
-    }
+
+  /**
+   * Get connection state name
+   */
+  getStateName(state) {
+    const states = {
+      [WebSocket.CONNECTING]: 'connecting',
+      [WebSocket.OPEN]: 'connected',
+      [WebSocket.CLOSING]: 'closing',
+      [WebSocket.CLOSED]: 'disconnected'
+    };
+    return states[state] || 'unknown';
   }
+
+  /**
+   * Get current connection status
+   */
   getConnectionStatus() {
-    if (!this.socket) return 'disconnected';
+    if (!this.ws) return 'disconnected';
+    return this.getStateName(this.ws.readyState);
+  }
+
+  /**
+   * Cleanup resources
+   */
+  cleanup() {
+    this.stopHeartbeat();
+    clearTimeout(this.connectionTimeout);
     
-    switch (this.socket.readyState) {
-      case WebSocket.CONNECTING: return 'connecting';
-      case WebSocket.OPEN: return 'connected';
-      case WebSocket.CLOSING: return 'closing';
-      case WebSocket.CLOSED: return 'disconnected';
-      default: return 'unknown';
+    if (this.ws) {
+      this.ws.onopen = null;
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws.onmessage = null;
+      this.ws = null;
     }
   }
 }
 
-// Export singleton instance
-export const webSocketService = new WebSocketService();
+// Create singleton instance
+const webSocketService = new WebSocketService();
+
 export default webSocketService;

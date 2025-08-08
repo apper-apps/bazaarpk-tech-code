@@ -46,131 +46,44 @@ try {
       
       await webSocketService.connect(url);
     } catch (error) {
-      // Enhanced error processing with comprehensive fallback handling
-      let userMessage = 'Connection issue occurred';
-      let toastType = 'error';
-      let shouldShowToast = showConnectionToasts;
-try {
-        // Enhanced error validation and handling
-        if (error && typeof error === 'object' && error !== null) {
-          // Handle structured error objects (from WebSocketService)
-          if (error.message) {
-            userMessage = error.message;
-            
-            // Add suggestion if available and space permits
-            if (error.suggestion && error.message.length < 50) {
-              userMessage += ` - ${error.suggestion}`;
-            }
-            
-            // Adjust toast behavior based on error category
-            if (error.category === 'closing' || error.category === 'timeout') {
-              toastType = 'warning';
-            } else if (error.category === 'auth') {
-              toastType = 'error';
-              shouldShowToast = true; // Always show auth errors
-            } else if (error.category === 'server') {
-              // Don't spam server error toasts
-              shouldShowToast = showConnectionToasts && Math.random() > 0.7;
-            } else if (error.category === 'connection') {
-              toastType = 'warning';
-            }
-          }
-          // Handle malformed error objects that might contain nested error data
-          else if (error.error && error.error.message) {
-            userMessage = error.error.message;
-          }
-// Handle error objects with stack property but no message (like the reported error)
-          else if (error.stack && Array.isArray(error.stack) && error.stack.length === 0) {
-            userMessage = 'Connection unavailable';
-            toastType = 'warning';
-          }
-          // Handle error objects with message property in nested structure
-          else if (error.message && typeof error.message === 'string') {
-            userMessage = error.message;
-            if (error.message.includes('Connection unavailable')) {
-              toastType = 'warning';
-            }
-          }
-          // Handle serialized error objects
-          else if (typeof error === 'object' && Object.keys(error).length > 0) {
-            userMessage = JSON.stringify(error).includes('Connection unavailable') 
-              ? 'Connection unavailable' 
-              : 'Connection error occurred';
-          }
-        } 
-        // Handle Error instances
-        else if (error instanceof Error && error.message) {
-          userMessage = error.message.substring(0, 80);
-        } 
-        // Handle string errors
-        else if (typeof error === 'string') {
-          userMessage = error.substring(0, 80);
-        }
-        // Handle null/undefined errors
-        else if (!error) {
-          userMessage = 'Unknown connection error';
-        }
-} catch (processingError) {
-        // Robust fallback if error processing itself fails
-        userMessage = 'Connection issue occurred';
-        toastType = 'warning';
-        console.warn('Error processing WebSocket error:', processingError);
+      // Simplified error handling to prevent object serialization issues
+      let userMessage = 'Connection unavailable';
+      let toastType = 'warning';
+      
+      // Extract meaningful error information without complex nesting
+      if (error?.message && typeof error.message === 'string') {
+        userMessage = error.message;
         
-        // Attempt to extract any useful information from the original error
-        if (error && typeof error === 'string') {
-          userMessage = error.substring(0, 50);
-        } else if (error?.message) {
-          userMessage = String(error.message).substring(0, 50);
+        // Adjust toast type based on error category
+        if (error.category === 'timeout') {
+          toastType = 'warning';
+          userMessage = 'Connection timeout - please try again';
+        } else if (error.category === 'connection') {
+          toastType = 'warning';
+          userMessage = 'Unable to connect - working in offline mode';
         }
+      } else if (typeof error === 'string') {
+        userMessage = error;
+      } else if (error instanceof Error) {
+        userMessage = error.message || 'Connection error';
       }
       
-      // Clean up technical jargon for user-friendly messages
+      // Clean technical jargon and ensure reasonable length
       userMessage = userMessage
         .replace(/WebSocket/gi, 'Connection')
         .replace(/ECONNREFUSED/gi, 'Server unavailable')
         .replace(/ETIMEDOUT/gi, 'Connection timeout')
-        .replace(/Connection unavailable/gi, 'Connection unavailable')
-        .replace(/readyState/gi, 'connection status')
-        .replace(/\[object Object\]/gi, 'Connection error');
+        .substring(0, 80);
       
-      // Ensure message length is reasonable
-      if (userMessage.length > 100) {
-        userMessage = userMessage.substring(0, 97) + '...';
-      }
-      
-      if (shouldShowToast) {
+      if (showConnectionToasts) {
         showToast(userMessage, toastType);
       }
       
-console.error('WebSocket connection failed:', {
-        originalError: error,
-        processedMessage: userMessage,
-        errorType: typeof error,
-        errorConstructor: error?.constructor?.name,
+      console.error('WebSocket connection failed:', {
+        error: error?.message || String(error),
         category: error?.category,
-        suggestion: error?.suggestion,
-        canRetry: error?.canRetry,
-        url: error?.url,
-        isDevelopment: error?.isDevelopment
+        canRetry: error?.canRetry
       });
-      
-// Enhanced error message handling with better user guidance
-      if (error?.category === 'server' && error?.suggestion) {
-        showToast.error(error.suggestion, {
-          toastId: 'websocket-server-error',
-          autoClose: 8000,
-        });
-      } else if (error?.suggestion) {
-        showToast.error(`${userMessage}: ${error.suggestion}`, {
-          toastId: 'websocket-connection-error',
-          autoClose: 6000,
-        });
-      } else {
-        showToast.error(`${userMessage}. The application will work in offline mode.`, {
-          toastId: 'websocket-fallback',
-          autoClose: 5000,
-        });
-      }
     }
   }, [isOnline, showConnectionToasts, showToast, url]);
 
@@ -213,12 +126,12 @@ useEffect(() => {
             }
             onDisconnect?.(data);
             break;
-          case 'error':
-            // Simple error message extraction - never serialize objects
+case 'error':
+            // Simple error message - never serialize objects
             let errorMessage = 'Connection error';
             
-            // Only extract simple string properties
-            if (data?.error && typeof data.error === 'string') {
+            // Only use string properties, never serialize objects
+            if (typeof data?.error === 'string') {
               errorMessage = data.error.substring(0, 50);
             } else if (data?.code === 'WEBSOCKET_ERROR') {
               errorMessage = 'Service unavailable';
