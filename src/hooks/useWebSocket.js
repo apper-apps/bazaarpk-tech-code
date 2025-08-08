@@ -64,11 +64,13 @@ const connect = useCallback(async () => {
         }
       }
       
-      // Ensure message is clean and meaningful
+// Comprehensive cleanup for all object serialization issues
       if (!userMessage || 
           typeof userMessage !== 'string' || 
           userMessage.includes('[object') || 
           userMessage.includes('undefined') ||
+          userMessage.includes('null') ||
+          userMessage.includes('[Event]') ||
           userMessage.length < 3) {
         userMessage = 'WebSocket connection failed - please try again';
       }
@@ -151,12 +153,14 @@ case 'error':
               }
             }
             
-            // Comprehensive cleanup for all object serialization issues
+// Enhanced cleanup for all object serialization issues
             if (!errorMessage || 
                 typeof errorMessage !== 'string' ||
                 errorMessage.includes('[object') ||
                 errorMessage.includes('undefined') ||
                 errorMessage.includes('null') ||
+                errorMessage.includes('[Event]') ||
+                errorMessage.includes('state: 3') ||
                 errorMessage.length < 3) {
               errorMessage = 'Connection error - please check your internet';
             }

@@ -134,9 +134,25 @@ this.socket.onerror = (event) => {
             }
           }
           
-          // Clean up message - remove any object references
-          if (typeof errorMessage !== 'string' || errorMessage.includes('[object')) {
+// Comprehensive cleanup for all object serialization issues
+          if (!errorMessage || 
+              typeof errorMessage !== 'string' ||
+              errorMessage.includes('[object') ||
+              errorMessage.includes('undefined') ||
+              errorMessage.includes('null') ||
+              errorMessage.length < 3) {
             errorMessage = 'WebSocket connection failed';
+          }
+          
+          // Make technical messages more user-friendly
+          errorMessage = errorMessage
+            .replace(/WebSocket/gi, 'Connection')
+            .replace(/ECONNREFUSED/gi, 'Server unavailable')
+            .replace(/ETIMEDOUT/gi, 'Connection timeout');
+          
+          // Limit length for better UI display
+          if (errorMessage.length > 80) {
+            errorMessage = errorMessage.substring(0, 80) + '...';
           }
           
           // Limit message length for UI display
