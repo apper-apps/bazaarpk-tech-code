@@ -119,11 +119,22 @@ this.socket.onerror = (event) => {
           }
           
           // Add event type if available and meaningful
-          if (event && event.type && event.type !== 'error') {
+          if (event && event.type && event.type !== 'error' && typeof event.type === 'string') {
             errorMessage += ` (${event.type})`;
           }
           
-          // Create sanitized error data
+          // Additional sanitization to prevent any object leakage
+          errorMessage = String(errorMessage).trim();
+          if (errorMessage.includes('[object') || errorMessage === '[object Object]') {
+            errorMessage = 'WebSocket connection error - network issue detected';
+          }
+          
+          // Ensure we have a meaningful message
+          if (!errorMessage || errorMessage.length === 0) {
+            errorMessage = 'WebSocket connection failed - please check your network';
+          }
+          
+          // Create sanitized error data with additional safety checks
           const safeErrorData = {
             status: 'error',
             error: errorMessage,
@@ -131,12 +142,25 @@ this.socket.onerror = (event) => {
             readyState: this.socket ? this.socket.readyState : 3,
             timestamp: new Date().toISOString()
           };
+          
+          // Final sanitization check on the entire error data object
+          Object.keys(safeErrorData).forEach(key => {
+            if (safeErrorData[key] && typeof safeErrorData[key] === 'object' && safeErrorData[key].constructor === Object) {
+              safeErrorData[key] = String(safeErrorData[key]);
+              if (safeErrorData[key].includes('[object')) {
+                safeErrorData[key] = 'Error data unavailable';
+              }
+            }
+          });
 
           console.error('Processed WebSocket error:', safeErrorData);
           this.emit('connection', safeErrorData);
           
-          // Reject with proper error
-          reject(new Error(errorMessage));
+          // Reject with proper Error instance, never raw event
+          const sanitizedError = new Error(errorMessage);
+          sanitizedError.code = 'WEBSOCKET_ERROR';
+          sanitizedError.readyState = this.socket ? this.socket.readyState : 3;
+          reject(sanitizedError);
         };
 
       } catch (error) {

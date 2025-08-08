@@ -46,33 +46,73 @@ try {
       let userMessage = 'Connection failed - will retry automatically';
       let toastType = 'error';
       
-      // Handle Error instances (most common from WebSocketService)
-      if (error instanceof Error) {
-        userMessage = error.message;
-      } 
-      // Handle raw event objects (shouldn't happen with fixed WebSocketService)
-      else if (error instanceof Event) {
-        userMessage = 'WebSocket connection error - server unreachable';
-      }
-      // Handle other error types with better detection
-      else if (error !== null && error !== undefined) {
-        const errorStr = String(error);
-        if (errorStr.includes('[object') || errorStr === '[object Object]') {
-          userMessage = 'WebSocket connection error - please check your network';
-        } else {
-          userMessage = errorStr;
+      // Comprehensive error sanitization with multiple layers
+      const sanitizeErrorMessage = (rawError) => {
+        // Layer 1: Handle different error types
+        if (rawError instanceof Error) {
+          return rawError.message || 'WebSocket connection error';
         }
-      }
-
-      // Additional sanitization for any remaining object references
-      if (userMessage.includes('[object') || userMessage === '[object Object]') {
-        userMessage = 'WebSocket connection error - network issue detected';
-      }
-
-      // Ensure we have a meaningful message
-      if (!userMessage || userMessage.trim() === '') {
+        
+        // Layer 2: Handle Event objects (should not occur with fixed WebSocketService)
+        if (rawError instanceof Event) {
+          return 'WebSocket connection error - server unreachable';
+        }
+        
+        // Layer 3: Handle any other objects
+        if (rawError && typeof rawError === 'object') {
+          // Try to extract meaningful properties
+          if (rawError.message && typeof rawError.message === 'string') {
+            return rawError.message;
+          }
+          if (rawError.error && typeof rawError.error === 'string') {
+            return rawError.error;
+          }
+          if (rawError.description && typeof rawError.description === 'string') {
+            return rawError.description;
+          }
+          // Default for unrecognized objects
+          return 'WebSocket connection error - please check your network';
+        }
+        
+        // Layer 4: Handle primitive values
+        if (rawError !== null && rawError !== undefined) {
+          const errorStr = String(rawError).trim();
+          // Check for object serialization artifacts
+          if (errorStr.includes('[object') || 
+              errorStr === '[object Object]' || 
+              errorStr === '[object Event]' ||
+              errorStr.startsWith('[object ')) {
+            return 'WebSocket connection error - network issue detected';
+          }
+          // Return sanitized string if it's meaningful
+          if (errorStr.length > 0 && errorStr !== 'undefined' && errorStr !== 'null') {
+            return errorStr;
+          }
+        }
+        
+        // Layer 5: Final fallback
+        return 'WebSocket connection failed - please try again';
+      };
+      
+      // Apply sanitization
+      userMessage = sanitizeErrorMessage(error);
+      
+      // Additional validation to ensure no artifacts remain
+      if (!userMessage || 
+          userMessage.trim() === '' || 
+          userMessage.includes('[object') ||
+          userMessage === 'undefined' ||
+          userMessage === 'null') {
         userMessage = 'WebSocket connection failed - will retry automatically';
       }
+
+      // Log the original error for debugging while showing clean message to user
+      console.error('WebSocket connection error (sanitized for user):', {
+        originalError: error,
+        sanitizedMessage: userMessage,
+        errorType: typeof error,
+        errorConstructor: error?.constructor?.name
+      });
 
       if (showConnectionToasts) {
         showToast(userMessage, toastType);
@@ -115,12 +155,43 @@ if (data.code !== 1000) { // Not a normal closure
           case 'error':
             let errorMessage = 'Connection error occurred';
             
-            // Use the error message from WebSocketService with sanitization
-            if (data?.error && typeof data.error === 'string' && data.error.trim()) {
-              const sanitizedError = data.error.trim();
-              if (!sanitizedError.includes('[object')) {
-                errorMessage = sanitizedError;
+            // Enhanced error message sanitization
+            const sanitizeToastError = (errorData) => {
+              // Check data.error first
+              if (errorData?.error && typeof errorData.error === 'string') {
+                const sanitized = errorData.error.trim();
+                if (sanitized.length > 0 && 
+                    !sanitized.includes('[object') && 
+                    sanitized !== 'undefined' && 
+                    sanitized !== 'null') {
+                  return sanitized;
+                }
               }
+              
+              // Check data.message as fallback
+              if (errorData?.message && typeof errorData.message === 'string') {
+                const sanitized = errorData.message.trim();
+                if (sanitized.length > 0 && !sanitized.includes('[object')) {
+                  return sanitized;
+                }
+              }
+              
+              // Check if entire data object might be stringified incorrectly
+              if (errorData && typeof errorData === 'object') {
+                const dataStr = String(errorData);
+                if (dataStr.includes('[object')) {
+                  return 'WebSocket connection error - please check your network';
+                }
+              }
+              
+              return 'Connection error occurred - please try again';
+            };
+            
+            errorMessage = sanitizeToastError(data);
+            
+            // Final safety check
+            if (errorMessage.includes('[object') || !errorMessage.trim()) {
+              errorMessage = 'WebSocket connection error - please check your network';
             }
             
             showToast(errorMessage, 'error');
