@@ -773,9 +773,9 @@
     "variants": [
       { "name": "50ml", "price": 2500, "oldPrice": 2900 },
       { "name": "100ml", "price": 4200, "oldPrice": 4900 },
-      { "name": "150ml", "price": 5800, "oldPrice": 6800 }
+{ "name": "150ml", "price": 5800, "oldPrice": 6800 }
     ]
-},
+  },
   {
     "Id": 49,
     "title": "Product Management System",
