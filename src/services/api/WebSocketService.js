@@ -103,24 +103,48 @@ this.socket.onerror = (event) => {
           
           this.isConnecting = false;
           
-          // Generate simple, guaranteed string error message
-          const readyState = this.socket ? this.socket.readyState : 3;
+          // Extract meaningful error message from event object
           let errorMessage = 'WebSocket connection failed';
           
-          // Add specific context based on ready state
-          switch (readyState) {
-            case 0:
-              errorMessage = 'WebSocket connection interrupted';
-              break;
-            case 2:
-              errorMessage = 'WebSocket connection closing';
-              break;
-            case 3:
-              errorMessage = 'WebSocket connection lost';
-              break;
-            default:
-              errorMessage = 'WebSocket connection error';
+          // Try to extract useful information from the error event
+          if (event && typeof event === 'object') {
+            // Check for common error message properties
+            if (typeof event.message === 'string' && event.message.length > 0) {
+              errorMessage = event.message;
+            } else if (typeof event.error === 'string' && event.error.length > 0) {
+              errorMessage = event.error;
+            } else if (typeof event.reason === 'string' && event.reason.length > 0) {
+              errorMessage = event.reason;
+            } else if (event.target && event.target.readyState !== undefined) {
+              // Use readyState for context-specific messages
+              const readyState = event.target.readyState;
+              switch (readyState) {
+                case 0:
+                  errorMessage = 'WebSocket connection interrupted';
+                  break;
+                case 2:
+                  errorMessage = 'WebSocket connection closing';
+                  break;
+                case 3:
+                  errorMessage = 'WebSocket connection lost';
+                  break;
+                default:
+                  errorMessage = 'WebSocket connection error';
+              }
+            }
           }
+          
+          // Clean up message - remove any object references
+          if (typeof errorMessage !== 'string' || errorMessage.includes('[object')) {
+            errorMessage = 'WebSocket connection failed';
+          }
+          
+          // Limit message length for UI display
+          if (errorMessage.length > 80) {
+            errorMessage = errorMessage.substring(0, 80) + '...';
+          }
+          
+          const readyState = this.socket ? this.socket.readyState : 3;
           
           // Create clean, string-only error data
           const errorData = {
@@ -132,7 +156,7 @@ this.socket.onerror = (event) => {
           };
           
           // Simple logging with primitive values only
-          console.error('WebSocket error:', errorMessage, `(state: ${readyState})`);
+          console.error('WebSocket error:', errorMessage, `(state: ${readyState})`, event);
           
           // Emit guaranteed clean error data
           this.emit('connection', errorData);
