@@ -65,23 +65,33 @@ const connect = useCallback(async () => {
       }
       await webSocketService.connect(url);
     } catch (error) {
-      // Streamlined error handling for development
+      // Enhanced error handling for better UX
       const isDevelopment = import.meta.env?.DEV || false;
-      const isServerDown = error?.category === 'server_unavailable';
+      const errorCategory = error?.category || 'unknown';
+      const isServerUnavailable = errorCategory === 'server_unavailable' || errorCategory === 'development';
       
-      // Only show meaningful toasts, reduce spam
+      // Only show meaningful toasts, reduce spam in development
       if (showConnectionToasts && connectionStatus === 'connecting') {
-        const message = isServerDown ? 'Running offline - all features available' : 'App running offline';
+        let message = 'App running offline - all features available';
+        
+        if (isDevelopment && errorCategory === 'development') {
+          message = 'Development mode - WebSocket not configured';
+        } else if (isServerUnavailable) {
+          message = 'Working offline - all features available';
+        }
+        
         showToast(message, 'info');
       }
 
-      // Minimal development logging
-      if (isDevelopment && isServerDown) {
-        console.info(`WebSocket offline: ${url} unavailable`);
+      // Minimal development logging - only for meaningful errors
+      if (isDevelopment && !url) {
+        console.info('WebSocket disabled - set VITE_WS_URL to enable');
+      } else if (isDevelopment && isServerUnavailable) {
+        console.info(`WebSocket server unavailable: ${url || 'No URL configured'}`);
       }
       
-      // Set appropriate connection status
-      setConnectionStatus(isServerDown ? 'server_unavailable' : 'disconnected');
+      // Set appropriate connection status based on error type
+      setConnectionStatus(isServerUnavailable ? 'server_unavailable' : 'disconnected');
     }
   }, [isOnline, showConnectionToasts, showToast, url, connectionStatus]);
 
@@ -124,46 +134,58 @@ useEffect(() => {
             }
             onDisconnect?.(data);
             break;
-case 'error':
+          case 'offline':
+          case 'error':
           case 'parse_error':
           case 'invalid':
           case 'server_unavailable':
-            // Graceful error handling with consistent messaging
+            // Enhanced error handling with better user experience
             const isDevelopment = import.meta.env?.DEV || false;
+            const errorCategory = data?.category || 'network';
             let shouldShowToast = false;
             
-            // Extract error message - handle both string and object formats
-            let errorMessage = 'App working offline';
+            // Extract and improve error message
+            let errorMessage = data?.message || 'App working offline';
             if (typeof data?.error === 'string') {
               errorMessage = data.error;
             } else if (data?.error?.message) {
               errorMessage = data.error.message;
             }
             
-            // Improve message for better user experience
-            if (errorMessage.includes('localhost') && isDevelopment) {
-              errorMessage = 'Development mode - all features available offline';
-            } else if (errorMessage.includes('Connection lost')) {
+            // Context-aware messaging for better UX
+            if (isDevelopment && errorCategory === 'development') {
+              errorMessage = 'Development mode - WebSocket not configured';
+            } else if (errorCategory === 'server_unavailable') {
+              errorMessage = 'Working offline - all features available';
+            } else if (errorMessage.includes('localhost') && isDevelopment) {
+              errorMessage = 'Development server - all features available offline';
+            } else if (errorMessage.includes('Connection lost') || errorMessage.includes('interrupted')) {
               errorMessage = 'Working offline - all features available';
             }
             
-            // Only show toast for meaningful state transitions
-            if (data?.status === 'error' && connectionStatus === 'connected') {
+            // Smart toast showing - avoid spam in development
+            const isTransitioningFromConnected = connectionStatus === 'connected';
+            const isFirstError = connectionStatus === 'connecting';
+            
+            if (data?.status === 'error' && isTransitioningFromConnected) {
+              shouldShowToast = true;
+            } else if (data?.status === 'offline' && isFirstError && !isDevelopment) {
               shouldShowToast = true;
             }
             
             if (shouldShowToast) {
-              showToast(errorMessage, 'info');
+              showToast(errorMessage, data?.status === 'error' ? 'warning' : 'info');
             }
             
             // Enhanced error callback with consistent structure
             onError?.({
               status: data?.status || 'offline',
               message: errorMessage,
-              category: data?.category || 'network',
+              category: errorCategory,
               canRetry: data?.canRetry ?? false,
               isDevelopment: isDevelopment,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              originalError: data?.error
             });
             break;
         }
@@ -172,7 +194,7 @@ case 'error':
     
     unsubscribeRefs.current.push(unsubscribe);
     return unsubscribe;
-  }, [showConnectionToasts, showToast, onConnect, onDisconnect, onError]);
+  }, [showConnectionToasts, showToast, onConnect, onDisconnect, onError, connectionStatus]);
 
   // Setup message listener
 useEffect(() => {

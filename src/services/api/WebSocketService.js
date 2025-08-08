@@ -39,28 +39,34 @@ class WebSocketService {
     });
 
     // Global error handler for WebSocket errors
-// Environment-based WebSocket configuration
-    this.getWebSocketUrl = () => {
-      // Check for environment variable first
-      if (import.meta.env.VITE_WS_URL) {
-        return import.meta.env.VITE_WS_URL;
-      }
-      
-      // Only use localhost in development and when explicitly enabled
-      if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_WS !== 'false') {
-        return 'ws://localhost:8080';
-      }
-      
-      // In production or when WebSocket disabled, return null for graceful degradation
-      return null;
-    };
-
     window.addEventListener('error', (globalError) => {
       if (globalError.message && globalError.message.includes('WebSocket')) {
         console.warn('WebSocket error intercepted, switching to offline mode:', globalError.message);
         globalError.preventDefault();
       }
     });
+  }
+
+  // Environment-based WebSocket configuration
+  getWebSocketUrl() {
+    // Check environment variable first - allow empty string to disable WebSocket
+    const envUrl = import.meta.env?.VITE_WS_URL;
+    
+    // If explicitly set (even as empty string), use that value
+    if (typeof envUrl === 'string') {
+      return envUrl.trim() || null; // Return null if empty/whitespace
+    }
+    
+    // Development fallback - only if in development mode
+    const isDevelopment = import.meta.env?.DEV || false;
+    if (isDevelopment) {
+      // Return null to disable WebSocket by default in development
+      // User must explicitly set VITE_WS_URL if they want WebSocket
+      return null;
+    }
+    
+    // Production - WebSocket must be explicitly configured
+    return null;
   }
 
   /**
@@ -317,7 +323,7 @@ this.emit('connection', {
           console.info('WebSocket not configured, running in offline mode');
           this.emit('connection', { 
             status: 'offline', 
-            message: 'Running in offline mode',
+            message: 'Running in offline mode - all features available',
             code: 'WS_DISABLED',
             category: 'offline',
             canRetry: false
@@ -325,17 +331,17 @@ this.emit('connection', {
           return;
         }
 
-        // Check if server is available before attempting connection
-        this.checkServerAvailability(url)
+        // Enhanced server availability check with better error categorization
+        this.checkServerAvailability(wsUrl)
           .then(isServerAvailable => {
             if (!isServerAvailable) {
               console.info('WebSocket server not available, switching to offline mode');
               
               this.emit('connection', { 
                 status: 'offline', 
-                message: 'Working offline - real-time features disabled',
+                message: 'Working offline - all features available',
                 code: 'SERVER_OFFLINE',
-                category: 'offline',
+                category: 'server_unavailable',
                 canRetry: true
               });
               return;
@@ -345,21 +351,26 @@ this.emit('connection', {
             console.warn('Network connection issue, will retry');
             this.emit('connection', { 
               status: 'error', 
-              error: 'Connection interrupted - retrying',
+              error: 'Connection interrupted - attempting reconnect',
               code: 'CONNECTION_FAILED', 
               category: 'connection',
               canRetry: true
             });
           })
           .catch(checkError => {
-            // Cannot reach server - treat as offline
+            // Cannot reach server - treat as offline with appropriate category
+            const isDevelopment = import.meta.env?.DEV || false;
+            const isLocalhost = wsUrl.includes('localhost');
+            
             console.info('Cannot reach WebSocket server, working offline');
             this.emit('connection', { 
               status: 'offline', 
-              message: 'Working offline - real-time features disabled',
+              message: isDevelopment && isLocalhost 
+                ? 'Development mode - all features available offline' 
+                : 'Working offline - all features available',
               code: 'SERVER_UNREACHABLE',
-              category: 'offline', 
-              canRetry: true
+              category: isDevelopment && isLocalhost ? 'development' : 'server_unavailable', 
+              canRetry: !isDevelopment || !isLocalhost
             });
           });
       }
