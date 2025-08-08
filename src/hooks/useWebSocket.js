@@ -63,56 +63,27 @@ const connect = useCallback(async () => {
       if (!webSocketService || typeof webSocketService.connect !== 'function') {
         throw new Error('WebSocket service is not available');
       }
-await webSocketService.connect(url);
-} catch (error) {
-      // Streamlined error handling with minimal user disruption
-      let userMessage = 'App running offline';
-      let toastType = 'info';
-      let shouldRetry = false;
-      let isServerDown = false;
+      await webSocketService.connect(url);
+    } catch (error) {
+      // Streamlined error handling for development
+      const isDevelopment = import.meta.env?.DEV || false;
+      const isServerDown = error?.category === 'server_unavailable';
       
-      // Categorize errors for appropriate handling
-      if (error?.category === 'server_unavailable' || error?.code === 'SERVER_DOWN') {
-        isServerDown = true;
-        shouldRetry = false;
-      } else if (error?.category === 'connection' || error?.code === 'CONNECTION_FAILED') {
-        shouldRetry = false; // Don't retry in development to reduce noise
-      } else if (error?.category === 'timeout') {
-        shouldRetry = false;
-      } else {
-        // Check for specific network errors indicating server unavailable
-        if (error?.message) {
-          const errorMsg = error.message.toLowerCase();
-          if (errorMsg.includes('econnrefused') || errorMsg.includes('connection refused') || 
-              errorMsg.includes('localhost') || errorMsg.includes('127.0.0.1')) {
-            isServerDown = true;
-            shouldRetry = false;
-          }
-        }
-      }
-      
-      // Only show toast on first connection attempt to reduce spam
-      if (showConnectionToasts && connectionStatus !== 'server_unavailable' && connectionStatus !== 'disconnected') {
-        showToast(userMessage, toastType);
+      // Only show meaningful toasts, reduce spam
+      if (showConnectionToasts && connectionStatus === 'connecting') {
+        const message = isServerDown ? 'Running offline - all features available' : 'App running offline';
+        showToast(message, 'info');
       }
 
-      // Minimal development-only logging
-      const isDevelopment = import.meta.env?.DEV || false;
-      if (isDevelopment) {
-        console.info('WebSocket offline mode:', {
-          reason: isServerDown ? 'server_unavailable' : 'connection_failed',
-          url: url
-        });
+      // Minimal development logging
+      if (isDevelopment && isServerDown) {
+        console.info(`WebSocket offline: ${url} unavailable`);
       }
       
       // Set appropriate connection status
-      if (isServerDown) {
-        setConnectionStatus('server_unavailable');
-      } else {
-        setConnectionStatus('disconnected');
-      }
+      setConnectionStatus(isServerDown ? 'server_unavailable' : 'disconnected');
     }
-  }, [isOnline, showConnectionToasts, showToast, url]);
+  }, [isOnline, showConnectionToasts, showToast, url, connectionStatus]);
 
   const disconnect = useCallback(() => {
     webSocketService.disconnect();
@@ -158,21 +129,14 @@ case 'error':
           case 'invalid':
           case 'server_unavailable':
             // Minimal error handling to reduce user disruption
+            const isDevelopment = import.meta.env?.DEV || false;
             let shouldShowToast = false;
             let errorMessage = 'App running offline';
             
             // Only show toast for meaningful state transitions
-            if (data?.status === 'server_unavailable' && connectionStatus === 'connecting') {
-              shouldShowToast = false; // Don't spam user with expected dev behavior
-            } else if (data?.status === 'error' && connectionStatus === 'connected') {
+            if (data?.status === 'error' && connectionStatus === 'connected') {
               errorMessage = 'Connection lost - now offline';
               shouldShowToast = true;
-            }
-            
-            // Development-only status logging (minimal)
-            const isDevelopment = import.meta.env?.DEV || false;
-            if (isDevelopment && data?.status !== connectionStatus) {
-              console.info(`WebSocket: ${connectionStatus} → ${data?.status || 'offline'}`);
             }
             
             if (shouldShowToast) {
@@ -180,18 +144,12 @@ case 'error':
             }
             
             // Simplified error callback
-            try {
-              onError?.({
-                status: data?.status || 'offline',
-                message: errorMessage,
-                canRetry: false, // Don't encourage retries in dev mode
-                timestamp: new Date().toISOString()
-              });
-            } catch (callbackError) {
-              if (isDevelopment) {
-                console.warn('Error callback failed:', callbackError.message);
-              }
-            }
+            onError?.({
+              status: data?.status || 'offline',
+              message: errorMessage,
+              canRetry: false,
+              timestamp: new Date().toISOString()
+            });
             break;
         }
       }
@@ -223,16 +181,12 @@ useEffect(() => {
     const connectionCheckInterval = setInterval(() => {
       // Only attempt reconnection if we're not in server_unavailable state
       if (connectionStatus === 'disconnected' && isOnline && connectionStatus !== 'server_unavailable') {
-        console.log('Periodic connection check - attempting reconnect');
         connect();
-      } else if (connectionStatus === 'server_unavailable') {
-        console.log('Server unavailable - skipping reconnection attempt');
       }
     }, 30000); // Check every 30 seconds
     
     return () => clearInterval(connectionCheckInterval);
   }, [connectionStatus, isOnline, connect]);
-
   // Auto-connect on mount
 useEffect(() => {
     if (autoConnect && isOnline) {

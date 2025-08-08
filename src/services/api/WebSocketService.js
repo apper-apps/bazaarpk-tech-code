@@ -188,210 +188,65 @@ this.ws.onerror = (event) => {
           
           clearTimeout(this.connectionTimeout);
           
-          // Extract meaningful error information from WebSocket and Event
-          let errorMessage = 'WebSocket connection failed';
+          // Determine if we're in development or production
+          const isDev = import.meta.env.MODE === 'development';
+          const isLocalhostFailure = wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1');
+          const wsState = this.ws?.readyState ?? 3;
+          
           let errorCategory = 'network';
           let userMessage = 'Connection lost';
           let suggestion = 'Please check your internet connection and try again';
-          let errorCode = null;
-          let errorReason = null;
+          let errorCode = event?.code || this.ws?.code || null;
+          let errorReason = event?.reason || this.ws?.reason || null;
           
-          // Determine if we're in development or production
-          const isDev = import.meta.env.MODE === 'development';
-          
-          // Check if this is a localhost connection failure
-          const isLocalhostFailure = wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1');
-          
-          // Extract error details from WebSocket instance
-          const wsState = this.ws?.readyState ?? 3;
-          const wsUrl_safe = wsUrl || 'unknown';
-          
-          // Try to extract error information from various sources
-          if (this.ws) {
-            // Some WebSocket implementations store error info on the WebSocket instance
-            errorCode = this.ws.code || null;
-            errorReason = this.ws.reason || null;
-          }
-          
-          // Extract from close event if available (sometimes error events precede close events)
-          if (event && typeof event === 'object') {
-            errorCode = event.code || errorCode;
-            errorReason = event.reason || errorReason;
-          }
-          
-          // Safe error object serialization to prevent [object Object] messages
-          const serializeErrorSafely = (obj) => {
-            if (!obj || typeof obj !== 'object') return String(obj);
+          // Handle development localhost failures gracefully
+          if (isLocalhostFailure && isDev && wsState === 3) {
+            errorCategory = 'server_unavailable';
+            userMessage = 'Working in offline mode - all features available';
+            suggestion = 'WebSocket server not running. App works fully offline.';
             
-            try {
-              // Extract only serializable properties to avoid circular references
-              const safeObj = {};
-              const allowedKeys = ['type', 'code', 'reason', 'message', 'target', 'currentTarget'];
-              
-              allowedKeys.forEach(key => {
-                if (key in obj && obj[key] !== null && obj[key] !== undefined) {
-                  const value = obj[key];
-                  // Only include primitive values and simple objects
-                  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-                    safeObj[key] = value;
-                  } else if (key === 'target' && value && typeof value === 'object') {
-                    // For WebSocket targets, extract useful info
-                    safeObj[key] = {
-                      readyState: value.readyState,
-                      url: value.url
-                    };
-                  }
-                }
-              });
-              
-              return safeObj;
-            } catch (serializationError) {
-              console.warn('Error serialization failed:', serializationError);
-              return { 
-                message: 'Error object could not be serialized',
-                originalType: Object.prototype.toString.call(obj)
-              };
-            }
-          };
-          
-          // Enhanced WebSocket error serialization
-const serializeWebSocketError = (event) => {
-            if (!event || typeof event !== 'object') {
-              return {
-                type: 'unknown',
-                message: 'No event object provided',
-                timestamp: new Date().toISOString()
-              };
-            }
-            
-            try {
-              const errorInfo = {
-                type: event.type || 'error',
-                message: event.message || 'WebSocket error occurred',
-                code: event.code || errorCode || null,
-                reason: event.reason || errorReason || 'No reason provided',
-                wasClean: event.wasClean || false,
-                timestamp: new Date().toISOString(),
-                target: null
-              };
-              
-              // Safely extract target information with defensive checks
-              if (event.target) {
-                try {
-                  errorInfo.target = {
-                    readyState: typeof event.target.readyState === 'number' ? event.target.readyState : null,
-                    url: typeof event.target.url === 'string' ? event.target.url : null,
-                    protocol: typeof event.target.protocol === 'string' ? event.target.protocol : null
-                  };
-                } catch (targetError) {
-                  errorInfo.target = { error: 'Could not access target properties' };
-                }
-              }
-              
-              // Safely extract additional properties without circular references
-              const safeKeys = ['type', 'message', 'code', 'reason', 'wasClean', 'timeStamp', 'isTrusted'];
-              safeKeys.forEach(key => {
-                if (key in event && event[key] !== undefined && !errorInfo.hasOwnProperty(key)) {
-                  try {
-                    // Only include simple values to avoid circular references
-                    const value = event[key];
-                    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-                      errorInfo[key] = value;
-                    }
-                  } catch (e) {
-                    // Skip properties that can't be safely accessed
-                  }
-                }
-              });
-              
-              return errorInfo;
-            } catch (serializationError) {
-              return {
-                type: 'serialization_error',
-                message: 'Error serialization failed',
-                originalError: serializationError.message || 'Unknown serialization error',
-                timestamp: new Date().toISOString()
-              };
-            }
-          };
-
-          const errorDetails = {
-            event: serializeWebSocketError(event),
-            eventType: event?.type || 'error',
-            readyState: wsState,
-            url: wsUrl_safe,
-            code: errorCode,
-            reason: errorReason || 'No reason provided',
-            timestamp: new Date().toISOString(),
-            errorCategory: event && typeof event === 'object' ? 'websocket_connection' : 'websocket_unknown'
-          };
-          
-          // Safe error details logging to prevent "[object Object]" messages
-          console.error('WebSocket error details:', JSON.stringify(errorDetails, null, 2));
-          
-          // Also log the raw event for debugging if it exists
-          if (event && typeof event === 'object') {
-            console.error('Raw WebSocket event:', event);
-          }
-          
-          // Process error reason if available
-          if (errorReason && typeof errorReason === 'string' && errorReason.trim()) {
-            const reason = errorReason.toLowerCase();
-            if (reason.includes('server') || reason.includes('503') || reason.includes('502')) {
-              errorCategory = 'server';
-              userMessage = 'Server temporarily unavailable';
-              suggestion = 'The server is currently unavailable. Please try again in a few moments.';
-            } else if (reason.includes('unauthorized') || reason.includes('403') || reason.includes('401')) {
-              errorCategory = 'auth';
-              userMessage = 'Authentication required';
-              suggestion = 'Please refresh the page and sign in again';
-            } else if (reason.includes('timeout') || reason.includes('etimedout')) {
-              errorCategory = 'timeout';
-              userMessage = 'Connection timed out';
-              suggestion = 'Connection timed out. Check your internet connection and try again';
-            } else if (reason.includes('refused') || reason.includes('econnrefused')) {
-              errorCategory = 'server';
-              userMessage = isDev ? 'Development server not running' : 'Server unavailable';
-              suggestion = isDev ? 'Please start the WebSocket server' : 'Server is temporarily unavailable';
-            } else {
-              userMessage = errorReason.substring(0, 100);
-            }
-            errorMessage = `WebSocket error: ${errorReason}`;
+            // Minimal development logging
+            console.info(`WebSocket: ${wsUrl} unavailable - offline mode active`);
           } else {
-            // Analyze connection state for context when no specific reason available
-            if (wsState === 0) { // CONNECTING
-              errorCategory = 'connection';
-              userMessage = 'Failed to establish connection';
-              suggestion = isLocalhostFailure && isDev
-                ? `Cannot connect to ${wsUrl_safe}. Check if WebSocket server is running.`
-                : 'Unable to connect to server. Check your internet connection.';
-            } else if (wsState === 2) { // CLOSING
-              errorCategory = 'closing';
-              userMessage = 'Connection is closing';
-              suggestion = 'Reconnecting automatically...';
-            } else if (wsState === 3) { // CLOSED
-if (isLocalhostFailure && isDev) {
-                errorCategory = 'server_unavailable';
-                userMessage = 'Working in offline mode - all features available';
-                suggestion = isDev 
-                  ? `WebSocket server not running at ${wsUrl_safe}. App works fully offline.`
-                  : 'Development server unavailable - offline mode active';
-              } else {
-                errorCategory = 'network';
-                userMessage = 'Working in offline mode';
-                suggestion = isDev 
-                  ? `Cannot connect to ${wsUrl_safe}. All features work offline.`
-                  : 'Connection unavailable - working in offline mode.';
+            // Process other error scenarios
+            if (errorReason && typeof errorReason === 'string' && errorReason.trim()) {
+              const reason = errorReason.toLowerCase();
+              if (reason.includes('server') || reason.includes('503') || reason.includes('502')) {
+                errorCategory = 'server';
+                userMessage = 'Server temporarily unavailable';
+                suggestion = 'The server is currently unavailable. Please try again in a few moments.';
+              } else if (reason.includes('unauthorized') || reason.includes('403') || reason.includes('401')) {
+                errorCategory = 'auth';
+                userMessage = 'Authentication required';
+                suggestion = 'Please refresh the page and sign in again';
+              } else if (reason.includes('timeout') || reason.includes('etimedout')) {
+                errorCategory = 'timeout';
+                userMessage = 'Connection timed out';
+                suggestion = 'Connection timed out. Check your internet connection and try again';
+              } else if (reason.includes('refused') || reason.includes('econnrefused')) {
+                errorCategory = 'server';
+                userMessage = isDev ? 'Development server not running' : 'Server unavailable';
+                suggestion = isDev ? 'Please start the WebSocket server' : 'Server is temporarily unavailable';
               }
             } else {
-              // Default error handling for unknown states
-              errorCategory = 'unknown';
-              userMessage = 'WebSocket connection error occurred';
-              suggestion = 'An unexpected connection error occurred. Please try refreshing the page.';
+              // State-based error handling
+              if (wsState === 0) { // CONNECTING
+                errorCategory = 'connection';
+                userMessage = 'Failed to establish connection';
+                suggestion = isLocalhostFailure && isDev
+                  ? 'Cannot connect to WebSocket server. Check if it\'s running.'
+                  : 'Unable to connect to server. Check your internet connection.';
+              } else if (wsState === 2) { // CLOSING
+                errorCategory = 'closing';
+                userMessage = 'Connection is closing';
+                suggestion = 'Reconnecting automatically...';
+              }
             }
             
-            // Create detailed error message for logging
-            errorMessage = `WebSocket error - State: ${this.getStateName(wsState)}, URL: ${wsUrl_safe}`;
+            // Concise error logging for non-development or non-localhost errors
+            if (!isDev || !isLocalhostFailure) {
+              console.error(`WebSocket error: ${userMessage} (${wsUrl})`);
+            }
           }
 
           const error = {
@@ -400,13 +255,12 @@ if (isLocalhostFailure && isDev) {
             suggestion: suggestion,
             canRetry: errorCategory !== 'auth',
             isDevelopment: isDev,
-            url: wsUrl_safe,
+            url: wsUrl,
             code: errorCode,
             reason: errorReason,
             readyState: wsState,
             stateName: this.getStateName(wsState),
             timestamp: new Date().toISOString(),
-            // Ensure error object can be safely serialized
             toString: () => userMessage,
             valueOf: () => userMessage
           };
