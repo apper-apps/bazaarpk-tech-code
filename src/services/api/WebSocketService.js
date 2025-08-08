@@ -265,11 +265,13 @@ this.ws.onerror = (event) => {
             valueOf: () => userMessage
           };
           
-          this.emit('connection', { 
+this.emit('connection', { 
             status: 'error', 
-            error: error.message, 
+            error: userMessage,
             code: 'WEBSOCKET_ERROR',
-            details: error
+            category: errorCategory,
+            canRetry: error.canRetry,
+            isDevelopment: isDev
           });
           
           // Schedule automatic reconnection if retryable
@@ -304,10 +306,12 @@ this.ws.onerror = (event) => {
                 timestamp: new Date().toISOString()
               };
               
-              this.emit('connection', { 
+this.emit('connection', { 
                 status: 'error', 
-                error: serverUnavailableError,
-                type: 'server_unavailable'
+                error: 'Server temporarily unavailable - working offline',
+                code: 'SERVER_DOWN',
+                category: 'server_unavailable',
+                canRetry: false
               });
               return;
             }
@@ -322,10 +326,12 @@ this.ws.onerror = (event) => {
               timestamp: new Date().toISOString()
             };
             
-            this.emit('connection', { 
+this.emit('connection', { 
               status: 'error', 
-              error: connectionError,
-              type: 'connection_failed'
+              error: 'Connection lost - working offline',
+              code: 'CONNECTION_FAILED', 
+              category: 'connection',
+              canRetry: true
             });
           })
           .catch(checkError => {
@@ -339,10 +345,12 @@ this.ws.onerror = (event) => {
               timestamp: new Date().toISOString()
             };
             
-            this.emit('connection', { 
+this.emit('connection', { 
               status: 'error', 
-              error: connectionError,
-              type: 'connection_failed'
+              error: 'Connection lost - working offline',
+              code: 'CONNECTION_FAILED',
+              category: 'connection', 
+              canRetry: true
             });
           });
       }

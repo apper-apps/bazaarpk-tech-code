@@ -128,14 +128,27 @@ case 'error':
           case 'parse_error':
           case 'invalid':
           case 'server_unavailable':
-            // Minimal error handling to reduce user disruption
+            // Graceful error handling with consistent messaging
             const isDevelopment = import.meta.env?.DEV || false;
             let shouldShowToast = false;
-            let errorMessage = 'App running offline';
+            
+            // Extract error message - handle both string and object formats
+            let errorMessage = 'App working offline';
+            if (typeof data?.error === 'string') {
+              errorMessage = data.error;
+            } else if (data?.error?.message) {
+              errorMessage = data.error.message;
+            }
+            
+            // Improve message for better user experience
+            if (errorMessage.includes('localhost') && isDevelopment) {
+              errorMessage = 'Development mode - all features available offline';
+            } else if (errorMessage.includes('Connection lost')) {
+              errorMessage = 'Working offline - all features available';
+            }
             
             // Only show toast for meaningful state transitions
             if (data?.status === 'error' && connectionStatus === 'connected') {
-              errorMessage = 'Connection lost - now offline';
               shouldShowToast = true;
             }
             
@@ -143,11 +156,13 @@ case 'error':
               showToast(errorMessage, 'info');
             }
             
-            // Simplified error callback
+            // Enhanced error callback with consistent structure
             onError?.({
               status: data?.status || 'offline',
               message: errorMessage,
-              canRetry: false,
+              category: data?.category || 'network',
+              canRetry: data?.canRetry ?? false,
+              isDevelopment: isDevelopment,
               timestamp: new Date().toISOString()
             });
             break;
