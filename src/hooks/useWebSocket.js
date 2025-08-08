@@ -187,7 +187,7 @@ try {
   // Setup connection status listener
 useEffect(() => {
     const unsubscribe = webSocketService.on('connection', (data) => {
-      setConnectionStatus(data.status);
+setConnectionStatus(data.status);
       
       if (showConnectionToasts) {
         switch (data.status) {
@@ -196,157 +196,23 @@ useEffect(() => {
             onConnect?.(data);
             break;
           case 'disconnected':
-if (data.code !== 1000) { // Not a normal closure
+            if (data.code !== 1000) {
               showToast('Connection lost - attempting to reconnect', 'warning');
             }
             onDisconnect?.(data);
             break;
-case 'error':
-            // Ultra-comprehensive error message sanitization
-            const extractCleanErrorMessage = (errorData) => {
-              const visited = new WeakSet();
-              
-              const deepExtract = (obj, path = [], depth = 0) => {
-                if (depth > 3 || !obj || visited.has(obj)) return null;
-                
-                // Handle direct string values
-                if (typeof obj === 'string' && obj.trim()) {
-                  const cleaned = obj.trim();
-                  if (!cleaned.includes('[object') && cleaned !== '[object Object]') {
-                    return cleaned;
-                  }
-                  return null;
-                }
-                
-                // Handle primitive types
-                if (typeof obj === 'number') return `Error ${obj}`;
-                if (typeof obj === 'boolean') return null;
-                
-                // Handle objects
-                if (typeof obj === 'object' && obj !== null) {
-                  visited.add(obj);
-                  
-                  // Prioritized property extraction
-                  const propertyPriority = [
-                    'message', 'error', 'description', 'detail', 'reason', 
-                    'statusText', 'responseText', 'data', 'cause', 'type', 'code'
-                  ];
-                  
-                  // Try each property in priority order
-                  for (const prop of propertyPriority) {
-                    try {
-                      if (prop in obj && obj[prop] !== undefined && obj[prop] !== null) {
-                        const result = deepExtract(obj[prop], [...path, prop], depth + 1);
-                        if (result) return result;
-                      }
-                    } catch (e) {
-                      // Skip inaccessible properties
-                    }
-                  }
-                  
-                  // Try safe toString
-                  try {
-                    if (obj.toString && typeof obj.toString === 'function') {
-                      const str = obj.toString();
-                      if (str && 
-                          typeof str === 'string' && 
-                          !str.includes('[object') && 
-                          str !== '[object Object]' &&
-                          str !== obj) {
-                        return str;
-                      }
-                    }
-                  } catch (e) {
-                    // Ignore toString errors
-                  }
-                  
-                  // For Error instances, try name + message combination
-                  if (obj instanceof Error) {
-                    const name = obj.name || 'Error';
-                    const msg = obj.message || '';
-                    if (msg && !msg.includes('[object')) {
-                      return name === 'Error' ? msg : `${name}: ${msg}`;
-                    }
-                  }
-                }
-                
-                return null;
-              };
-              
-              return deepExtract(errorData);
-            };
-            
+          case 'error':
+            // Simplified error handling
             let errorMessage = 'Connection error occurred';
             
-            try {
-              // Multi-source error message extraction
-              const sources = [
-                data.error,
-                data.originalMessage,
-                data.message,
-                data
-              ];
-              
-              for (const source of sources) {
-                if (source) {
-                  const extracted = extractCleanErrorMessage(source);
-                  if (extracted && extracted.length > 0) {
-                    errorMessage = extracted;
-                    break;
-                  }
-                }
-              }
-              
-              // Context-specific error messages
-              if (data.readyState !== undefined) {
-                const stateMessages = {
-                  0: 'Connection is being established',
-                  1: 'Connection is open',
-                  2: 'Connection is closing', 
-                  3: 'Connection is closed or failed'
-                };
-                
-                const stateMsg = stateMessages[data.readyState];
-                if (stateMsg && data.readyState === 3) {
-                  errorMessage = 'Connection lost - attempting to reconnect';
-                }
-              }
-              
-              // Final validation and cleaning
-              if (typeof errorMessage !== 'string' ||
-                  errorMessage.includes('[object') ||
-                  errorMessage === '[object Object]' ||
-                  errorMessage.includes('toString') ||
-                  !errorMessage.trim()) {
-                errorMessage = 'WebSocket connection error - please try again';
-              }
-              
-              // Reasonable length limit
-              if (errorMessage.length > 120) {
-                errorMessage = errorMessage.substring(0, 120) + '...';
-              }
-              
-            } catch (extractionError) {
-              console.warn('Advanced error extraction failed:', extractionError);
-              errorMessage = 'Connection error - will attempt to reconnect';
+            if (data.error && typeof data.error === 'string') {
+              // Clean and truncate message
+              errorMessage = data.error
+                .replace(/\\[object\\s+\\w+\\]/g, '')
+                .substring(0, 120);
             }
             
-            setConnectionStatus('error');
-            
-            if (showConnectionToasts) {
-              showToast(errorMessage, 'error');
-            }
-            
-            // Enhanced debug logging
-            console.error('WebSocket error status received:', {
-              sanitizedMessage: errorMessage,
-              dataKeys: data ? Object.keys(data).slice(0, 10) : [],
-              readyState: data?.readyState,
-              hasError: !!(data?.error),
-              errorType: typeof data?.error,
-              timestamp: data?.timestamp
-            });
-            
+            showToast(errorMessage, 'error');
             onError?.(data);
             break;
         }
