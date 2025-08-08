@@ -17,19 +17,35 @@ const ProductCard = ({ product, className, ...props }) => {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const handleAddToCart = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+const handleAddToCart = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    
+    // Defensive checks to prevent instanceof errors
+    if (!product?.Id) {
+      showToast?.('Invalid product data. Please try again.', 'error');
+      return;
+    }
+
+    if (typeof addToCart !== 'function') {
+      showToast?.('Cart service unavailable. Please refresh the page.', 'error');
+      return;
+    }
     
     const cartItem = {
       productId: product.Id,
       quantity: 1,
-      variant: selectedVariant,
-      price: selectedVariant ? selectedVariant.price : product.price
+      variant: selectedVariant || null,
+      price: selectedVariant?.price ?? product.price ?? 0
     };
 
-    addToCart(cartItem);
-    showToast(`${product.title} added to cart!`, "success");
+    try {
+      addToCart(cartItem);
+      showToast?.(`${product.title || 'Product'} added to cart!`, "success");
+    } catch (error) {
+      console.error('Product add to cart error:', error);
+      showToast?.('Failed to add product to cart. Please try again.', 'error');
+    }
   };
 
   const handleVariantSelect = (variant, e) => {

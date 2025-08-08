@@ -14,30 +14,47 @@ const RecipeBundleCard = ({ bundle, className, ...props }) => {
   const { addToCart } = useCart();
   const showToast = useToast();
 
-  const handleAddBundleToCart = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+const handleAddBundleToCart = async (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    
+    // Defensive checks to prevent instanceof errors
+    if (!bundle || !bundle.products || !Array.isArray(bundle.products)) {
+      showToast?.('Invalid bundle data. Please try again.', 'error');
+      return;
+    }
+
+    if (typeof addToCart !== 'function') {
+      showToast?.('Cart service unavailable. Please refresh the page.', 'error');
+      return;
+    }
     
     setIsLoading(true);
     
     try {
-      // Add each product in the bundle to cart
+      // Add each product in the bundle to cart with safety checks
       for (const item of bundle.products) {
+        if (!item?.product?.Id) {
+          console.warn('Skipping invalid product item:', item);
+          continue;
+        }
+
         const cartItem = {
           productId: item.product.Id,
-          quantity: item.quantity,
+          quantity: item.quantity || 1,
           variant: item.variant || null,
-          price: item.product.price,
+          price: item.product.price || 0,
           bundleId: bundle.Id,
-          bundleName: bundle.name
+          bundleName: bundle.name || 'Unknown Bundle'
         };
         
         await addToCart(cartItem);
       }
       
-      showToast(`${bundle.name} bundle added to cart!`, 'success');
+      showToast?.(`${bundle.name || 'Bundle'} added to cart!`, 'success');
     } catch (error) {
-      showToast('Failed to add bundle to cart. Please try again.', 'error');
+      console.error('Bundle add to cart error:', error);
+      showToast?.('Failed to add bundle to cart. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
