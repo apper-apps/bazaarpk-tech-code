@@ -41,29 +41,37 @@ export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
     }
 
 try {
-await webSocketService.connect(url);
+      await webSocketService.connect(url);
     } catch (error) {
       let userMessage = 'Connection failed - will retry automatically';
       let toastType = 'error';
       
-      // Handle Error instances
+      // Handle Error instances (most common from WebSocketService)
       if (error instanceof Error) {
         userMessage = error.message;
       } 
-      // Handle event objects directly
+      // Handle raw event objects (shouldn't happen with fixed WebSocketService)
       else if (error instanceof Event) {
-        userMessage = `WebSocket error: ${error.type}`;
+        userMessage = 'WebSocket connection error - server unreachable';
       }
-      // Handle other error types
-      else {
-        userMessage = String(error).includes('[object')
-          ? 'WebSocket connection error'
-          : String(error);
+      // Handle other error types with better detection
+      else if (error !== null && error !== undefined) {
+        const errorStr = String(error);
+        if (errorStr.includes('[object') || errorStr === '[object Object]') {
+          userMessage = 'WebSocket connection error - please check your network';
+        } else {
+          userMessage = errorStr;
+        }
       }
 
-      // Final sanitization
-      if (userMessage.includes('[object')) {
-        userMessage = 'WebSocket connection error';
+      // Additional sanitization for any remaining object references
+      if (userMessage.includes('[object') || userMessage === '[object Object]') {
+        userMessage = 'WebSocket connection error - network issue detected';
+      }
+
+      // Ensure we have a meaningful message
+      if (!userMessage || userMessage.trim() === '') {
+        userMessage = 'WebSocket connection failed - will retry automatically';
       }
 
       if (showConnectionToasts) {

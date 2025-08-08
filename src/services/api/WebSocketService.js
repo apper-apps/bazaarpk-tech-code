@@ -96,10 +96,32 @@ this.socket.onerror = (event) => {
           
           this.isConnecting = false;
           
-          // Create a safe error message
-          const errorMessage = event && event.message 
-            ? event.message 
-            : `WebSocket error: ${event.type || 'unknown error'}`;
+          // Create a meaningful error message from WebSocket error event
+          let errorMessage = 'WebSocket connection failed';
+          
+          // WebSocket error events don't have a message property
+          // Extract meaningful info from the event and socket state
+          if (this.socket) {
+            const readyState = this.socket.readyState;
+            switch (readyState) {
+              case WebSocket.CONNECTING:
+                errorMessage = 'Connection attempt failed - server unreachable';
+                break;
+              case WebSocket.CLOSING:
+                errorMessage = 'Connection was interrupted while closing';
+                break;
+              case WebSocket.CLOSED:
+                errorMessage = 'Connection closed unexpectedly';
+                break;
+              default:
+                errorMessage = 'WebSocket connection error occurred';
+            }
+          }
+          
+          // Add event type if available and meaningful
+          if (event && event.type && event.type !== 'error') {
+            errorMessage += ` (${event.type})`;
+          }
           
           // Create sanitized error data
           const safeErrorData = {
