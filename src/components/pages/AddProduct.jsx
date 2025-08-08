@@ -25,10 +25,65 @@ const navigate = useNavigate();
   const isInAdminDashboard = location.pathname.includes('/admin') || 
                            location.pathname.includes('/dashboard');
   
-  // Initialize CSRF protection on component mount
+// Initialize CSRF protection on component mount
   useEffect(() => {
     initializeCSRF();
     announceToScreenReader("Add product form loaded. Fill in required fields marked with asterisk.", "polite");
+    
+    // Fix spacebar functionality in admin text fields
+    const adminFieldSelectors = [
+      'input[type="text"]',
+      'input[type="email"]', 
+      'input[type="url"]',
+      'input[type="search"]',
+      'textarea',
+      '.description-editor',
+      '.short-description',
+      '#product-name',
+      '.brand-search input',
+      '.category-search input'
+    ];
+
+    function fixAdminFields() {
+      adminFieldSelectors.forEach(selector => {
+        document.querySelectorAll(selector).forEach(field => {
+          // Remove existing listener to prevent duplicates
+          field.removeEventListener('keydown', handleSpacebarFix);
+          // Add new listener
+          field.addEventListener('keydown', handleSpacebarFix);
+        });
+      });
+    }
+
+    function handleSpacebarFix(e) {
+      if (e.key === ' ') {
+        e.stopImmediatePropagation();
+        return true;
+      }
+    }
+
+    // Run immediately and on DOM changes
+    fixAdminFields();
+    
+    // Create observer for dynamically added fields
+    const observer = new MutationObserver(() => {
+      fixAdminFields();
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    // Cleanup on unmount
+    return () => {
+      observer.disconnect();
+      adminFieldSelectors.forEach(selector => {
+        document.querySelectorAll(selector).forEach(field => {
+          field.removeEventListener('keydown', handleSpacebarFix);
+        });
+      });
+    };
   }, []);
 
   const [formData, setFormData] = useState({
