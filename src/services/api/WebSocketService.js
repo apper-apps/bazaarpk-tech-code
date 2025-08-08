@@ -117,11 +117,20 @@ this.socket.onerror = (event) => {
             error: errorMessage,
             code: 'WEBSOCKET_ERROR',
             readyState: readyState,
-            timestamp: new Date().toISOString()
+timestamp: new Date().toISOString()
           };
           
           console.error('Processed WebSocket error:', safeErrorData);
-          this.emit('connection', safeErrorData);
+          
+          // Ensure error message is clean string before emitting
+          const cleanErrorForEmit = {
+            ...safeErrorData,
+            error: typeof safeErrorData.error === 'string' 
+              ? safeErrorData.error.replace(/\[object\s+\w+\]/gi, 'WebSocket connection error')
+              : 'WebSocket connection error'
+          };
+          
+          this.emit('connection', cleanErrorForEmit);
           
           // Reject with proper Error instance
           reject(new Error(errorMessage));

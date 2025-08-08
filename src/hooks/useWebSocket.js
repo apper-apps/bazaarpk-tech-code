@@ -107,13 +107,29 @@ if (data.code !== 1000) { // Not a normal closure
             onDisconnect?.(data);
             break;
 case 'error':
-            // Handle error case with safe message
-            const safeError = data.error || 'Connection error occurred';
-            const cleanError = safeError.replace(/\[object\s+\w+\]/g, '');
+            // Handle error case with comprehensive message cleaning
+            let safeError = 'Connection error occurred';
+            
+            if (data.error) {
+              if (typeof data.error === 'string') {
+                safeError = data.error;
+              } else if (data.error instanceof Error) {
+                safeError = data.error.message || 'WebSocket error';
+              } else if (typeof data.error === 'object') {
+                safeError = data.error.message || data.error.type || 'WebSocket connection error';
+              }
+            }
+            
+            // Clean any remaining object representations
+            const cleanError = safeError
+              .replace(/\[object\s+\w+\]/gi, 'WebSocket error')
+              .replace(/\s{2,}/g, ' ')
+              .trim();
+              
             setConnectionStatus('error');
             
             if (showConnectionToasts) {
-              showToast(cleanError, 'error');
+              showToast(cleanError || 'Connection error occurred', 'error');
             }
             onError?.(data);
             break;
