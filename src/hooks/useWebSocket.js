@@ -154,11 +154,22 @@ console.error('WebSocket connection failed:', {
         isDevelopment: error?.isDevelopment
       });
       
-      // Show user-friendly error message
-      if (error?.suggestion) {
-        showToast.error(`${userMessage}: ${error.suggestion}`);
+// Enhanced error message handling with better user guidance
+      if (error?.category === 'server' && error?.suggestion) {
+        showToast.error(error.suggestion, {
+          toastId: 'websocket-server-error',
+          autoClose: 8000,
+        });
+      } else if (error?.suggestion) {
+        showToast.error(`${userMessage}: ${error.suggestion}`, {
+          toastId: 'websocket-connection-error',
+          autoClose: 6000,
+        });
       } else {
-        showToast.error(userMessage);
+        showToast.error(`${userMessage}. The application will work in offline mode.`, {
+          toastId: 'websocket-fallback',
+          autoClose: 5000,
+        });
       }
     }
   }, [isOnline, showConnectionToasts, showToast, url]);

@@ -35,7 +35,10 @@ window.addEventListener('offline', () => {
     });
   }
 
-  connect(url = 'ws://localhost:8080') {
+connect(url) {
+    // Determine WebSocket URL with proper fallback strategy
+    const wsUrl = url || import.meta.env.VITE_WS_URL || 'wss://echo.websocket.org/';
+    
     if (!this.isOnline) {
       console.warn('WebSocket: Cannot connect - offline');
       return Promise.reject(new Error('Device is offline'));
@@ -46,10 +49,16 @@ window.addEventListener('offline', () => {
     }
 
     this.isConnecting = true;
+    this.url = wsUrl; // Store URL for error reporting
     
     return new Promise((resolve, reject) => {
       try {
-        this.socket = new WebSocket(url);
+        // Validate URL before attempting connection
+        if (!wsUrl || (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://'))) {
+          throw new Error('Invalid WebSocket URL provided');
+        }
+        
+        this.socket = new WebSocket(wsUrl);
         this.connectionId = Date.now().toString();
 
 this.socket.onopen = (event) => {
@@ -110,10 +119,12 @@ this.socket.onerror = (event) => {
           let userMessage = 'Connection lost';
           let suggestion = 'Please check your internet connection and try again';
           
-          // Determine if we're in development or production
+// Determine if we're in development or production
           const isDev = import.meta.env.MODE === 'development';
-          const wsUrl = this.url || import.meta.env.VITE_WS_URL || 'ws://localhost:8080';
+          const wsUrl = this.url || import.meta.env.VITE_WS_URL || 'wss://echo.websocket.org/';
           
+          // Check if this is a localhost connection failure
+          const isLocalhostFailure = wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1');
           if (event?.reason && typeof event.reason === 'string' && event.reason.trim()) {
             const reason = event.reason.toLowerCase();
             if (reason.includes('server') || reason.includes('503') || reason.includes('502')) {
@@ -143,12 +154,18 @@ this.socket.onerror = (event) => {
               errorCategory = 'closing';
               userMessage = 'Connection is closing';
               suggestion = 'Reconnecting automatically...';
-            } else if (readyState === 3) { // CLOSED
-              errorCategory = 'network';
-              userMessage = 'Unable to connect to server';
-              suggestion = isDev 
-                ? `Cannot connect to ${wsUrl}. Ensure WebSocket server is running.`
-                : 'Unable to establish connection. Please check your internet connection.';
+} else if (readyState === 3) { // CLOSED
+              if (isLocalhostFailure && isDev) {
+                errorCategory = 'server';
+                userMessage = 'Development WebSocket server not running';
+                suggestion = `Cannot connect to ${wsUrl}. Start your WebSocket server or check the VITE_WS_URL configuration.`;
+              } else {
+                errorCategory = 'network';
+                userMessage = 'Unable to connect to server';
+                suggestion = isDev 
+                  ? `Cannot connect to ${wsUrl}. Check WebSocket server status.`
+                  : 'Unable to establish connection. Please check your internet connection.';
+              }
             }
           }
           
