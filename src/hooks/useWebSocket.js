@@ -271,14 +271,10 @@ case 'invalid':
                 }
                 
                 console.error('WebSocket Hook Error:', safeLogData);
-              } catch (logErr) {
-console.error('Failed to log WebSocket error safely:', logErr.message || logErr);
-                // Fallback logging
-                console.error('Original error data (fallback):', safeStringify(data, 'Error data unavailable'));
-              } catch (logErr) {
+} catch (logErr) {
                 console.error('Failed to log WebSocket error safely:', logErr.message || logErr);
                 // Fallback logging
-                console.error('Original error data (fallback):', 'Error data unavailable');
+                console.error('Original error data (fallback):', safeStringify(data, 'Error data unavailable'));
               }
             };
             
