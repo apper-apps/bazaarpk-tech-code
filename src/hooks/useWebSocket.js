@@ -1,6 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useToast } from "@/hooks/useToast";
-import webSocketService from "@/services/api/WebSocketService";
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useToast } from '@/hooks/useToast'
+import webSocketService from '@/services/api/WebSocketService'
+
+// Enhanced error logging for WebSocket hook
+const logWebSocketError = (error, context = '') => {
+  const errorInfo = {
+    message: error?.message || 'Unknown WebSocket error',
+    category: error?.category || 'unknown',
+    url: error?.url || 'unknown',
+    code: error?.code || null,
+    reason: error?.reason || null,
+    readyState: error?.readyState || null,
+    timestamp: error?.timestamp || new Date().toISOString(),
+    context
+  };
+  
+  console.error('WebSocket Hook Error:', errorInfo);
+  return errorInfo;
+};
 export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [lastMessage, setLastMessage] = useState(null);

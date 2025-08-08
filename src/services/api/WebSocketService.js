@@ -155,19 +155,20 @@ class WebSocketService {
           }
         };
 
-        this.ws.onerror = (event) => {
+this.ws.onerror = (event) => {
           // Prevent duplicate error emissions
           if (this.errorEmitted) return;
           this.errorEmitted = true;
           
           clearTimeout(this.connectionTimeout);
-          console.error('WebSocket error:', event);
           
-          // Enhanced error message generation with environment context
+          // Extract meaningful error information from WebSocket and Event
           let errorMessage = 'WebSocket connection failed';
           let errorCategory = 'network';
           let userMessage = 'Connection lost';
           let suggestion = 'Please check your internet connection and try again';
+          let errorCode = null;
+          let errorReason = null;
           
           // Determine if we're in development or production
           const isDev = import.meta.env.MODE === 'development';
@@ -175,8 +176,42 @@ class WebSocketService {
           // Check if this is a localhost connection failure
           const isLocalhostFailure = wsUrl.includes('localhost') || wsUrl.includes('127.0.0.1');
           
-          if (event?.reason && typeof event.reason === 'string' && event.reason.trim()) {
-            const reason = event.reason.toLowerCase();
+          // Extract error details from WebSocket instance
+          const wsState = this.ws?.readyState ?? 3;
+          const wsUrl_safe = wsUrl || 'unknown';
+          
+          // Try to extract error information from various sources
+          if (this.ws) {
+            // Some WebSocket implementations store error info on the WebSocket instance
+            errorCode = this.ws.code || null;
+            errorReason = this.ws.reason || null;
+          }
+          
+          // Extract from close event if available (sometimes error events precede close events)
+          if (event && typeof event === 'object') {
+            errorCode = event.code || errorCode;
+            errorReason = event.reason || errorReason;
+            
+            // Log detailed error information for debugging
+            console.error('WebSocket error details:', {
+              eventType: event.type || 'error',
+              readyState: wsState,
+              url: wsUrl_safe,
+              code: errorCode,
+              reason: errorReason,
+              timestamp: new Date().toISOString()
+            });
+          } else {
+            console.error('WebSocket error with minimal context:', {
+              readyState: wsState,
+              url: wsUrl_safe,
+              timestamp: new Date().toISOString()
+            });
+          }
+          
+          // Process error reason if available
+          if (errorReason && typeof errorReason === 'string' && errorReason.trim()) {
+            const reason = errorReason.toLowerCase();
             if (reason.includes('server') || reason.includes('503') || reason.includes('502')) {
               errorCategory = 'server';
               userMessage = 'Server temporarily unavailable';
@@ -194,29 +229,42 @@ class WebSocketService {
               userMessage = isDev ? 'Development server not running' : 'Server unavailable';
               suggestion = isDev ? 'Please start the WebSocket server' : 'Server is temporarily unavailable';
             } else {
-              userMessage = reason.substring(0, 100);
+              userMessage = errorReason.substring(0, 100);
             }
-            errorMessage = `WebSocket error: ${reason}`;
+            errorMessage = `WebSocket error: ${errorReason}`;
           } else {
-            // Check connection state for more context
-            const readyState = this.ws?.readyState ?? 3;
-            if (readyState === 2) { // CLOSING
+            // Analyze connection state for context when no specific reason available
+            if (wsState === 0) { // CONNECTING
+              errorCategory = 'connection';
+              userMessage = 'Failed to establish connection';
+              suggestion = isLocalhostFailure && isDev
+                ? `Cannot connect to ${wsUrl_safe}. Check if WebSocket server is running.`
+                : 'Unable to connect to server. Check your internet connection.';
+            } else if (wsState === 2) { // CLOSING
               errorCategory = 'closing';
               userMessage = 'Connection is closing';
               suggestion = 'Reconnecting automatically...';
-            } else if (readyState === 3) { // CLOSED
+            } else if (wsState === 3) { // CLOSED
               if (isLocalhostFailure && isDev) {
                 errorCategory = 'server';
                 userMessage = 'Development WebSocket server not running';
-                suggestion = `Cannot connect to ${wsUrl}. Start your WebSocket server or check the VITE_WS_URL configuration.`;
+                suggestion = `Cannot connect to ${wsUrl_safe}. Start your WebSocket server or check the VITE_WS_URL configuration.`;
               } else {
                 errorCategory = 'network';
                 userMessage = 'Unable to connect to server';
                 suggestion = isDev 
-                  ? `Cannot connect to ${wsUrl}. Check WebSocket server status.`
+                  ? `Cannot connect to ${wsUrl_safe}. Check WebSocket server status.`
                   : 'Unable to establish connection. Please check your internet connection.';
               }
+            } else {
+              // Default error handling for unknown states
+              errorCategory = 'unknown';
+              userMessage = 'WebSocket connection error occurred';
+              suggestion = 'An unexpected connection error occurred. Please try refreshing the page.';
             }
+            
+            // Create detailed error message for logging
+            errorMessage = `WebSocket error - State: ${this.getStateName(wsState)}, URL: ${wsUrl_safe}`;
           }
 
           const error = {
@@ -225,11 +273,20 @@ class WebSocketService {
             suggestion: suggestion,
             canRetry: errorCategory !== 'auth',
             isDevelopment: isDev,
-            url: wsUrl,
+            url: wsUrl_safe,
+            code: errorCode,
+            reason: errorReason,
+            readyState: wsState,
+            stateName: this.getStateName(wsState),
             timestamp: new Date().toISOString()
           };
           
-          this.emit('connection', { status: 'error', error: error.message, code: 'WEBSOCKET_ERROR' });
+          this.emit('connection', { 
+            status: 'error', 
+            error: error.message, 
+            code: 'WEBSOCKET_ERROR',
+            details: error
+          });
           
           // Schedule automatic reconnection if retryable
           if (error.canRetry && !this.isDestroyed) {
