@@ -301,11 +301,11 @@ case 'invalid':
               } catch (logErr) {
                 console.error('Failed to log WebSocket error safely:', logErr.message || logErr);
                 // Fallback logging
-                console.error('Original error data (fallback):', data);
+console.error('Original error data (fallback):', data);
               }
+            };
             
             logError();
-            
             if (shouldShowToast) {
               showToast(errorMessage, 'error');
             }
@@ -319,11 +319,11 @@ case 'invalid':
                 message: errorMessage,
                 timestamp: new Date().toISOString()
               };
-              onError?.(callbackData);
-} catch (callbackError) {
+onError?.(callbackData);
+            } catch (callbackError) {
               console.error('Error in WebSocket error callback:', callbackError);
             }
-break;
+            break;
         }
       }
     });
