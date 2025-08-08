@@ -297,22 +297,23 @@ startHeartbeat() {
   }
 
 flushMessageQueue() {
-    if (!this.messageQueue.length) return;
+    if (!this.messageQueue.length || !this.socket) return;
     
-    const messages = [...this.messageQueue];
+    const tempQueue = [...this.messageQueue];
     this.messageQueue = [];
     
-    for (const message of messages) {
-      try {
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+    for (const message of tempQueue) {
+      if (this.socket.readyState === WebSocket.OPEN) {
+        try {
           this.socket.send(JSON.stringify(message));
-        } else {
-          // Requeue if not sent
+        } catch (error) {
+          console.warn('Failed to send queued message, discarding');
+        }
+      } else {
+        // Requeue only if connection is expected to recover
+        if (this.socket.readyState === WebSocket.CONNECTING) {
           this.messageQueue.push(message);
         }
-      } catch (error) {
-        console.error('Message send error:', error.message);
-        // Don't requeue - message will be lost to prevent buildup
       }
     }
   }

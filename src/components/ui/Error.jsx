@@ -4,10 +4,114 @@ import ApperIcon from "@/components/ApperIcon";
 import HomePage from "@/components/pages/Home";
 import Button from "@/components/atoms/Button";
 
+// Error Boundary for WebSocket and other errors
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.FallbackComponent 
+        ? <this.props.FallbackComponent error={this.state.error} />
+        : <div className="p-6 text-center">
+            <ApperIcon name="AlertTriangle" size={48} className="mx-auto mb-4 text-red-500" />
+            <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
+            <p className="text-gray-600 mb-4">An unexpected error occurred</p>
+            <Button onClick={() => window.location.reload()}>
+              Refresh Page
+            </Button>
+          </div>;
+    }
+
+    return this.props.children;
+  }
+}
+
+// WebSocket specific error fallback
+function WebSocketErrorFallback({ error }) {
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
+      <div className="flex items-center">
+        <ApperIcon name="Wifi" size={20} className="text-red-500 mr-2" />
+        <h3 className="text-red-800 font-medium">WebSocket Connection Failed</h3>
+      </div>
+      <p className="text-red-600 text-sm mt-2">
+        {error?.message || 'Unable to establish real-time connection'}
+      </p>
+      <Button 
+        size="sm" 
+        variant="outline" 
+        className="mt-3"
+        onClick={() => window.location.reload()}
+      >
+        <ApperIcon name="RefreshCw" size={14} className="mr-2" />
+        Retry Connection
+      </Button>
+    </div>
+  );
+}
+
+const useErrorHandler = () => {
+  const [error, setError] = useState(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  
+  const handleError = useCallback((error) => {
+    console.error('Error caught:', error);
+    setError(error);
+    setIsRetrying(false);
+  }, []);
+
+  const retry = useCallback((retryFn) => {
+    if (typeof retryFn === 'function') {
+      setIsRetrying(true);
+      setError(null);
+      setRetryCount(prev => prev + 1);
+      
+      try {
+        const result = retryFn();
+        
+        if (result && typeof result.catch === 'function') {
+          result
+            .catch(handleError)
+            .finally(() => setIsRetrying(false));
+        } else {
+          setIsRetrying(false);
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    }
+  }, [handleError]);
+
+  const clearError = useCallback(() => {
+    setError(null);
+    setIsRetrying(false);
+    setRetryCount(0);
+  }, []);
+
+  return {
+    error,
+    isRetrying,
+    retryCount,
+    handleError,
+    retry,
+    clearError
+  };
+};
+
 /**
- * Enhanced Error Component with comprehensive browser compatibility and accessibility support
- * 
- * Features:
+ * Enhanced Error Component with:
  * - Cross-browser compatibility detection
  * - Screen reader optimization
  * - Touch device support
@@ -236,19 +340,17 @@ content.suggestions.push('Update Chrome for better security and performance');
       onRetry();
     }
   }, [onRetry, isRetrying, type, retryCount, browserInfo, isOnline]);
-
-  // Base styles with accessibility enhancements
+// Variant styles
   const getVariantStyles = () => {
-    const baseStyles = accessibilityMode ? 'focus-within:ring-4 focus-within:ring-blue-500' : '';
-    
-    switch (variant) {
-      case 'inline':
-        return `p-4 bg-red-50 border-2 border-red-200 rounded-lg ${baseStyles}`;
-      case 'fullscreen':
-        return `min-h-screen flex items-center justify-center p-6 bg-background ${baseStyles}`;
-      default: // card
-        return `p-6 bg-white rounded-xl shadow-soft border border-gray-100 ${baseStyles}`;
-    }
+    const styles = {
+      card: 'bg-white border border-red-200 rounded-lg p-6 shadow-sm',
+      banner: 'bg-red-50 border-l-4 border-red-400 p-4',
+      inline: 'p-4 bg-red-50 rounded border border-red-200',
+      fullscreen: 'min-h-screen flex items-center justify-center bg-gray-50 px-4 py-16',
+      toast: 'fixed top-4 right-4 z-50 max-w-sm bg-white border border-red-200 rounded-lg shadow-lg p-4',
+      minimal: 'text-red-600'
+    };
+    return styles[variant] || styles.card;
   };
 
   const variantStyles = getVariantStyles();
@@ -456,238 +558,13 @@ const mailtoUrl = `mailto:support@bazaarpk.com?subject=Error Report&body=Error T
   );
 };
 
-/**
- * Enhanced ErrorBoundary Component with comprehensive error tracking
- */
-export class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { 
-      hasError: false, 
-      error: null,
-      errorInfo: null,
-      errorId: null
-    };
-  }
+Error.displayName = 'Error'
 
-  static getDerivedStateFromError(error) {
-    return { hasError: true, errorId: Date.now().toString(36) };
-  }
+// Additional component exports for different error types  
+export const NetworkError = (props) => <Error type="network" {...props} />
+export const NotFoundError = (props) => <Error type="notFound" {...props} />
+export const UnauthorizedError = (props) => <Error type="unauthorized" {...props} />
 
-  componentDidCatch(error, errorInfo) {
-    const errorDetails = {
-      error: error,
-      errorInfo: errorInfo,
-      timestamp: new Date().toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      errorId: this.state.errorId || Date.now().toString(36)
-    };
-
-    this.setState({
-      error: error,
-      errorInfo: errorInfo
-    });
-
-    // Enhanced error logging with browser context
-    console.group('🚨 Error Boundary Caught Error');
-    console.error('Error Details:', errorDetails);
-    console.error('Component Stack:', errorInfo.componentStack);
-    console.error('Error Stack:', error.stack);
-    console.groupEnd();
-
-    // Track in analytics
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'javascript_error', {
-        error_message: error.message,
-        error_stack: error.stack,
-        component_stack: errorInfo.componentStack,
-        error_id: errorDetails.errorId,
-        browser_name: navigator.userAgent.includes('Chrome') ? 'Chrome' : 
-                     navigator.userAgent.includes('Firefox') ? 'Firefox' : 
-                     navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'
-      });
-    }
-
-    // Store error for support
-    try {
-      localStorage.setItem('last_error', JSON.stringify({
-        ...errorDetails,
-        componentStack: errorInfo.componentStack
-      }));
-    } catch (storageError) {
-      console.warn('Failed to store error details:', storageError);
-    }
-  }
-
-  handleRetry = () => {
-    this.setState({ 
-      hasError: false, 
-      error: null, 
-      errorInfo: null,
-      errorId: null
-    });
-  };
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <Error
-          title="Application Error"
-          message="Something went wrong in the application. This error has been logged and our team has been notified."
-          type="server"
-          variant="fullscreen"
-          onRetry={this.handleRetry}
-          showRetry={true}
-          onGoHome={() => {
-            // Clear error state before navigating
-            this.setState({ 
-              hasError: false, 
-              error: null, 
-              errorInfo: null,
-              errorId: null
-            });
-            window.location.href = '/';
-          }}
-          showGoHome={true}
-        >
-          {/* Error ID for support */}
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600">
-              Error ID: <code className="bg-gray-200 px-2 py-1 rounded text-xs">{this.state.errorId}</code>
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Please reference this ID when contacting support.
-            </p>
-          </div>
-
-          {/* Development error details */}
-          {import.meta.env.MODE === 'development' && this.state.error && (
-            <details className="mt-4 p-4 bg-red-50 rounded-lg text-left border border-red-200">
-              <summary className="cursor-pointer font-medium text-red-800 mb-2 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded">
-                🔧 Error Details (Development Only)
-              </summary>
-              <div className="mt-2 space-y-2">
-                <div>
-                  <h4 className="font-medium text-red-800">Error Message:</h4>
-                  <pre className="text-xs text-red-700 bg-red-100 p-2 rounded overflow-auto">
-                    {this.state.error.toString()}
-                  </pre>
-                </div>
-                <div>
-                  <h4 className="font-medium text-red-800">Component Stack:</h4>
-                  <pre className="text-xs text-red-700 bg-red-100 p-2 rounded overflow-auto">
-                    {this.state.errorInfo?.componentStack}
-                  </pre>
-                </div>
-                <div>
-                  <h4 className="font-medium text-red-800">Error Stack:</h4>
-                  <pre className="text-xs text-red-700 bg-red-100 p-2 rounded overflow-auto max-h-40">
-                    {this.state.error?.stack}
-                  </pre>
-                </div>
-              </div>
-            </details>
-          )}
-        </Error>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
-/**
- * Enhanced useErrorHandler Hook with browser compatibility and retry logic
- */
-export const useErrorHandler = () => {
-  const [error, setError] = React.useState(null);
-  const [isRetrying, setIsRetrying] = React.useState(false);
-  const [retryCount, setRetryCount] = React.useState(0);
-  const [browserInfo, setBrowserInfo] = React.useState(null);
-
-  React.useEffect(() => {
-    // Detect browser capabilities for error handling
-    const userAgent = navigator.userAgent;
-    const info = {
-      mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
-      online: navigator.onLine,
-      name: userAgent.includes('Chrome') ? 'Chrome' : 
-            userAgent.includes('Firefox') ? 'Firefox' : 
-            userAgent.includes('Safari') ? 'Safari' : 'Other'
-    };
-    setBrowserInfo(info);
-  }, []);
-
-  const handleError = React.useCallback((error) => {
-    const errorDetails = {
-      message: error?.message || 'Unknown error',
-      name: error?.name || 'Error',
-      stack: error?.stack,
-      timestamp: new Date().toISOString(),
-      browserInfo: browserInfo,
-      retryCount: retryCount
-    };
-
-    console.group('❌ Error Handler');
-    console.error('Error caught:', errorDetails);
-    console.groupEnd();
-
-    // Track in analytics
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'handled_error', {
-        error_type: error?.name || 'Unknown',
-        error_message: error?.message || 'Unknown error',
-        browser_name: browserInfo?.name || 'unknown',
-        is_mobile: browserInfo?.mobile || false,
-        retry_count: retryCount
-      });
-    }
-
-    setError(error);
-    setIsRetrying(false);
-  }, [browserInfo, retryCount]);
-
-  const retry = React.useCallback((retryFn) => {
-    if (typeof retryFn === 'function') {
-      setIsRetrying(true);
-      setError(null);
-      setRetryCount(prev => prev + 1);
-      
-      try {
-        const result = retryFn();
-        
-        // Handle promise-based retry functions
-        if (result && typeof result.catch === 'function') {
-          result
-            .catch(handleError)
-            .finally(() => {
-              setIsRetrying(false);
-            });
-        } else {
-          setIsRetrying(false);
-        }
-      } catch (err) {
-        handleError(err);
-      }
-    }
-  }, [handleError]);
-
-  const clearError = React.useCallback(() => {
-    setError(null);
-    setIsRetrying(false);
-    setRetryCount(0);
-  }, []);
-
-  return {
-    error,
-    isRetrying,
-    retryCount,
-    browserInfo,
-    handleError,
-    retry,
-    clearError
-  };
-};
+export { Error as default, useErrorHandler, ErrorBoundary, WebSocketErrorFallback }
 
 export default Error;
