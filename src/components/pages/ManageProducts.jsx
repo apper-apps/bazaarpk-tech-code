@@ -1825,17 +1825,16 @@ aria-hidden="true"
               <option value="stock-high">Stock (High-Low)</option>
               <option value="stock-low">Stock (Low-High)</option>
               <option value="most-popular">Most Popular</option>
+<option value="most-popular">Most Popular</option>
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
               <option value="last-updated">Last Updated</option>
-<option value="last-updated">Last Updated</option>
-            </select>
+</select>
           </div>
         </div>
       </section>
+
       {/* Products Grid/List */}
-      {/* Products Grid/List */}
-{/* Products Grid/List */}
       {filteredProducts.length === 0 ? (
         <Empty
           title="No products found"
