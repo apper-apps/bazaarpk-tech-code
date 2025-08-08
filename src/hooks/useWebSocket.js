@@ -19,7 +19,7 @@ const logWebSocketError = (error, context = '') => {
   console.error('WebSocket Hook Error:', errorInfo);
   return errorInfo;
 };
-export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
+export const useWebSocket = (url, options = {}) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [lastMessage, setLastMessage] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -51,6 +51,19 @@ export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
 
   // Connection management
 const connect = useCallback(async () => {
+    // Check if WebSocket is intentionally disabled
+    const isWebSocketDisabled = import.meta.env.VITE_DISABLE_WEBSOCKET === 'true';
+    const defaultUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8080';
+    const finalUrl = url || defaultUrl;
+    
+    if (isWebSocketDisabled) {
+      setConnectionStatus('disabled');
+      if (showConnectionToasts && connectionStatus === 'connecting') {
+        showToast('App running in offline mode - all features available', 'info');
+      }
+      return;
+    }
+
     if (!isOnline) {
       if (showConnectionToasts) {
         showToast('Cannot connect - device is offline', 'warning');
@@ -63,7 +76,7 @@ const connect = useCallback(async () => {
       if (!webSocketService || typeof webSocketService.connect !== 'function') {
         throw new Error('WebSocket service is not available');
       }
-      await webSocketService.connect(url);
+await webSocketService.connect(finalUrl);
     } catch (error) {
       // Enhanced error handling for better UX
       const isDevelopment = import.meta.env?.DEV || false;
@@ -71,11 +84,13 @@ const connect = useCallback(async () => {
       const isServerUnavailable = errorCategory === 'server_unavailable' || errorCategory === 'development';
       
       // Only show meaningful toasts, reduce spam in development
-      if (showConnectionToasts && connectionStatus === 'connecting') {
+if (showConnectionToasts && connectionStatus === 'connecting') {
         let message = 'App running offline - all features available';
         
-        if (isDevelopment && errorCategory === 'development') {
-          message = 'Development mode - WebSocket not configured';
+        if (isDevelopment && errorCategory === 'disabled') {
+          message = 'WebSocket disabled - app working offline (all features available)';
+        } else if (isDevelopment && errorCategory === 'development') {
+          message = 'Development mode - WebSocket server not running (working offline)';
         } else if (isServerUnavailable) {
           message = 'Working offline - all features available';
         }
@@ -84,16 +99,19 @@ const connect = useCallback(async () => {
       }
 
       // Minimal development logging - only for meaningful errors
-      if (isDevelopment && !url) {
+if (isDevelopment && errorCategory === 'disabled') {
+        console.info('WebSocket disabled via VITE_DISABLE_WEBSOCKET=true');
+      } else if (isDevelopment && !finalUrl) {
         console.info('WebSocket disabled - set VITE_WS_URL to enable');
       } else if (isDevelopment && isServerUnavailable) {
-        console.info(`WebSocket server unavailable: ${url || 'No URL configured'}`);
+        console.info(`WebSocket server unavailable: ${finalUrl || 'No URL configured'}`);
       }
       
       // Set appropriate connection status based on error type
-      setConnectionStatus(isServerUnavailable ? 'server_unavailable' : 'disconnected');
+setConnectionStatus(errorCategory === 'disabled' ? 'disabled' : 
+                         isServerUnavailable ? 'server_unavailable' : 'disconnected');
     }
-  }, [isOnline, showConnectionToasts, showToast, url, connectionStatus]);
+}, [isOnline, showConnectionToasts, showToast, url, connectionStatus]);
 
   const disconnect = useCallback(() => {
     webSocketService.disconnect();
@@ -138,6 +156,7 @@ useEffect(() => {
           case 'error':
 case 'parse_error':
           case 'invalid':
+          case 'disabled':
           case 'server_unavailable':
             // Enhanced error handling with better user experience
             const isDevelopment = import.meta.env?.DEV || false;
@@ -153,8 +172,10 @@ case 'parse_error':
             }
             
             // Context-aware messaging for better UX - improved development detection
-            if (isDevelopment && errorCategory === 'development') {
-              errorMessage = 'Development mode - all features available offline';
+if (errorCategory === 'disabled') {
+              errorMessage = 'WebSocket disabled - app working offline (all features available)';
+            } else if (isDevelopment && errorCategory === 'development') {
+              errorMessage = 'Development mode - WebSocket server not running (working offline)';
             } else if (errorCategory === 'server_unavailable' || errorCategory === 'development') {
               errorMessage = isDevelopment 
                 ? 'Development mode - working offline' 
@@ -168,9 +189,9 @@ case 'parse_error':
             }
             
             // Smart toast showing - reduced frequency in development
-            const isTransitioningFromConnected = connectionStatus === 'connected';
+const isTransitioningFromConnected = connectionStatus === 'connected';
             const isFirstError = connectionStatus === 'connecting';
-            const isDevelopmentError = isDevelopment && (errorCategory === 'development' || errorCategory === 'server_unavailable');
+            const isDevelopmentError = isDevelopment && (errorCategory === 'development' || errorCategory === 'server_unavailable' || errorCategory === 'disabled');
             
             if (data?.status === 'error' && isTransitioningFromConnected && !isDevelopmentError) {
               shouldShowToast = true;
@@ -227,7 +248,8 @@ useEffect(() => {
   useEffect(() => {
     const connectionCheckInterval = setInterval(() => {
       // Only attempt reconnection if we're not in server_unavailable state
-      if (connectionStatus === 'disconnected' && isOnline && connectionStatus !== 'server_unavailable') {
+if (connectionStatus === 'disconnected' && isOnline && 
+          connectionStatus !== 'server_unavailable' && connectionStatus !== 'disabled') {
         connect();
       }
     }, 30000); // Check every 30 seconds
@@ -259,8 +281,9 @@ useEffect(() => {
     disconnect,
     sendMessage,
     subscribe,
-    isConnected: connectionStatus === 'connected',
-    isConnecting: connectionStatus === 'connecting'
+isConnected: connectionStatus === 'connected',
+    isConnecting: connectionStatus === 'connecting',
+    isDisabled: connectionStatus === 'disabled'
   };
 };
 
