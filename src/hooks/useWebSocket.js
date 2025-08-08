@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/useToast";
 import webSocketService from "@/services/api/WebSocketService";
-import { Error as ErrorComponent } from "@/components/ui/Error";
-
 export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [lastMessage, setLastMessage] = useState(null);
@@ -43,81 +41,36 @@ export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
 try {
       await webSocketService.connect(url);
     } catch (error) {
-      // Enhanced error message extraction with object-safe handling
+      // Simplified, bulletproof error message extraction
       let userMessage = 'Connection failed - will retry automatically';
       
-      // Handle Error instances
+      // Simple extraction with guaranteed string output
       if (error instanceof Error) {
         userMessage = error.message || 'WebSocket connection error';
-      } 
-      // Handle DOMException separately
-      else if (typeof window !== 'undefined' && window.DOMException && error instanceof window.DOMException) {
-        userMessage = `Network error: ${error.message || 'Connection failed'}`;
-      }
-      // Handle string errors
-      else if (typeof error === 'string') {
+      } else if (typeof error === 'string') {
         userMessage = error;
-      }
-      // Enhanced object error handling with JSON fallback
-      else if (error && typeof error === 'object') {
-        // Try common error properties first
-        userMessage = error.message || error.error || error.type || error.code;
-        
-        // If still an object, try safe serialization
-        if (typeof userMessage === 'object' && userMessage !== null) {
-          try {
-            userMessage = JSON.stringify(userMessage).replace(/[{}"]/g, '').trim();
-          } catch (e) {
-            userMessage = 'WebSocket connection error';
-          }
-        }
-        
-        // Final fallback for objects
-        if (!userMessage || typeof userMessage === 'object') {
-          userMessage = 'WebSocket connection error';
-        }
+      } else if (error && typeof error === 'object') {
+        // Extract common error properties with fallback
+        userMessage = error.message || 
+                     error.error || 
+                     error.type || 
+                     error.code || 
+                     'WebSocket connection error';
       }
       
-      // Multi-layer sanitization to prevent any object leakage
-      userMessage = String(userMessage)
-        .replace(/\[object\s+\w+\]/gi, 'WebSocket connection error')
-        .replace(/^\s*error\s*error/i, 'WebSocket error')
-        .replace(/\s{2,}/g, ' ')
-        .replace(/^undefined$|^null$/i, 'WebSocket connection error')
-        .trim();
-      
-      // Fallback for empty or invalid messages
-      if (!userMessage || userMessage.length === 0) {
-        userMessage = 'WebSocket connection failed';
-      }
+      // Ensure final result is always a string
+      userMessage = String(userMessage || 'WebSocket connection failed');
       
       if (showConnectionToasts) {
         showToast(userMessage, 'error');
       }
       
-      // Enhanced safe error logging with object serialization protection
-      const logData = {
-        originalErrorType: typeof error,
-        errorConstructor: error?.constructor?.name || 'Unknown',
-        cleanMessage: userMessage,
-        timestamp: new Date().toISOString()
-      };
-      
-      // Ensure all log data is serializable
-      Object.keys(logData).forEach(key => {
-        if (typeof logData[key] === 'object' && logData[key] !== null) {
-          try {
-            logData[key] = JSON.stringify(logData[key]);
-          } catch (e) {
-            logData[key] = 'serialization-failed';
-          }
-        }
-        logData[key] = String(logData[key]).replace(/\[object\s+\w+\]/gi, 'unknown-object');
+      console.error('WebSocket connection failed:', {
+        type: typeof error,
+        message: userMessage
       });
-      
-      console.error('WebSocket connection failed:', logData);
     }
-  }, [url, isOnline, showConnectionToasts, showToast]);
+  }, [isOnline, showConnectionToasts, showToast, url]);
 
   const disconnect = useCallback(() => {
     webSocketService.disconnect();
@@ -152,55 +105,29 @@ if (data.code !== 1000) { // Not a normal closure
             onDisconnect?.(data);
             break;
 case 'error':
-            // Enhanced error case handling with multi-layer object protection
-            let safeError = 'Connection error occurred';
+            // Simple, fail-safe error handling
+            let errorMessage = 'Connection error occurred';
             
             if (data.error) {
               if (typeof data.error === 'string') {
-                safeError = data.error;
+                errorMessage = data.error;
               } else if (data.error instanceof Error) {
-                safeError = data.error.message || 'WebSocket error';
-              } else if (typeof data.error === 'object' && data.error !== null) {
-                // Enhanced safe property access for objects
-                safeError = data.error.message || 
-                           data.error.type || 
-                           data.error.code ||
-                           data.error.error;
-                           
-                // If still an object, attempt JSON serialization
-                if (typeof safeError === 'object' && safeError !== null) {
-                  try {
-                    safeError = JSON.stringify(safeError)
-                      .replace(/[{}"]/g, '')
-                      .replace(/,/g, ' ')
-                      .trim();
-                  } catch (e) {
-                    safeError = 'WebSocket connection error';
-                  }
-                }
-                
-                // Final object check
-                if (!safeError || typeof safeError === 'object') {
-                  safeError = 'WebSocket connection error';
-                }
+                errorMessage = data.error.message || 'WebSocket error';
+              } else if (typeof data.error === 'object') {
+                errorMessage = data.error.message || 
+                              data.error.type || 
+                              data.error.code || 
+                              'WebSocket connection error';
               }
             }
             
-            // Enhanced multi-layer cleaning of error messages
-            const cleanError = String(safeError)
-              .replace(/\[object\s+\w+\]/gi, 'WebSocket connection error')
-              .replace(/^\s*error\s*error/i, 'WebSocket error')
-              .replace(/^undefined$|^null$/i, 'WebSocket connection error')
-              .replace(/\s{2,}/g, ' ')
-              .trim();
-              
+            // Ensure we always have a string
+            errorMessage = String(errorMessage || 'Connection error occurred');
+            
             setConnectionStatus('error');
             
-            // Ensure we have a valid, non-empty error message
-            const finalError = cleanError && cleanError.length > 0 ? cleanError : 'Connection error occurred';
-            
             if (showConnectionToasts) {
-              showToast(finalError, 'error');
+              showToast(errorMessage, 'error');
             }
             onError?.(data);
             break;
