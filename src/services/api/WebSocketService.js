@@ -492,13 +492,10 @@ async checkServerAvailability(url) {
     }
   }
 
-  /**
+/**
    * Disconnect WebSocket
    */
-// Add server availability check method
-}
-
-disconnect() {
+  disconnect() {
     this.isManualDisconnect = true;
     this.isDestroyed = true;
     this.stopHeartbeat();
