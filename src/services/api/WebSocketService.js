@@ -165,12 +165,13 @@ this.socket.onerror = (event) => {
           // Emit clean error data
 this.emit('connection', errorData);
           
-          // Create consistent error object with both Error instance properties and structured data
+// Create consistent error object with both Error instance properties and structured data
           const connectionError = new Error(errorMessage);
           connectionError.category = errorData.category;
           connectionError.suggestion = errorData.suggestion;
           connectionError.timestamp = errorData.timestamp;
-          connectionError.retryable = errorData.retryable;
+          connectionError.canRetry = errorData.canRetry; // Fixed: was errorData.retryable
+          connectionError.retryable = errorData.canRetry; // Added for backward compatibility
           
           reject(connectionError);
         };

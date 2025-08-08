@@ -38,17 +38,21 @@ const connect = useCallback(async () => {
       return;
     }
 
-    try {
+try {
+      // Defensive check: ensure webSocketService is available
+      if (!webSocketService || typeof webSocketService.connect !== 'function') {
+        throw new Error('WebSocket service is not available');
+      }
+      
       await webSocketService.connect(url);
-} catch (error) {
+    } catch (error) {
       // Enhanced error processing with comprehensive fallback handling
       let userMessage = 'Connection issue occurred';
       let toastType = 'error';
       let shouldShowToast = showConnectionToasts;
-      
-      try {
-        // Handle various error object formats
-        if (error && typeof error === 'object') {
+try {
+        // Enhanced error validation and handling
+        if (error && typeof error === 'object' && error !== null) {
           // Handle structured error objects (from WebSocketService)
           if (error.message) {
             userMessage = error.message;
@@ -75,10 +79,17 @@ const connect = useCallback(async () => {
           else if (error.error && error.error.message) {
             userMessage = error.error.message;
           }
-          // Handle error objects with stack property but no message
+// Handle error objects with stack property but no message (like the reported error)
           else if (error.stack && Array.isArray(error.stack) && error.stack.length === 0) {
             userMessage = 'Connection unavailable';
             toastType = 'warning';
+          }
+          // Handle error objects with message property in nested structure
+          else if (error.message && typeof error.message === 'string') {
+            userMessage = error.message;
+            if (error.message.includes('Connection unavailable')) {
+              toastType = 'warning';
+            }
           }
           // Handle serialized error objects
           else if (typeof error === 'object' && Object.keys(error).length > 0) {
@@ -99,10 +110,18 @@ const connect = useCallback(async () => {
         else if (!error) {
           userMessage = 'Unknown connection error';
         }
-      } catch (processingError) {
-        // Fallback if error processing itself fails
-        userMessage = 'Connection processing error';
+} catch (processingError) {
+        // Robust fallback if error processing itself fails
+        userMessage = 'Connection issue occurred';
+        toastType = 'warning';
         console.warn('Error processing WebSocket error:', processingError);
+        
+        // Attempt to extract any useful information from the original error
+        if (error && typeof error === 'string') {
+          userMessage = error.substring(0, 50);
+        } else if (error?.message) {
+          userMessage = String(error.message).substring(0, 50);
+        }
       }
       
       // Clean up technical jargon for user-friendly messages
@@ -149,8 +168,15 @@ const connect = useCallback(async () => {
 
   // Setup connection status listener
 useEffect(() => {
+    // Defensive check for webSocketService availability
+    if (!webSocketService || typeof webSocketService.on !== 'function') {
+      console.warn('WebSocket service not available, connection status will remain disconnected');
+      setConnectionStatus('error');
+      return () => {}; // Return empty cleanup function
+    }
+    
     const unsubscribe = webSocketService.on('connection', (data) => {
-      setConnectionStatus(data.status);
+      setConnectionStatus(data?.status || 'disconnected');
       
       if (showConnectionToasts) {
         switch (data.status) {
@@ -188,6 +214,12 @@ useEffect(() => {
 
   // Setup message listener
 useEffect(() => {
+    // Defensive check for webSocketService availability
+    if (!webSocketService || typeof webSocketService.on !== 'function') {
+      console.warn('WebSocket service not available for message handling');
+      return () => {}; // Return empty cleanup function
+    }
+    
     const unsubscribe = webSocketService.on('message', (data) => {
       setLastMessage(data);
       onMessage?.(data);
