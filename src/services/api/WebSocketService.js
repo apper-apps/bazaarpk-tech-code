@@ -226,18 +226,24 @@ this.socket.onerror = (event) => {
     this.emit('message', data);
   }
 
-  scheduleReconnect() {
-    if (!this.isOnline) return;
+scheduleReconnect() {
+    if (!this.isOnline || this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log('WebSocket: Max reconnect attempts reached or offline');
+      return;
+    }
     
-    const delay = Math.min(this.reconnectInterval * Math.pow(2, this.reconnectAttempts), 30000);
+    const delay = Math.min(
+      this.reconnectInterval * Math.pow(2, this.reconnectAttempts), 
+      30000
+    );
+    
     this.reconnectAttempts++;
-    
     console.log(`WebSocket: Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
     
-    setTimeout(() => {
+    this.reconnectTimer = setTimeout(() => {
       if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
         this.connect().catch(error => {
-          console.error('WebSocket: Reconnection failed', error);
+          console.error('WebSocket: Reconnection failed', error.message);
         });
       }
     }, delay);

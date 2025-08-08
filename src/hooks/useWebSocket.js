@@ -162,7 +162,7 @@ case 'error':
   }, [showConnectionToasts, showToast, onConnect, onDisconnect, onError]);
 
   // Setup message listener
-  useEffect(() => {
+useEffect(() => {
     const unsubscribe = webSocketService.on('message', (data) => {
       setLastMessage(data);
       onMessage?.(data);
@@ -171,6 +171,18 @@ case 'error':
     unsubscribeRefs.current.push(unsubscribe);
     return unsubscribe;
   }, [onMessage]);
+
+  // Periodic connection check for resilience
+  useEffect(() => {
+    const connectionCheckInterval = setInterval(() => {
+      if (connectionStatus === 'disconnected' && isOnline) {
+        console.log('Periodic connection check - attempting reconnect');
+        connect();
+      }
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(connectionCheckInterval);
+  }, [connectionStatus, isOnline, connect]);
 
   // Auto-connect on mount
 useEffect(() => {
