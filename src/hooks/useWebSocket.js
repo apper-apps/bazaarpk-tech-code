@@ -105,12 +105,11 @@ await webSocketService.connect(url);
         }
       }
       
-      if (showConnectionToasts) {
+if (showConnectionToasts) {
         showToast(userMessage, toastType);
       }
-}
 
-// Simplified error logging to reduce console noise
+      // Simplified error logging to reduce console noise
       const isDevelopment = import.meta.env?.DEV || false;
       const logLevel = isDevelopment ? 'warn' : 'info';
       console[logLevel]('WebSocket connection unavailable:', {
