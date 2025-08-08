@@ -1529,9 +1529,9 @@ return (
                 <ApperIcon 
                   name="Search" 
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" 
-                  aria-hidden="true"
+aria-hidden="true"
                 />
-<Input
+                <Input
                   id="product-search"
                   type="text"
                   placeholder="Search by name, SKU, or brand..."
@@ -1828,11 +1828,12 @@ return (
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
               <option value="last-updated">Last Updated</option>
-            </select>
+</select>
           </div>
         </div>
       </section>
 
+      {/* Products Grid/List */}
       {/* Products Grid/List */}
 {/* Products Grid/List */}
       {filteredProducts.length === 0 ? (
