@@ -566,5 +566,3 @@ export const NotFoundError = (props) => <Error type="notFound" {...props} />
 export const UnauthorizedError = (props) => <Error type="unauthorized" {...props} />
 
 export { Error as default, useErrorHandler, ErrorBoundary, WebSocketErrorFallback }
-
-export default Error;
