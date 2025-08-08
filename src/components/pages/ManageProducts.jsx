@@ -146,7 +146,7 @@ const [activityLog, setActivityLog] = useState([]);
     isConnected, 
     subscribe, 
     sendMessage 
-  } = useWebSocket('ws://localhost:8080', {
+  } = useWebSocket(import.meta.env.VITE_WS_URL, {
     showConnectionToasts: true,
     onMessage: (data) => {
       logActivity('WebSocket Message Received', { type: data.type, data });

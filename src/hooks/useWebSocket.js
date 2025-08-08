@@ -51,15 +51,24 @@ export const useWebSocket = (url, options = {}) => {
 
   // Connection management
 const connect = useCallback(async () => {
-    // Check if WebSocket is intentionally disabled
+// Check if WebSocket is intentionally disabled
     const isWebSocketDisabled = import.meta.env.VITE_DISABLE_WEBSOCKET === 'true';
-    const defaultUrl = import.meta.env.VITE_WS_URL || 'wss://echo.websocket.org/';
-    const finalUrl = url || defaultUrl;
+    const configuredUrl = import.meta.env.VITE_WS_URL;
+    const finalUrl = url || configuredUrl;
     
     if (isWebSocketDisabled) {
       setConnectionStatus('disabled');
-      if (showConnectionToasts && connectionStatus === 'connecting') {
-        showToast('WebSocket disabled - app working offline (all features available)', 'info');
+      if (showConnectionToasts && connectionStatus !== 'disabled') {
+        showToast('App working offline - all features available', 'info');
+      }
+      return;
+    }
+
+    // If no WebSocket URL is configured, work in offline mode
+    if (!finalUrl || finalUrl.trim() === '') {
+      setConnectionStatus('disabled');
+      if (showConnectionToasts && connectionStatus !== 'disabled') {
+        showToast('App working offline - all features available', 'info');
       }
       return;
     }
