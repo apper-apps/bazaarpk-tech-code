@@ -370,16 +370,18 @@ const serializeWebSocketError = (event) => {
               userMessage = 'Connection is closing';
               suggestion = 'Reconnecting automatically...';
             } else if (wsState === 3) { // CLOSED
-              if (isLocalhostFailure && isDev) {
-                errorCategory = 'server';
-                userMessage = 'Development WebSocket server not running';
-                suggestion = `Cannot connect to ${wsUrl_safe}. Start your WebSocket server or check the VITE_WS_URL configuration.`;
+if (isLocalhostFailure && isDev) {
+                errorCategory = 'server_unavailable';
+                userMessage = 'Working in offline mode - all features available';
+                suggestion = isDev 
+                  ? `WebSocket server not running at ${wsUrl_safe}. App works fully offline.`
+                  : 'Development server unavailable - offline mode active';
               } else {
                 errorCategory = 'network';
-                userMessage = 'Unable to connect to server';
+                userMessage = 'Working in offline mode';
                 suggestion = isDev 
-                  ? `Cannot connect to ${wsUrl_safe}. Check WebSocket server status.`
-                  : 'Unable to establish connection. Please check your internet connection.';
+                  ? `Cannot connect to ${wsUrl_safe}. All features work offline.`
+                  : 'Connection unavailable - working in offline mode.';
               }
             } else {
               // Default error handling for unknown states

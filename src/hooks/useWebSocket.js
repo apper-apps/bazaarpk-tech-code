@@ -64,60 +64,46 @@ const connect = useCallback(async () => {
         throw new Error('WebSocket service is not available');
       }
 await webSocketService.connect(url);
-    } catch (error) {
-      // Enhanced error handling with cleaner user feedback
-      let userMessage = 'Working in offline mode';
+} catch (error) {
+      // Streamlined error handling with minimal user disruption
+      let userMessage = 'App running offline';
       let toastType = 'info';
-      let shouldRetry = true;
+      let shouldRetry = false;
       let isServerDown = false;
       
-      // Categorize errors for appropriate user feedback
+      // Categorize errors for appropriate handling
       if (error?.category === 'server_unavailable' || error?.code === 'SERVER_DOWN') {
-        userMessage = 'Server unavailable - all features work offline';
-        toastType = 'info';
-        shouldRetry = false;
         isServerDown = true;
+        shouldRetry = false;
       } else if (error?.category === 'connection' || error?.code === 'CONNECTION_FAILED') {
-        userMessage = 'Working in offline mode';
-        toastType = 'info';
-        shouldRetry = true;
+        shouldRetry = false; // Don't retry in development to reduce noise
       } else if (error?.category === 'timeout') {
-        userMessage = 'Connection timeout - offline mode active';
-        toastType = 'info';
-        shouldRetry = true;
+        shouldRetry = false;
       } else {
-        // Generic handling with cleaner user messaging
-        userMessage = 'Working in offline mode';
-        toastType = 'info';
-        shouldRetry = true;
-        
-        // Check for specific network errors
+        // Check for specific network errors indicating server unavailable
         if (error?.message) {
           const errorMsg = error.message.toLowerCase();
-          if (errorMsg.includes('econnrefused') || errorMsg.includes('connection refused')) {
+          if (errorMsg.includes('econnrefused') || errorMsg.includes('connection refused') || 
+              errorMsg.includes('localhost') || errorMsg.includes('127.0.0.1')) {
             isServerDown = true;
             shouldRetry = false;
-            userMessage = 'Server unavailable - offline mode active';
-          } else if (errorMsg.includes('timeout') || errorMsg.includes('etimedout')) {
-            userMessage = 'Connection slow - working offline';
-            toastType = 'warning';
           }
         }
       }
       
-if (showConnectionToasts) {
+      // Only show toast on first connection attempt to reduce spam
+      if (showConnectionToasts && connectionStatus !== 'server_unavailable' && connectionStatus !== 'disconnected') {
         showToast(userMessage, toastType);
       }
 
-      // Simplified error logging to reduce console noise
+      // Minimal development-only logging
       const isDevelopment = import.meta.env?.DEV || false;
-      const logLevel = isDevelopment ? 'warn' : 'info';
-      console[logLevel]('WebSocket connection unavailable:', {
-        status: isServerDown ? 'server_down' : 'connection_failed',
-        url: url,
-        canRetry: shouldRetry,
-        timestamp: new Date().toISOString()
-      });
+      if (isDevelopment) {
+        console.info('WebSocket offline mode:', {
+          reason: isServerDown ? 'server_unavailable' : 'connection_failed',
+          url: url
+        });
+      }
       
       // Set appropriate connection status
       if (isServerDown) {
@@ -171,46 +157,37 @@ case 'error':
           case 'parse_error':
           case 'invalid':
           case 'server_unavailable':
-            // Simplified error handling with consistent user messaging
-            let errorMessage = 'Working in offline mode';
-            let toastType = 'info';
-            let shouldShowToast = false; // Reduce toast frequency for connection errors
+            // Minimal error handling to reduce user disruption
+            let shouldShowToast = false;
+            let errorMessage = 'App running offline';
             
-            // Only show toast for significant status changes
-            if (data?.status === 'server_unavailable' && connectionStatus !== 'server_unavailable') {
-              errorMessage = 'Server unavailable - offline mode active';
-              toastType = 'info';
-              shouldShowToast = true;
+            // Only show toast for meaningful state transitions
+            if (data?.status === 'server_unavailable' && connectionStatus === 'connecting') {
+              shouldShowToast = false; // Don't spam user with expected dev behavior
             } else if (data?.status === 'error' && connectionStatus === 'connected') {
-              errorMessage = 'Connection lost - working offline';
-              toastType = 'warning';
+              errorMessage = 'Connection lost - now offline';
               shouldShowToast = true;
             }
-// Simplified logging for development debugging only
+            
+            // Development-only status logging (minimal)
             const isDevelopment = import.meta.env?.DEV || false;
-            if (isDevelopment) {
-              console.info('WebSocket status change:', {
-                from: connectionStatus,
-                to: data?.status || 'unknown',
-                url: url,
-                timestamp: new Date().toISOString()
-              });
+            if (isDevelopment && data?.status !== connectionStatus) {
+              console.info(`WebSocket: ${connectionStatus} → ${data?.status || 'offline'}`);
             }
             
             if (shouldShowToast) {
-              showToast(errorMessage, toastType);
+              showToast(errorMessage, 'info');
             }
             
-            // Clean error callback with minimal data
+            // Simplified error callback
             try {
               onError?.({
-                status: data?.status || 'error',
+                status: data?.status || 'offline',
                 message: errorMessage,
-                canRetry: data?.status !== 'server_unavailable',
+                canRetry: false, // Don't encourage retries in dev mode
                 timestamp: new Date().toISOString()
               });
-} catch (callbackError) {
-              const isDevelopment = import.meta.env?.DEV || false;
+            } catch (callbackError) {
               if (isDevelopment) {
                 console.warn('Error callback failed:', callbackError.message);
               }
