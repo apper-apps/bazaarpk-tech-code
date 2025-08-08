@@ -19,8 +19,17 @@ class WebSocketService {
       }
     });
     
-    window.addEventListener('offline', () => {
+window.addEventListener('offline', () => {
       this.isOnline = false;
+    });
+
+    // Global error handler for WebSocket errors
+    window.addEventListener('error', (globalError) => {
+      if (globalError.message.includes('WebSocket')) {
+        console.error('Global WebSocket error intercepted:', globalError.message);
+        // Prevent default handling
+        globalError.preventDefault();
+      }
     });
   }
 
@@ -243,8 +252,8 @@ startHeartbeat() {
     }
   }
 
-  flushMessageQueue() {
-if (!this.messageQueue.length) return;
+flushMessageQueue() {
+    if (!this.messageQueue.length) return;
     
     const messages = [...this.messageQueue];
     this.messageQueue = [];
@@ -254,11 +263,12 @@ if (!this.messageQueue.length) return;
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
           this.socket.send(JSON.stringify(message));
         } else {
+          // Requeue if not sent
           this.messageQueue.push(message);
-          break;
         }
       } catch (error) {
-        console.error('WebSocket: Failed to send queued message', error);
+        console.error('Message send error:', error.message);
+        // Don't requeue - message will be lost to prevent buildup
       }
     }
   }

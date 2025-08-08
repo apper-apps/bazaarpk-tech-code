@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/useToast";
 import webSocketService from "@/services/api/WebSocketService";
+import { Error } from "@/components/ui/Error";
 
 export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
@@ -49,7 +50,7 @@ try {
         userMessage = error.message;
 } 
 // Handle DOMException separately
-else if (typeof DOMException !== 'undefined' && error instanceof DOMException) {
+else if (typeof window !== 'undefined' && window.DOMException && error instanceof window.DOMException) {
   userMessage = `Network error: ${error.message}`;
 }
 // Handle primitive errors
@@ -136,15 +137,19 @@ case 'error':
   }, [onMessage]);
 
   // Auto-connect on mount
-  useEffect(() => {
+useEffect(() => {
     if (autoConnect && isOnline) {
       connect();
     }
     
     // Cleanup on unmount
     return () => {
+      // Clear all listeners
       unsubscribeRefs.current.forEach(unsubscribe => unsubscribe());
       unsubscribeRefs.current = [];
+      
+      // Graceful disconnect
+      webSocketService.disconnect();
     };
   }, [autoConnect, isOnline, connect]);
 
