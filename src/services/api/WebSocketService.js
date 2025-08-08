@@ -103,31 +103,145 @@ this.socket.onerror = (event) => {
           
           this.isConnecting = false;
           
-          // Bulletproof error message extraction - guaranteed string output
-          let errorMessage = 'WebSocket connection error';
-          
-          // Extract meaningful error information with strict string conversion
-          if (event && typeof event === 'object') {
-            // Try multiple properties, convert everything to string immediately
-            const potentialMessages = [
-              event.message,
-              event.type,
-              event.reason,
-              event.code,
-              event.toString?.()
-            ].filter(Boolean).map(msg => String(msg));
+          // Advanced error object analysis with circular reference detection
+          const analyzeErrorObject = (errorObj) => {
+            const visited = new WeakSet();
+            const messages = [];
             
-            if (potentialMessages.length > 0) {
-              errorMessage = potentialMessages[0];
+            const extractFromObject = (obj, depth = 0) => {
+              if (depth > 3 || !obj || visited.has(obj)) return;
+              visited.add(obj);
+              
+              // Common error properties to check
+              const errorProps = [
+                'message', 'error', 'type', 'reason', 'code', 'description', 
+                'detail', 'statusText', 'responseText', 'data', 'cause'
+              ];
+              
+              for (const prop of errorProps) {
+                try {
+                  const value = obj[prop];
+                  if (value && typeof value === 'string' && value.trim()) {
+                    messages.push(value.trim());
+                  } else if (value && typeof value === 'number') {
+                    messages.push(`Error ${value}`);
+                  } else if (value && typeof value === 'object' && depth < 2) {
+                    extractFromObject(value, depth + 1);
+                  }
+                } catch (e) {
+                  // Ignore property access errors
+                }
+              }
+              
+              // Try toString methods
+              try {
+                if (obj.toString && typeof obj.toString === 'function') {
+                  const str = obj.toString();
+                  if (str && !str.includes('[object') && str !== '[object Object]') {
+                    messages.push(str);
+                  }
+                }
+              } catch (e) {
+                // Ignore toString errors
+              }
+              
+              // Check constructor name for error types
+              try {
+                if (obj.constructor && obj.constructor.name && obj.constructor.name !== 'Object') {
+                  messages.push(`${obj.constructor.name} occurred`);
+                }
+              } catch (e) {
+                // Ignore constructor access errors
+              }
+            };
+            
+            if (errorObj && typeof errorObj === 'object') {
+              extractFromObject(errorObj);
             }
-          } else if (event) {
-            // Handle non-object events
-            errorMessage = String(event);
+            
+            return messages.filter(msg => 
+              msg && 
+              typeof msg === 'string' && 
+              msg.trim() && 
+              !msg.includes('[object') &&
+              msg !== '[object Object]'
+            );
+          };
+          
+          // Multi-layer error message extraction
+          let errorMessage = 'WebSocket connection error';
+          let debugInfo = { eventType: typeof event, eventConstructor: 'unknown' };
+          
+          try {
+            // Capture debug info safely
+            if (event) {
+              debugInfo.eventType = typeof event;
+              debugInfo.eventConstructor = event.constructor?.name || 'unknown';
+              debugInfo.eventKeys = Object.keys(event || {}).slice(0, 10); // Limit keys for safety
+            }
+            
+            // Analyze the error object comprehensively
+            const extractedMessages = analyzeErrorObject(event);
+            
+            if (extractedMessages.length > 0) {
+              errorMessage = extractedMessages[0];
+            } else if (event && typeof event === 'string') {
+              errorMessage = event.trim() || 'WebSocket connection error';
+            } else if (event && typeof event === 'number') {
+              errorMessage = `WebSocket error code: ${event}`;
+            }
+            
+            // Additional fallback checks for common WebSocket error patterns
+            if (event && typeof event === 'object') {
+              // Check for standard WebSocket close codes
+              if (event.code && typeof event.code === 'number') {
+                const closeCodeMessages = {
+                  1000: 'Normal closure',
+                  1001: 'Going away',
+                  1002: 'Protocol error',
+                  1003: 'Unsupported data',
+                  1006: 'Abnormal closure',
+                  1007: 'Invalid frame payload data',
+                  1008: 'Policy violation',
+                  1009: 'Message too big',
+                  1011: 'Unexpected condition',
+                  1015: 'TLS handshake failure'
+                };
+                
+                const codeMessage = closeCodeMessages[event.code];
+                if (codeMessage) {
+                  errorMessage = `Connection closed: ${codeMessage} (${event.code})`;
+                }
+              }
+              
+              // Check for network-related errors
+              if (event.type) {
+                const type = String(event.type).toLowerCase();
+                if (type.includes('network') || type.includes('timeout')) {
+                  errorMessage = 'Network connection error';
+                } else if (type.includes('security') || type.includes('ssl')) {
+                  errorMessage = 'Security/SSL connection error';
+                }
+              }
+            }
+            
+          } catch (analysisError) {
+            // If error analysis itself fails, use safe fallback
+            console.warn('Error analysis failed:', analysisError);
+            errorMessage = 'WebSocket connection error (analysis failed)';
           }
           
-          // Ensure we never have "[object Object]" or similar
-          if (errorMessage.includes('[object') || errorMessage === '[object Object]') {
+          // Final sanitization - absolutely prevent object serialization artifacts
+          if (typeof errorMessage !== 'string' || 
+              errorMessage.includes('[object') || 
+              errorMessage === '[object Object]' ||
+              errorMessage.includes('toString')) {
             errorMessage = 'WebSocket connection error';
+          }
+          
+          // Ensure message is meaningful and not too long
+          if (errorMessage.length > 200) {
+            errorMessage = errorMessage.substring(0, 200) + '...';
           }
           
           const readyState = this.socket ? this.socket.readyState : 3;
@@ -136,7 +250,7 @@ this.socket.onerror = (event) => {
           // Create user-friendly error message
           const finalErrorMessage = `WebSocket connection failed (${stateName})`;
           
-          // Create clean error data - all strings guaranteed
+          // Create completely sanitized error data
           const errorData = {
             status: 'error',
             error: finalErrorMessage,
@@ -146,13 +260,31 @@ this.socket.onerror = (event) => {
             originalMessage: errorMessage
           };
           
+          // Enhanced debugging log
           console.error('WebSocket error occurred:', {
             message: errorMessage,
             finalMessage: finalErrorMessage,
             state: stateName,
             readyState: readyState,
-            eventType: typeof event
+            debugInfo: debugInfo,
+            url: this.url
           });
+          
+          // Additional debug log for problematic error objects
+          if (event && typeof event === 'object') {
+            try {
+              console.error('Raw error event details:', {
+                type: event.type,
+                target: event.target?.constructor?.name,
+                currentTarget: event.currentTarget?.constructor?.name,
+                timeStamp: event.timeStamp,
+                bubbles: event.bubbles,
+                cancelable: event.cancelable
+              });
+            } catch (e) {
+              console.error('Could not log error event details safely');
+            }
+          }
           
           // Emit clean error data for listeners
           this.emit('connection', errorData);

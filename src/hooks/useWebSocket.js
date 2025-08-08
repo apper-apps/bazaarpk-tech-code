@@ -41,46 +41,131 @@ export const useWebSocket = (url = 'ws://localhost:8080', options = {}) => {
 try {
       await webSocketService.connect(url);
     } catch (error) {
-      // Bulletproof error message extraction - prevents "[object Object]"
+      // Advanced error object sanitization
+      const sanitizeErrorMessage = (errorObj) => {
+        const visited = new WeakSet();
+        
+        const extractMessage = (obj, depth = 0) => {
+          if (depth > 2 || !obj || visited.has(obj)) return null;
+          if (typeof obj === 'string' && obj.trim()) return obj.trim();
+          if (typeof obj === 'number') return `Error ${obj}`;
+          
+          if (typeof obj === 'object') {
+            visited.add(obj);
+            
+            // Priority order for error properties
+            const props = ['message', 'error', 'description', 'detail', 'reason', 'type', 'code'];
+            
+            for (const prop of props) {
+              try {
+                const value = obj[prop];
+                const result = extractMessage(value, depth + 1);
+                if (result && !result.includes('[object')) return result;
+              } catch (e) {
+                // Ignore property access errors
+              }
+            }
+            
+            // Try toString safely
+            try {
+              if (obj.toString && typeof obj.toString === 'function') {
+                const str = obj.toString();
+                if (str && !str.includes('[object') && str !== obj) {
+                  return str;
+                }
+              }
+            } catch (e) {
+              // Ignore toString errors
+            }
+          }
+          
+          return null;
+        };
+        
+        return extractMessage(errorObj);
+      };
+      
+      // Multi-stage error message extraction
       let userMessage = 'Connection failed - will retry automatically';
       
-      // Strict string conversion with fallback chain
-      if (error instanceof Error) {
-        userMessage = error.message || 'WebSocket connection error';
-      } else if (typeof error === 'string') {
-        userMessage = error;
-      } else if (error && typeof error === 'object') {
-        // Extract from common error properties, convert immediately to string
-        const errorProps = [
-          error.message,
-          error.error,
-          error.type,
-          error.code,
-          error.reason
-        ].filter(Boolean).map(prop => String(prop));
-        
-        if (errorProps.length > 0) {
-          userMessage = errorProps[0];
+      try {
+        // First attempt - direct error analysis
+        if (error instanceof Error && error.message) {
+          userMessage = error.message;
+        } else if (typeof error === 'string' && error.trim()) {
+          userMessage = error.trim();
+        } else {
+          // Deep sanitization attempt
+          const sanitized = sanitizeErrorMessage(error);
+          if (sanitized) {
+            userMessage = sanitized;
+          }
         }
-      } else if (error) {
-        // Handle any other error types
-        userMessage = String(error);
-      }
-      
-      // Final safety check - prevent object serialization artifacts
-      if (userMessage.includes('[object') || userMessage === '[object Object]') {
-        userMessage = 'WebSocket connection failed - please try again';
+        
+        // Handle common WebSocket error patterns
+        if (error && typeof error === 'object') {
+          // Check for specific WebSocket error indicators
+          if (error.code === 'WEBSOCKET_ERROR' || error.type === 'error') {
+            userMessage = 'Unable to establish WebSocket connection';
+          } else if (error.name === 'NetworkError') {
+            userMessage = 'Network error - check your connection';
+          } else if (error.name === 'SecurityError') {
+            userMessage = 'Connection blocked by security policy';
+          }
+        }
+        
+        // Validate and sanitize the final message
+        if (typeof userMessage !== 'string' || 
+            userMessage.includes('[object') || 
+            userMessage === '[object Object]' ||
+            userMessage.includes('toString') ||
+            !userMessage.trim()) {
+          userMessage = 'WebSocket connection failed - please try again';
+        }
+        
+        // Ensure reasonable message length
+        if (userMessage.length > 150) {
+          userMessage = userMessage.substring(0, 150) + '...';
+        }
+        
+      } catch (sanitizationError) {
+        console.warn('Error sanitization failed:', sanitizationError);
+        userMessage = 'Connection error occurred - will retry automatically';
       }
       
       if (showConnectionToasts) {
         showToast(userMessage, 'error');
       }
       
+      // Enhanced error logging with safe serialization
       console.error('WebSocket connection failed:', {
-        originalError: error,
+        processedMessage: userMessage,
         errorType: typeof error,
-        processedMessage: userMessage
+        errorName: error?.constructor?.name,
+        errorString: String(error).substring(0, 200), // Limit length
+        hasMessage: !!(error?.message),
+        url: url
       });
+      
+      // Additional debug info for object errors
+      if (error && typeof error === 'object' && error !== null) {
+        try {
+          const safeKeys = Object.keys(error).slice(0, 10);
+          console.error('Error object keys:', safeKeys);
+          
+          // Try to identify the problematic structure
+          const errorAnalysis = {
+            isError: error instanceof Error,
+            hasMessage: 'message' in error,
+            hasCode: 'code' in error,
+            hasType: 'type' in error,
+            constructorName: error.constructor?.name
+          };
+          console.error('Error analysis:', errorAnalysis);
+        } catch (e) {
+          console.error('Could not analyze error object safely');
+        }
+      }
     }
   }, [isOnline, showConnectionToasts, showToast, url]);
 
@@ -117,36 +202,133 @@ if (data.code !== 1000) { // Not a normal closure
             onDisconnect?.(data);
             break;
 case 'error':
-            // Bulletproof error message extraction for WebSocket errors
+            // Ultra-comprehensive error message sanitization
+            const extractCleanErrorMessage = (errorData) => {
+              const visited = new WeakSet();
+              
+              const deepExtract = (obj, path = [], depth = 0) => {
+                if (depth > 3 || !obj || visited.has(obj)) return null;
+                
+                // Handle direct string values
+                if (typeof obj === 'string' && obj.trim()) {
+                  const cleaned = obj.trim();
+                  if (!cleaned.includes('[object') && cleaned !== '[object Object]') {
+                    return cleaned;
+                  }
+                  return null;
+                }
+                
+                // Handle primitive types
+                if (typeof obj === 'number') return `Error ${obj}`;
+                if (typeof obj === 'boolean') return null;
+                
+                // Handle objects
+                if (typeof obj === 'object' && obj !== null) {
+                  visited.add(obj);
+                  
+                  // Prioritized property extraction
+                  const propertyPriority = [
+                    'message', 'error', 'description', 'detail', 'reason', 
+                    'statusText', 'responseText', 'data', 'cause', 'type', 'code'
+                  ];
+                  
+                  // Try each property in priority order
+                  for (const prop of propertyPriority) {
+                    try {
+                      if (prop in obj && obj[prop] !== undefined && obj[prop] !== null) {
+                        const result = deepExtract(obj[prop], [...path, prop], depth + 1);
+                        if (result) return result;
+                      }
+                    } catch (e) {
+                      // Skip inaccessible properties
+                    }
+                  }
+                  
+                  // Try safe toString
+                  try {
+                    if (obj.toString && typeof obj.toString === 'function') {
+                      const str = obj.toString();
+                      if (str && 
+                          typeof str === 'string' && 
+                          !str.includes('[object') && 
+                          str !== '[object Object]' &&
+                          str !== obj) {
+                        return str;
+                      }
+                    }
+                  } catch (e) {
+                    // Ignore toString errors
+                  }
+                  
+                  // For Error instances, try name + message combination
+                  if (obj instanceof Error) {
+                    const name = obj.name || 'Error';
+                    const msg = obj.message || '';
+                    if (msg && !msg.includes('[object')) {
+                      return name === 'Error' ? msg : `${name}: ${msg}`;
+                    }
+                  }
+                }
+                
+                return null;
+              };
+              
+              return deepExtract(errorData);
+            };
+            
             let errorMessage = 'Connection error occurred';
             
-            if (data.error) {
-              if (typeof data.error === 'string') {
-                errorMessage = data.error;
-              } else if (data.error instanceof Error) {
-                errorMessage = data.error.message || 'WebSocket error';
-              } else if (typeof data.error === 'object') {
-                // Extract from multiple properties, ensure string conversion
-                const errorProps = [
-                  data.error.message,
-                  data.error.error,
-                  data.error.type,
-                  data.error.code,
-                  data.error.reason
-                ].filter(Boolean).map(prop => String(prop));
-                
-                if (errorProps.length > 0) {
-                  errorMessage = errorProps[0];
+            try {
+              // Multi-source error message extraction
+              const sources = [
+                data.error,
+                data.originalMessage,
+                data.message,
+                data
+              ];
+              
+              for (const source of sources) {
+                if (source) {
+                  const extracted = extractCleanErrorMessage(source);
+                  if (extracted && extracted.length > 0) {
+                    errorMessage = extracted;
+                    break;
+                  }
                 }
-              } else {
-                // Handle any other error types
-                errorMessage = String(data.error);
               }
-            }
-            
-            // Prevent object serialization artifacts
-            if (errorMessage.includes('[object') || errorMessage === '[object Object]') {
-              errorMessage = 'WebSocket connection error - please try again';
+              
+              // Context-specific error messages
+              if (data.readyState !== undefined) {
+                const stateMessages = {
+                  0: 'Connection is being established',
+                  1: 'Connection is open',
+                  2: 'Connection is closing', 
+                  3: 'Connection is closed or failed'
+                };
+                
+                const stateMsg = stateMessages[data.readyState];
+                if (stateMsg && data.readyState === 3) {
+                  errorMessage = 'Connection lost - attempting to reconnect';
+                }
+              }
+              
+              // Final validation and cleaning
+              if (typeof errorMessage !== 'string' ||
+                  errorMessage.includes('[object') ||
+                  errorMessage === '[object Object]' ||
+                  errorMessage.includes('toString') ||
+                  !errorMessage.trim()) {
+                errorMessage = 'WebSocket connection error - please try again';
+              }
+              
+              // Reasonable length limit
+              if (errorMessage.length > 120) {
+                errorMessage = errorMessage.substring(0, 120) + '...';
+              }
+              
+            } catch (extractionError) {
+              console.warn('Advanced error extraction failed:', extractionError);
+              errorMessage = 'Connection error - will attempt to reconnect';
             }
             
             setConnectionStatus('error');
@@ -154,6 +336,17 @@ case 'error':
             if (showConnectionToasts) {
               showToast(errorMessage, 'error');
             }
+            
+            // Enhanced debug logging
+            console.error('WebSocket error status received:', {
+              sanitizedMessage: errorMessage,
+              dataKeys: data ? Object.keys(data).slice(0, 10) : [],
+              readyState: data?.readyState,
+              hasError: !!(data?.error),
+              errorType: typeof data?.error,
+              timestamp: data?.timestamp
+            });
+            
             onError?.(data);
             break;
         }
