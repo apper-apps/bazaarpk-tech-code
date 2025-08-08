@@ -88,79 +88,34 @@ this.socket.onclose = (event) => {
         };
 
 this.socket.onerror = (event) => {
-          console.error('WebSocket error event:', event);
-          
           // Prevent duplicate error emissions
           if (this.errorEmitted) return;
           this.errorEmitted = true;
           
           this.isConnecting = false;
           
-          // Create a meaningful error message from WebSocket error event
+          // Extract meaningful error message
           let errorMessage = 'WebSocket connection failed';
+          const eventType = event?.type || 'unknown';
+          const readyState = this.socket ? this.socket.readyState : 3;
           
-          // WebSocket error events don't have a message property
-          // Extract meaningful info from the event and socket state
-          if (this.socket) {
-            const readyState = this.socket.readyState;
-            switch (readyState) {
-              case WebSocket.CONNECTING:
-                errorMessage = 'Connection attempt failed - server unreachable';
-                break;
-              case WebSocket.CLOSING:
-                errorMessage = 'Connection was interrupted while closing';
-                break;
-              case WebSocket.CLOSED:
-                errorMessage = 'Connection closed unexpectedly';
-                break;
-              default:
-                errorMessage = 'WebSocket connection error occurred';
-            }
-          }
+          // Create safe error message without object references
+          errorMessage = `WebSocket ${eventType} error (state: ${this.getStateName(readyState)})`;
           
-          // Add event type if available and meaningful
-          if (event && event.type && event.type !== 'error' && typeof event.type === 'string') {
-            errorMessage += ` (${event.type})`;
-          }
-          
-          // Additional sanitization to prevent any object leakage
-          errorMessage = String(errorMessage).trim();
-          if (errorMessage.includes('[object') || errorMessage === '[object Object]') {
-            errorMessage = 'WebSocket connection error - network issue detected';
-          }
-          
-          // Ensure we have a meaningful message
-          if (!errorMessage || errorMessage.length === 0) {
-            errorMessage = 'WebSocket connection failed - please check your network';
-          }
-          
-          // Create sanitized error data with additional safety checks
+          // Create sanitized error data
           const safeErrorData = {
             status: 'error',
             error: errorMessage,
             code: 'WEBSOCKET_ERROR',
-            readyState: this.socket ? this.socket.readyState : 3,
+            readyState: readyState,
             timestamp: new Date().toISOString()
           };
           
-          // Final sanitization check on the entire error data object
-          Object.keys(safeErrorData).forEach(key => {
-            if (safeErrorData[key] && typeof safeErrorData[key] === 'object' && safeErrorData[key].constructor === Object) {
-              safeErrorData[key] = String(safeErrorData[key]);
-              if (safeErrorData[key].includes('[object')) {
-                safeErrorData[key] = 'Error data unavailable';
-              }
-            }
-          });
-
           console.error('Processed WebSocket error:', safeErrorData);
           this.emit('connection', safeErrorData);
           
-          // Reject with proper Error instance, never raw event
-          const sanitizedError = new Error(errorMessage);
-          sanitizedError.code = 'WEBSOCKET_ERROR';
-          sanitizedError.readyState = this.socket ? this.socket.readyState : 3;
-          reject(sanitizedError);
+          // Reject with proper Error instance
+          reject(new Error(errorMessage));
         };
 
       } catch (error) {
@@ -263,11 +218,20 @@ this.socket.onerror = (event) => {
     }, delay);
   }
 
-  startHeartbeat() {
+startHeartbeat() {
     this.stopHeartbeat();
+    
+    // Guard against multiple heartbeats
+    if (this.heartbeatInterval) return;
+    
     this.heartbeatInterval = setInterval(() => {
+      // Check connection status before sending
       if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-        this.send({ type: 'ping', timestamp: Date.now() });
+        try {
+          this.send({ type: 'ping', timestamp: Date.now() });
+        } catch (e) {
+          console.error('Heartbeat send error:', e.message);
+        }
       }
     }, 30000); // Send ping every 30 seconds
   }
@@ -298,7 +262,15 @@ if (!this.messageQueue.length) return;
       }
     }
   }
-
+getStateName(state) {
+    switch(state) {
+      case 0: return 'CONNECTING';
+      case 1: return 'OPEN';
+      case 2: return 'CLOSING';
+      case 3: return 'CLOSED';
+      default: return 'UNKNOWN';
+    }
+  }
   getConnectionStatus() {
     if (!this.socket) return 'disconnected';
     
