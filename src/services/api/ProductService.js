@@ -1890,9 +1890,8 @@ getTrendingByLocation: async (location) => {
 // Sort by score and return top 8
     return scoredProducts
       .filter(p => p.score > 0) // Only products with positive scores
-.filter(p => p.score > 0) // Only products with positive scores
       .sort((a, b) => b.score - a.score)
       .slice(0, 8)
-      .map(({ score, ...product }) => ({ ...product })); // Remove score from final result
+.map(({ score, ...product }) => ({ ...product })); // Remove score from final result
   }
 };
