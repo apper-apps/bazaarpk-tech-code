@@ -3386,11 +3386,11 @@ const renderPreviewModal = () => {
                 <h4 className="font-medium mb-2">Description</h4>
                 <p className="text-gray-600 text-sm">Product description will appear here</p>
               </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
+    </div>
     );
   };
 
