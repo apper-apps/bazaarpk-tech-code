@@ -284,15 +284,16 @@ const validateBulkUpdateEdgeCases = async (updates) => {
       }
     }
   }
+}
   return { criticalErrors, warnings };
 };
 
+// Export the main ProductService object
 export const ProductService = {
   getAll: async () => {
     await new Promise(resolve => setTimeout(resolve, 300));
     return [...productsData];
   },
-  
   getAllProducts: async () => {
     await new Promise(resolve => setTimeout(resolve, 300));
     return [...productsData];
