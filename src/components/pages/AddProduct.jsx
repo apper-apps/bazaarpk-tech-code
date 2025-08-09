@@ -293,10 +293,10 @@ const handleInputChange = (field, value, validationInfo = {}) => {
         case 'subcategory':
           sanitizedValue = sanitizeInput(value, { 
             maxLength: 100, 
-            allowNumbers: true, 
+allowNumbers: true, 
             allowSpecialChars: false 
           });
-          // Enhanced validation
+          // Enhanced validation with proper field mapping for service validation
           if (field === 'title' && sanitizedValue.length < 3) {
             fieldError = "Product name must be at least 3 characters long";
           }
@@ -311,12 +311,21 @@ const handleInputChange = (field, value, validationInfo = {}) => {
             allowNumbers: true, 
             allowSpecialChars: true 
           });
-          // Enhanced validation for descriptions
-          if (field === 'description' && sanitizedValue && sanitizedValue.length < 20) {
-            fieldError = "Product description should be at least 20 characters for better customer understanding";
+// Enhanced validation for descriptions with proper field mapping
+          if (field === 'description') {
+            if (!sanitizedValue || sanitizedValue.trim() === '') {
+              fieldError = "Description is required and cannot be empty";
+            } else if (sanitizedValue.length < 20) {
+              fieldError = "Product description should be at least 20 characters for better customer understanding";
+            }
           }
           if (field === 'shortDescription' && sanitizedValue && sanitizedValue.length < 10) {
             fieldError = "Short description should be at least 10 characters";
+          }
+          break;
+        case 'category':
+          if (!sanitizedValue || sanitizedValue.trim() === '') {
+            fieldError = "Category is required and cannot be empty";
           }
           break;
         case 'sku':
@@ -335,7 +344,7 @@ const handleInputChange = (field, value, validationInfo = {}) => {
           }
           break;
         case 'sellingPrice':
-        case 'buyingPrice':
+case 'buyingPrice':
         case 'discountedPrice':
         case 'discountAmount':
           sanitizedValue = sanitizeNumericInput(value, { 
@@ -344,12 +353,17 @@ const handleInputChange = (field, value, validationInfo = {}) => {
             maxDecimalPlaces: 2
           });
           // Enhanced price validation
-          const numValue = parseFloat(sanitizedValue);
+const numValue = parseFloat(sanitizedValue);
           if (sanitizedValue && (isNaN(numValue) || numValue < 0)) {
             fieldError = "Price must be a valid positive number";
           }
-          if (field === 'sellingPrice' && numValue === 0) {
-            fieldError = "Selling price must be greater than 0";
+          // Enhanced validation for selling price with proper field mapping
+          if (field === 'sellingPrice') {
+            if (!sanitizedValue || sanitizedValue.trim() === '' || numValue === 0) {
+              fieldError = "Selling Price is required and cannot be empty";
+            } else if (isNaN(numValue) || numValue <= 0) {
+              fieldError = "Selling price must be a valid positive number";
+            }
           }
           if (field === 'buyingPrice' && numValue >= parseFloat(formData.sellingPrice || 0)) {
             fieldError = "Cost price should be less than selling price for profitability";

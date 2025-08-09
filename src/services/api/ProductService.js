@@ -7,21 +7,29 @@ let mockProducts = [...productsData];
 const validateProductData = async (product) => {
   const errors = [];
   
-  if (!product.title || product.title.trim().length < 3) {
+  // Enhanced validation with field name mapping for form compatibility
+  const title = product.title || product.name || '';
+  if (!title || title.trim().length < 3) {
     errors.push('Product name is required and must be at least 3 characters long');
   }
   
-if (!product.sellingPrice || product.sellingPrice.toString().trim() === '' || isNaN(parseFloat(product.sellingPrice)) || parseFloat(product.sellingPrice) <= 0) {
+  // Handle multiple field name variants for selling price
+  const sellingPrice = product.sellingPrice || product.price || '';
+  if (!sellingPrice || sellingPrice.toString().trim() === '' || isNaN(parseFloat(sellingPrice)) || parseFloat(sellingPrice) <= 0) {
     errors.push('Selling Price is required and cannot be empty');
   }
   
-  if (!product.category || product.category.trim() === '') {
+  // Enhanced category validation with proper field mapping
+  const category = product.category || '';
+  if (!category || category.trim() === '') {
     errors.push('Category is required and cannot be empty');
   }
   
-if (!product.description || product.description.trim() === '') {
+  // Enhanced description validation with proper field mapping  
+  const description = product.description || '';
+  if (!description || description.trim() === '') {
     errors.push('Description is required and cannot be empty');
-  } else if (product.description.trim().length < 20) {
+  } else if (description.trim().length < 20) {
     errors.push('Description must be at least 20 characters long');
   }
   
@@ -36,13 +44,16 @@ if (!product.description || product.description.trim() === '') {
 };
 
 const sanitizeAndValidateText = (text, options = {}) => {
-  if (!text && options.required !== false) {
-    if (options.required === false) return '';
-    const fieldName = options.fieldName || 'Text';
-    throw new Error(`${fieldName} is required and cannot be empty`);
-  }
+  // Enhanced validation with proper required field handling
+  const isRequired = options.required !== false;
   
-  if (!text) return options.defaultValue || '';
+  if (!text || text.toString().trim() === '') {
+    if (isRequired) {
+      const fieldName = options.fieldName || 'Text';
+      throw new Error(`${fieldName} is required and cannot be empty`);
+    }
+    return options.defaultValue || '';
+  }
   
   const sanitized = text.toString().trim();
   
@@ -59,13 +70,25 @@ const sanitizeAndValidateText = (text, options = {}) => {
 };
 
 const validateAndFormatPrice = (price, options = {}) => {
-  if (!price && options.required === false) {
+  const isRequired = options.required !== false;
+  
+  if (!price || price.toString().trim() === '') {
+    if (isRequired) {
+      const fieldName = options.fieldName || 'Price';
+      throw new Error(`${fieldName} is required and cannot be empty`);
+    }
     return options.defaultValue || 0;
   }
   
   const numPrice = parseFloat(price);
   if (isNaN(numPrice) || numPrice < 0) {
-    throw new Error('Price must be a valid positive number');
+    const fieldName = options.fieldName || 'Price';
+    throw new Error(`${fieldName} must be a valid positive number`);
+  }
+  
+  if (isRequired && numPrice === 0) {
+    const fieldName = options.fieldName || 'Price';
+    throw new Error(`${fieldName} must be greater than 0`);
   }
   
   return Math.round(numPrice * 100) / 100;
@@ -161,12 +184,16 @@ const validateBusinessLogic = (product) => {
 const validateProductUpdateData = async (data, originalProduct) => {
   const errors = [];
   
-  if (data.title !== undefined && (!data.title || data.title.trim().length < 3)) {
+// Enhanced validation with field name mapping
+  const title = data.title || data.name;
+  if (title !== undefined && (!title || title.trim().length < 3)) {
     errors.push('Title must be at least 3 characters long');
   }
   
-if (data.sellingPrice !== undefined) {
-    const price = parseFloat(data.sellingPrice);
+  // Handle multiple selling price field variants
+  const sellingPrice = data.sellingPrice || data.price;
+  if (sellingPrice !== undefined) {
+    const price = parseFloat(sellingPrice);
     if (isNaN(price) || price <= 0) {
       errors.push('Selling Price is required and cannot be empty');
     }
@@ -179,15 +206,17 @@ errors.push('Stock quantity must be a non-negative number');
     }
   }
   
-  // Add category and description validation for updates
-  if (data.category !== undefined && (!data.category || data.category.trim() === '')) {
+// Enhanced category and description validation for updates with field mapping
+  const category = data.category;
+  if (category !== undefined && (!category || category.trim() === '')) {
     errors.push('Category is required and cannot be empty');
   }
   
-  if (data.description !== undefined) {
-    if (!data.description || data.description.trim() === '') {
+  const description = data.description;
+  if (description !== undefined) {
+    if (!description || description.trim() === '') {
       errors.push('Description is required and cannot be empty');
-    } else if (data.description.trim().length < 20) {
+    } else if (description.trim().length < 20) {
       errors.push('Description must be at least 20 characters long');
     }
   }
@@ -356,22 +385,37 @@ create: async (product) => {
       throw new Error(`SKU '${product.sku}' already exists. Please use a unique SKU.`);
     }
     
-// Enhanced data processing with comprehensive validation
+// Enhanced data processing with comprehensive validation and field mapping
 const processedProduct = {
       ...product,
       Id: newId,
       
-      // Core product fields with validation
-      title: sanitizeAndValidateText(product.title, { minLength: 3, maxLength: 100 }),
+      // Core product fields with validation and field name mapping
+      title: sanitizeAndValidateText(product.title || product.name, { 
+        fieldName: 'Product name',
+        minLength: 3, 
+        maxLength: 100 
+      }),
       brand: sanitizeAndValidateText(product.brand, { maxLength: 100, required: false }),
-      category: product.category || "",
+      category: sanitizeAndValidateText(product.category, {
+        fieldName: 'Category',
+        required: true
+      }),
       subcategory: product.subcategory || "",
-      description: sanitizeAndValidateText(product.description, { minLength: 20, maxLength: 2000 }),
+      description: sanitizeAndValidateText(product.description, { 
+        fieldName: 'Description',
+        minLength: 20, 
+        maxLength: 2000 
+      }),
       shortDescription: sanitizeAndValidateText(product.shortDescription, { maxLength: 200, required: false }),
       
-      // Enhanced pricing fields with business logic validation
-      price: validateAndFormatPrice(product.sellingPrice),
-      sellingPrice: validateAndFormatPrice(product.sellingPrice),
+      // Enhanced pricing fields with business logic validation and field mapping
+      price: validateAndFormatPrice(product.sellingPrice || product.price, {
+        fieldName: 'Selling Price'
+      }),
+      sellingPrice: validateAndFormatPrice(product.sellingPrice || product.price, {
+        fieldName: 'Selling Price'
+      }),
       buyingPrice: validateAndFormatPrice(product.buyingPrice, { required: false }),
       costPrice: validateAndFormatPrice(product.buyingPrice, { required: false }),
       discountedPrice: validateAndFormatPrice(product.discountedPrice, { required: false }),
