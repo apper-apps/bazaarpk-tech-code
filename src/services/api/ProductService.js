@@ -2052,6 +2052,5 @@ getTrendingByLocation: async (location) => {
 }
 };
 
-// Export singleton instance
-export const productService = new ProductService();
+// Export the comprehensive service object
 export default productService;
