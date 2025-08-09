@@ -29,18 +29,48 @@ body {
   word-spacing: 0.05em;
 }
 
-/* Global text spacing standards */
-p, .text-content {
+/* ENHANCED GLOBAL TEXT SPACING STANDARDS */
+
+/* Core text elements with enhanced word spacing */
+p, .text-content, span, div {
   margin-bottom: 1rem;
-  word-spacing: 0.05em;
+  word-spacing: 0.08em;
+  letter-spacing: 0.015em;
   line-height: 1.65;
 }
 
+/* Product-specific text spacing */
+.product-title, .product-name, [class*="title"], [class*="name"] {
+  word-spacing: 0.1em;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.product-description, [class*="description"], .text-description {
+  word-spacing: 0.08em;
+  letter-spacing: 0.015em;
+  line-height: 1.65;
+  margin-bottom: 0.75rem;
+}
+
+/* Headings with proper spacing */
 h1, h2, h3, h4, h5, h6 {
-  letter-spacing: -0.02em;
-  word-spacing: 0.03em;
+  letter-spacing: -0.01em;
+  word-spacing: 0.05em;
   line-height: 1.3;
   margin-bottom: 0.75rem;
+}
+
+/* Card content spacing */
+.card-content, .card-body, [class*="card"] {
+  word-spacing: 0.08em;
+  letter-spacing: 0.015em;
+}
+
+/* Ensure all text nodes have proper spacing */
+* {
+  word-spacing: 0.05em;
+  letter-spacing: 0.01em;
 }
 
 /* Enhanced spacing for lists */
@@ -61,15 +91,33 @@ label {
   word-spacing: 0.05em;
 }
 
+/* Enhanced form elements spacing */
 input, textarea, select {
   margin-bottom: 1rem;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
+  word-spacing: 0.08em;
+  line-height: 1.6;
+}
+
+/* Specific input types with enhanced spacing */
+input[type="text"], input[type="email"], input[type="password"], 
+input[type="search"], textarea {
+  word-spacing: 0.1em;
+  letter-spacing: 0.025em;
+  padding: 0.75rem;
 }
 
 /* Button spacing */
 button {
   letter-spacing: 0.025em;
-  word-spacing: 0.05em;
+  word-spacing: 0.08em;
+  line-height: 1.5;
+}
+
+/* Interactive text elements */
+a, [role="button"], [tabindex] {
+  word-spacing: 0.06em;
+  letter-spacing: 0.015em;
 }
 .Toastify__toast-container {
   z-index: 9999;
@@ -381,33 +429,50 @@ div[class*="mask"][style*="position: fixed"],
 /* ESSENTIAL INPUT STYLING */
 /* ESSENTIAL INPUT STYLING */
 
-/* Basic input normalization */
+/* COMPREHENSIVE INPUT AND TEXT SPACING */
+
+/* Enhanced input normalization with proper spacing */
 input, textarea, [contenteditable] {
   font-family: inherit;
   font-size: inherit;
   line-height: 1.6;
-  letter-spacing: 0.01em;
-  word-spacing: 0.05em;
+  letter-spacing: 0.025em;
+  word-spacing: 0.1em;
   color: inherit;
   background: inherit;
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   margin-bottom: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
 }
 
-/* Ensure proper text cursor behavior */
+/* Ensure proper text cursor and spacing behavior */
 input, textarea, [contenteditable] {
   cursor: text;
+  word-break: normal;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 input:focus, textarea:focus, [contenteditable]:focus {
   cursor: text;
+  outline: 2px solid #4CAF50;
   outline-offset: 2px;
+  border-color: #4CAF50;
 }
 
-/* ContentEditable basic styling */
+/* ContentEditable enhanced styling with proper spacing */
+[contenteditable] {
+  min-height: 2.5rem;
+  word-spacing: 0.1em;
+  letter-spacing: 0.025em;
+  line-height: 1.65;
+}
+
 [contenteditable]:focus {
   outline: 2px solid #4CAF50;
   outline-offset: 1px;
+  background-color: #fefefe;
 }
 
 [contenteditable]:empty:before {
@@ -416,11 +481,56 @@ input:focus, textarea:focus, [contenteditable]:focus {
   cursor: text;
   pointer-events: none;
   font-style: italic;
+  word-spacing: 0.08em;
+  letter-spacing: 0.02em;
 }
 
-/* Mobile optimizations */
+/* Placeholder text spacing */
+input::placeholder, textarea::placeholder {
+  word-spacing: 0.08em;
+  letter-spacing: 0.02em;
+  color: #9CA3AF;
+}
+
+/* Mobile optimizations with enhanced spacing */
 @media (hover: none) and (pointer: coarse) {
   input, textarea {
     font-size: 16px; /* Prevent zoom on iOS */
+    word-spacing: 0.1em;
+    letter-spacing: 0.025em;
+    padding: 1rem;
   }
+}
+
+/* Dynamic content spacing */
+[data-dynamic], .dynamic-content, .rendered-content {
+  word-spacing: 0.08em;
+  letter-spacing: 0.015em;
+  line-height: 1.65;
+}
+
+/* Toast and notification text spacing */
+.toast-content, .notification-text, [class*="toast"] {
+  word-spacing: 0.08em;
+  letter-spacing: 0.015em;
+}
+
+/* Modal and dialog content spacing */
+.modal-content, .dialog-content, [role="dialog"] {
+  word-spacing: 0.08em;
+  letter-spacing: 0.015em;
+}
+
+/* Table content spacing */
+td, th, .table-cell {
+  word-spacing: 0.06em;
+  letter-spacing: 0.01em;
+  padding: 0.75rem;
+}
+
+/* Badge and tag spacing */
+.badge, .tag, [class*="badge"], [class*="tag"] {
+  word-spacing: 0.05em;
+  letter-spacing: 0.02em;
+  padding: 0.25rem 0.75rem;
 }
