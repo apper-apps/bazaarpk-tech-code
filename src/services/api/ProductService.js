@@ -285,8 +285,7 @@ warnings.push(`Product ${update.id} status changed rapidly (${timeDiff}ms ago)`)
       }
     }
   }
-  
-  return { criticalErrors, warnings };
+return { criticalErrors, warnings };
 };
 
 export const ProductService = {
@@ -1891,7 +1890,7 @@ getTrendingByLocation: async (location) => {
     return scoredProducts
       .filter(p => p.score > 0) // Only products with positive scores
       .sort((a, b) => b.score - a.score)
-      .slice(0, 8)
+.slice(0, 8)
       .map(({ score, ...product }) => ({ ...product })); // Remove score from final result
   }
 };
