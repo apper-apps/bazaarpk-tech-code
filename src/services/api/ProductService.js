@@ -1,14 +1,18 @@
 import productsData from "../mockData/products.json";
+import React from "react";
+import { Error } from "@/components/ui/Error";
 import { calculateProfitMargin } from "@/utils/currency";
 // Local copy of products for manipulation
 let mockProducts = [...productsData];
 
 // Validation helper functions
+// Validation helper functions
 const validateProductData = async (product) => {
   const errors = [];
   
-  // Enhanced validation with field name mapping for form compatibility
-  const title = product.title || product.name || '';
+  // Enhanced validation with proper field name mapping for form compatibility
+  // Handle frontend field names: productName, shortDescription, category, sellingPrice, sku
+  const title = product.productName || product.title || product.name || '';
   if (!title || title.trim().length < 3) {
     errors.push('Product name is required and must be at least 3 characters long');
   }
@@ -25,12 +29,20 @@ const validateProductData = async (product) => {
     errors.push('Category is required and cannot be empty');
   }
   
-  // Enhanced description validation with proper field mapping  
-  const description = product.description || '';
-  if (!description || description.trim() === '') {
-    errors.push('Description is required and cannot be empty');
-  } else if (description.trim().length < 20) {
-    errors.push('Description must be at least 20 characters long');
+  // Enhanced validation with proper field mapping - check shortDescription from frontend  
+  const shortDescription = product.shortDescription || product.description || '';
+  if (!shortDescription || shortDescription.trim() === '') {
+    errors.push('Short Description is required and cannot be empty');
+  } else if (shortDescription.trim().length < 10) {
+    errors.push('Short Description must be at least 10 characters long');
+  }
+  
+  // Enhanced SKU validation with proper field mapping
+  const sku = product.sku || '';
+  if (!sku || sku.trim() === '') {
+    errors.push('Sku is required and cannot be empty');
+  } else if (sku.trim().length < 3) {
+    errors.push('SKU must be at least 3 characters long');
   }
   
   if (product.stockQuantity === undefined || isNaN(parseInt(product.stockQuantity)) || parseInt(product.stockQuantity) < 0) {
@@ -41,7 +53,6 @@ const validateProductData = async (product) => {
     isValid: errors.length === 0,
     errors
   };
-};
 
 const sanitizeAndValidateText = (text, options = {}) => {
   // Enhanced validation with proper required field handling
@@ -184,10 +195,10 @@ const validateBusinessLogic = (product) => {
 const validateProductUpdateData = async (data, originalProduct) => {
   const errors = [];
   
-// Enhanced validation with field name mapping
-  const title = data.title || data.name;
+// Enhanced validation with field name mapping for frontend compatibility
+  const title = data.productName || data.title || data.name;
   if (title !== undefined && (!title || title.trim().length < 3)) {
-    errors.push('Title must be at least 3 characters long');
+    errors.push('Product name must be at least 3 characters long');
   }
   
   // Handle multiple selling price field variants
@@ -202,7 +213,7 @@ const validateProductUpdateData = async (data, originalProduct) => {
   if (data.stockQuantity !== undefined) {
     const stock = parseInt(data.stockQuantity);
     if (isNaN(stock) || stock < 0) {
-errors.push('Stock quantity must be a non-negative number');
+      errors.push('Stock quantity must be a non-negative number');
     }
   }
   
@@ -212,13 +223,20 @@ errors.push('Stock quantity must be a non-negative number');
     errors.push('Category is required and cannot be empty');
   }
   
-  const description = data.description;
-  if (description !== undefined) {
-    if (!description || description.trim() === '') {
-      errors.push('Description is required and cannot be empty');
-    } else if (description.trim().length < 20) {
-      errors.push('Description must be at least 20 characters long');
+  // Check shortDescription field from frontend form
+  const shortDescription = data.shortDescription || data.description;
+  if (shortDescription !== undefined) {
+    if (!shortDescription || shortDescription.trim() === '') {
+      errors.push('Short Description is required and cannot be empty');
+    } else if (shortDescription.trim().length < 10) {
+      errors.push('Short Description must be at least 10 characters long');
     }
+  }
+  
+  // Enhanced SKU validation for updates
+  const sku = data.sku;
+  if (sku !== undefined && (!sku || sku.trim() === '')) {
+    errors.push('Sku is required and cannot be empty');
   }
   
   return {
@@ -390,8 +408,13 @@ const processedProduct = {
       ...product,
       Id: newId,
       
-      // Core product fields with validation and field name mapping
-      title: sanitizeAndValidateText(product.title || product.name, { 
+      // Core product fields with validation and proper field name mapping from frontend
+      title: sanitizeAndValidateText(product.productName || product.title || product.name, { 
+        fieldName: 'Product name',
+        minLength: 3, 
+        maxLength: 100 
+      }),
+      name: sanitizeAndValidateText(product.productName || product.title || product.name, { 
         fieldName: 'Product name',
         minLength: 3, 
         maxLength: 100 
@@ -402,12 +425,18 @@ const processedProduct = {
         required: true
       }),
       subcategory: product.subcategory || "",
-      description: sanitizeAndValidateText(product.description, { 
-        fieldName: 'Description',
-        minLength: 20, 
+      // Map shortDescription from frontend to description for backend compatibility
+      description: sanitizeAndValidateText(product.shortDescription || product.description, { 
+        fieldName: 'Short Description',
+        minLength: 10, 
         maxLength: 2000 
       }),
-      shortDescription: sanitizeAndValidateText(product.shortDescription, { maxLength: 200, required: false }),
+      shortDescription: sanitizeAndValidateText(product.shortDescription, { 
+        fieldName: 'Short Description',
+        minLength: 10,
+        maxLength: 250,
+        required: true
+      }),
       
       // Enhanced pricing fields with business logic validation and field mapping
       price: validateAndFormatPrice(product.sellingPrice || product.price, {
@@ -1862,7 +1891,7 @@ getTrendingByLocation: async (location) => {
     return scoredProducts
       .filter(p => p.score > 0) // Only products with positive scores
       .sort((a, b) => b.score - a.score)
-      .slice(0, 8)
+.slice(0, 8)
       .map(({ score, ...product }) => ({ ...product })); // Remove score from final result
   }
 };

@@ -1061,8 +1061,15 @@ const finalValidation = validateFormData(sanitizedData, {
         throw new Error(`Final validation failed: ${Object.values(finalValidation.errors).join(', ')}`);
       }
 
-      const productData = {
+const productData = {
         ...sanitizedData,
+        // Ensure proper field mapping for backend validation
+        productName: sanitizedData.productName,
+        shortDescription: sanitizedData.shortDescription,
+        category: sanitizedData.category,
+        sellingPrice: sanitizedData.sellingPrice,
+        sku: sanitizedData.sku,
+        
         visibility,
         requiresApproval,
         moderatorApproved: currentUser.permissions.canBypassApproval,
