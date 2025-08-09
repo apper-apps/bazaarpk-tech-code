@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import Card from "@/components/atoms/Card";
-import Button from "@/components/atoms/Button";
-import Input from "@/components/atoms/Input";
-import ApperIcon from "@/components/ApperIcon";
-import SearchBar from "@/components/molecules/SearchBar";
-import RecipeBundleCard from "@/components/organisms/RecipeBundleCard";
-import Loading from "@/components/ui/Loading";
-import Error from "@/components/ui/Error";
-import Empty from "@/components/ui/Empty";
+import { AnimatePresence, motion } from "framer-motion";
 import { RecipeBundleService } from "@/services/api/RecipeBundleService";
 import { useToast } from "@/hooks/useToast";
+import ApperIcon from "@/components/ApperIcon";
+import Category from "@/components/pages/Category";
+import RecipeBundleCard from "@/components/organisms/RecipeBundleCard";
+import Empty from "@/components/ui/Empty";
+import Error from "@/components/ui/Error";
+import Loading from "@/components/ui/Loading";
+import Input from "@/components/atoms/Input";
+import Card from "@/components/atoms/Card";
+import Button from "@/components/atoms/Button";
 import { cn } from "@/utils/cn";
 import { formatPrice } from "@/utils/currency";
 
@@ -19,17 +19,16 @@ const RecipeBundlesPage = () => {
   const navigate = useNavigate();
   const showToast = useToast();
 
-  // State
+// State
   const [bundles, setBundles] = useState([]);
   const [filteredBundles, setFilteredBundles] = useState([]);
-const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
   const [featuredFilter, setFeaturedFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(null);
-
   // Filter options
   const categories = ["all", "Pakistani", "Indian", "Chinese", "Italian", "Healthy", "Snacks", "Breakfast", "BBQ", "Desserts"];
   const difficultyLevels = ["all", "Easy", "Medium", "Hard"];
@@ -60,12 +59,12 @@ const [searchQuery, setSearchQuery] = useState("");
     let filtered = [...bundles];
 
     // Search filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(bundle =>
-        bundle.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        bundle.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        bundle.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        bundle.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+    if (searchQuery && searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(bundle => 
+        bundle.name?.toLowerCase().includes(query) ||
+        bundle.description?.toLowerCase().includes(query) ||
+        bundle.category?.toLowerCase().includes(query)
       );
     }
 
@@ -219,17 +218,21 @@ const [searchQuery, setSearchQuery] = useState("");
         </div>
 
         {/* Filters */}
-        <Card className="p-6 mb-8">
+<Card className="p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
-              <SearchBar
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search Bundles
+              </label>
+              <Input
+                type="text"
+                placeholder="Search by name, description, or category..."
                 value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder="Search bundles..."
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full"
+                icon="Search"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Category
@@ -284,10 +287,10 @@ const [searchQuery, setSearchQuery] = useState("");
           {(searchQuery || selectedCategory !== "all" || selectedDifficulty !== "all" || featuredFilter !== "all") && (
             <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t">
               <span className="text-sm text-gray-600">Active filters:</span>
-              
+
               {searchQuery && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-sm">
-                  Search: {searchQuery}
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+                  "{searchQuery}"
                   <button onClick={() => setSearchQuery("")}>
                     <ApperIcon name="X" className="w-3 h-3" />
                   </button>
@@ -321,7 +324,7 @@ const [searchQuery, setSearchQuery] = useState("");
                 </span>
               )}
 
-              <button
+<button
                 onClick={() => {
                   setSearchQuery("");
                   setSelectedCategory("all");

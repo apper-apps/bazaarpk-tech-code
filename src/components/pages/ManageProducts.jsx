@@ -22,7 +22,7 @@ function ManageProducts() {
   const navigate = useNavigate()
   const { showToast } = useToast()
   
-  // State management
+// State management
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -363,12 +363,12 @@ function ManageProducts() {
     setDeleteConfirm({ show: false, product: null })
   }
   
-  // Filter and search functions
+// Filter and search functions
   function getFilteredProducts() {
     return products.filter(product => {
       const matchesSearch = !searchTerm || 
         product.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.category?.toLowerCase().includes(searchTerm.toLowerCase())
       
       const matchesCategory = !selectedCategory || product.category === selectedCategory
@@ -378,7 +378,6 @@ function ManageProducts() {
       return matchesSearch && matchesCategory && matchesStatus
     })
   }
-  
   function getSortedProducts(filteredProducts) {
     return [...filteredProducts].sort((a, b) => {
       let aValue = a[sortBy]
@@ -404,7 +403,7 @@ function ManageProducts() {
     })
   }
   
-  function clearAllFilters() {
+function clearAllFilters() {
     setSearchTerm('')
     setSelectedCategory('')
     setStatusFilter('')
@@ -504,22 +503,24 @@ function ManageProducts() {
         </div>
       )}
       
-      {/* Filters and Search */}
+{/* Filters and Search */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search Products</label>
-              <Input
-                type="text"
-                placeholder="Search by name, brand, or category..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-            </div>
+          {/* Search Input */}
+          <div className="mb-4">
+            <Input
+              type="text"
+              placeholder="Search products by name, description, or category..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full"
+              icon="Search"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
             
-<div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
               <select
                 value={selectedCategory}

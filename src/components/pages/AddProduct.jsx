@@ -30,69 +30,14 @@ const navigate = useNavigate();
     initializeCSRF();
     announceToScreenReader("Add product form loaded. Fill in required fields marked with asterisk.", "polite");
     
-    // Fix spacebar functionality in admin text fields
-    const adminFieldSelectors = [
-      'input[type="text"]',
-      'input[type="email"]', 
-      'input[type="url"]',
-      'input[type="search"]',
-      'textarea',
-      '.description-editor',
-      '.short-description',
-      '#product-name',
-      '.brand-search input',
-      '.category-search input'
-    ];
-
-    function fixAdminFields() {
-      adminFieldSelectors.forEach(selector => {
-        document.querySelectorAll(selector).forEach(field => {
-          // Remove existing listener to prevent duplicates
-          field.removeEventListener('keydown', handleSpacebarFix);
-          // Add new listener
-          field.addEventListener('keydown', handleSpacebarFix);
-        });
-      });
-    }
-
-    function handleSpacebarFix(e) {
-      if (e.key === ' ') {
-        e.stopImmediatePropagation();
-        return true;
-      }
-    }
-
-    // Run immediately and on DOM changes
-    fixAdminFields();
-    
-    // Create observer for dynamically added fields
-    const observer = new MutationObserver(() => {
-      fixAdminFields();
-    });
-    
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-
-    // Cleanup on unmount
-    return () => {
-      observer.disconnect();
-      adminFieldSelectors.forEach(selector => {
-        document.querySelectorAll(selector).forEach(field => {
-          field.removeEventListener('keydown', handleSpacebarFix);
-        });
-      });
-    };
+// Basic admin initialization
+    return () => {};
   }, []);
 
   const [formData, setFormData] = useState({
-    title: "",
-    brand: "",
+brand: "",
     category: "",
     subcategory: "",
-    description: "",
-    shortDescription: "",
     sellingPrice: "",
     buyingPrice: "",
     discountedPrice: "",
@@ -287,40 +232,16 @@ const handleInputChange = (field, value, validationInfo = {}) => {
     
     if (typeof value === 'string') {
       switch (field) {
-        case 'title':
         case 'brand':
         case 'category':
         case 'subcategory':
           sanitizedValue = sanitizeInput(value, { 
             maxLength: 100, 
-allowNumbers: true, 
+            allowNumbers: true, 
             allowSpecialChars: false 
           });
-          // Enhanced validation with proper field mapping for service validation
-          if (field === 'title' && sanitizedValue.length < 3) {
-            fieldError = "Product name must be at least 3 characters long";
-          }
           if (field === 'brand' && sanitizedValue && sanitizedValue.length < 2) {
             fieldError = "Brand name must be at least 2 characters long";
-          }
-          break;
-        case 'description':
-        case 'shortDescription':
-          sanitizedValue = sanitizeInput(value, { 
-            maxLength: field === 'description' ? 2000 : 200, 
-            allowNumbers: true, 
-            allowSpecialChars: true 
-          });
-// Enhanced validation for descriptions with proper field mapping
-          if (field === 'description') {
-            if (!sanitizedValue || sanitizedValue.trim() === '') {
-              fieldError = "Description is required and cannot be empty";
-            } else if (sanitizedValue.length < 20) {
-              fieldError = "Product description should be at least 20 characters for better customer understanding";
-            }
-          }
-          if (field === 'shortDescription' && sanitizedValue && sanitizedValue.length < 10) {
-            fieldError = "Short description should be at least 10 characters";
           }
           break;
         case 'category':
@@ -344,7 +265,7 @@ allowNumbers: true,
           }
           break;
         case 'sellingPrice':
-case 'buyingPrice':
+        case 'buyingPrice':
         case 'discountedPrice':
         case 'discountAmount':
           sanitizedValue = sanitizeNumericInput(value, { 
@@ -353,7 +274,7 @@ case 'buyingPrice':
             maxDecimalPlaces: 2
           });
           // Enhanced price validation
-const numValue = parseFloat(sanitizedValue);
+          const numValue = parseFloat(sanitizedValue);
           if (sanitizedValue && (isNaN(numValue) || numValue < 0)) {
             fieldError = "Price must be a valid positive number";
           }
@@ -400,7 +321,7 @@ const numValue = parseFloat(sanitizedValue);
             fieldError = "Alt text should be at least 5 characters for accessibility";
           }
           break;
-case 'videoUrl':
+        case 'videoUrl':
           sanitizedValue = sanitizeURL(value);
           // Enhanced URL validation
           if (sanitizedValue && !isValidURL(sanitizedValue)) {
@@ -484,48 +405,6 @@ case 'videoUrl':
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
 
-    // Auto-generation and calculation logic with validation
-    
-    // Auto-generate SKU if title changes
-    if (field === 'title' && sanitizedValue && sanitizedValue.length >= 3) {
-      const autoSku = `${formData.category?.substring(0,3).toUpperCase() || 'PRD'}-${sanitizedValue.substring(0,3).toUpperCase()}-${Date.now().toString().slice(-3)}`;
-      if (!formData.sku) {
-        setFormData(prev => ({ ...prev, sku: autoSku }));
-        showToast("SKU auto-generated", "info");
-      }
-    }
-    
-    // Auto-generate meta fields if not set
-if (field === 'title' && sanitizedValue && sanitizedValue.length >= 3 && !formData.metaTitle) {
-      setFormData(prev => ({ ...prev, metaTitle: sanitizedValue.substring(0, 60) }));
-      showToast("Meta title auto-generated", "info");
-    }
-    
-    if (field === 'shortDescription' && sanitizedValue && sanitizedValue.length >= 10 && !formData.metaDescription) {
-      setFormData(prev => ({ ...prev, metaDescription: sanitizedValue.substring(0, 160) }));
-      showToast("Meta description auto-generated", "info");
-    }
-    
-    // Auto-generate URL slug from title
-    if (field === 'title' && sanitizedValue && sanitizedValue.length >= 3 && !formData.urlSlug) {
-      const autoSlug = sanitizedValue.toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .substring(0, 100);
-      
-      if (autoSlug.length >= 3) {
-        setFormData(prev => ({ ...prev, urlSlug: autoSlug }));
-        showToast("URL slug auto-generated", "info");
-      }
-    }
-    
-    // Auto-update main image alt text if not set
-    if (field === 'title' && sanitizedValue && sanitizedValue.length >= 3 && !formData.mainImageAltText) {
-      setFormData(prev => ({ ...prev, mainImageAltText: `${sanitizedValue} - Product Image` }));
-    }
-    
     // Enhanced discount calculations with validation
     if (field === 'discountAmount' && sanitizedValue) {
       const discountVal = parseFloat(sanitizedValue) || 0;
@@ -636,8 +515,8 @@ if (field === 'title' && sanitizedValue && sanitizedValue.length >= 3 && !formDa
   };
 
   const getCompletionPercentage = () => {
-const requiredFields = ['title', 'category', 'description', 'sellingPrice', 'stockQuantity', 'sku'];
-    const optionalFields = ['brand', 'shortDescription', 'buyingPrice', 'mainImage', 'tags', 'metaTitle'];
+const requiredFields = ['category', 'sellingPrice', 'stockQuantity', 'sku'];
+    const optionalFields = ['brand', 'buyingPrice', 'mainImage', 'tags', 'metaTitle'];
     const advancedFields = ['variants', 'bundleComponents', 'seoKeywords', 'relatedProducts'];
     
     const requiredCompleted = requiredFields.filter(field => formData[field]).length;
@@ -695,33 +574,9 @@ const validateForm = () => {
     const newErrors = {};
     const warnings = {};
     
-    // Enhanced Basic Information validation with consistent messaging
-    if (!formData.title?.trim()) {
-      newErrors.title = "Product name is required and cannot be empty";
-    } else if (formData.title.trim().length < 3) {
-      newErrors.title = "Product name must be at least 3 characters for searchability";
-    } else if (formData.title.length > 100) {
-      newErrors.title = "Product name cannot exceed 100 characters";
-    } else if (!/^[a-zA-Z0-9\s\-&.()]+$/.test(formData.title)) {
-      newErrors.title = "Product name contains invalid characters. Use only letters, numbers, spaces, and basic punctuation";
-    }
-    
     // Category validation - ensure consistent with backend
     if (!formData.category || formData.category.trim() === '') {
       newErrors.category = "Category is required and cannot be empty";
-    }
-    
-    // Description validation - ensure consistent with backend  
-    if (!formData.description?.trim()) {
-      newErrors.description = "Description is required and cannot be empty";
-    } else if (formData.description.trim().length < 20) {
-      newErrors.description = "Description must be at least 20 characters to provide meaningful information to customers";
-    } else if (formData.description.length > 2000) {
-      newErrors.description = "Description cannot exceed 2000 characters";
-    }
-    
-    if (formData.shortDescription && formData.shortDescription.length < 10) {
-      newErrors.shortDescription = "Short description should be at least 10 characters if provided";
     }
     
     // Enhanced Pricing validation with consistent messaging
@@ -869,8 +724,6 @@ const validateForm = () => {
       } else if (formData.metaTitle.length < 10) {
         warnings.metaTitle = "Meta title is quite short - consider adding more descriptive keywords";
       }
-    } else if (formData.title) {
-      warnings.metaTitle = "Meta title will be auto-generated from product name, but custom titles often perform better";
     }
     
     if (formData.metaDescription) {
@@ -881,8 +734,7 @@ const validateForm = () => {
       }
     }
     
-// URL validation
-    // URL slug validation
+    // URL validation
     if (formData.videoUrl && !isValidURL(formData.videoUrl)) {
       newErrors.videoUrl = "Please enter a valid video URL (e.g., https://youtube.com/watch?v=...)";
     }
@@ -906,7 +758,7 @@ const validateForm = () => {
       announceToScreenReader("Form validation successful. All required fields are properly filled.", 'polite');
     }
     
-return errorCount === 0;
+    return errorCount === 0;
   };
 const handleSave = async (publish = false, silent = false, schedule = null) => {
     // Enhanced security validation
@@ -993,23 +845,8 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
 
       // Comprehensive data sanitization and validation
       const sanitizedData = {
-        ...formData,
+...formData,
         // Enhanced field sanitization with validation
-        title: sanitizeInput(formData.title, { 
-          maxLength: 100, 
-          allowNumbers: true, 
-          allowSpecialChars: false 
-        }),
-        description: sanitizeInput(formData.description, { 
-          maxLength: 2000, 
-          allowNumbers: true, 
-          allowSpecialChars: true 
-        }),
-        shortDescription: sanitizeInput(formData.shortDescription, { 
-          maxLength: 200, 
-          allowNumbers: true, 
-          allowSpecialChars: true 
-        }),
         brand: sanitizeInput(formData.brand, { 
           maxLength: 100, 
           allowNumbers: true, 
@@ -1120,8 +957,6 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
 
       // Final validation before submission
       const finalValidation = validateFormData(sanitizedData, {
-        title: { required: true, minLength: 3, maxLength: 100 },
-        description: { required: true, minLength: 20, maxLength: 2000 },
         category: { required: true },
         sellingPrice: { required: true, validator: (v) => parseFloat(v) > 0 ? null : 'Must be greater than 0' },
         sku: { required: true, minLength: 3, maxLength: 50 }
@@ -1145,12 +980,12 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
         images: [
           ...(sanitizedData.mainImage ? [{ 
             url: URL.createObjectURL(sanitizedData.mainImage), 
-            altText: sanitizeInput(sanitizedData.mainImageAltText || sanitizedData.title, { maxLength: 125 }),
+            altText: sanitizeInput(sanitizedData.mainImageAltText || "Product Image", { maxLength: 125 }),
             isMain: true 
           }] : []),
           ...sanitizedData.additionalImages.map(img => ({
             url: img.preview,
-            altText: sanitizeInput(img.altText || sanitizedData.title, { maxLength: 125 }),
+            altText: sanitizeInput(img.altText || "Product Image", { maxLength: 125 }),
             isMain: false
           }))
         ],
@@ -1181,9 +1016,9 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
           servings: sanitizeInput(sanitizedData.servings, { maxLength: 20 })
         } : null,
         seo: {
-          metaTitle: sanitizedData.metaTitle || sanitizedData.title,
-          metaDescription: sanitizedData.metaDescription || sanitizedData.shortDescription,
-          urlSlug: sanitizedData.urlSlug || sanitizedData.title?.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 100),
+          metaTitle: sanitizedData.metaTitle || "Product Title",
+          metaDescription: sanitizedData.metaDescription || "Product Description",
+          urlSlug: sanitizedData.urlSlug || "product-slug",
           keywords: Array.isArray(sanitizedData.seoKeywords) ? sanitizedData.seoKeywords : [],
           relatedProducts: Array.isArray(sanitizedData.relatedProducts) ? sanitizedData.relatedProducts : []
         },
@@ -1232,12 +1067,9 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
       } else if (!silent) {
         // Reset form for another product with sanitized defaults
         const cleanFormData = {
-          title: "",
-          brand: "",
+brand: "",
           category: "",
           subcategory: "",
-          description: "",
-          shortDescription: "",
           sellingPrice: "",
           buyingPrice: "",
           discountedPrice: "",
@@ -1659,40 +1491,8 @@ const renderBasicInfo = () => (
         </p>
       </div>
 
-<div>
-<Input
-            label="Product Name"
-            type="text"
-            placeholder="e.g., Premium Organic Basmati Rice 5kg Pack"
-            value={formData.title}
-            onChange={(e) => handleInputChange("title", e.target.value, e.target.validationInfo)}
-            error={errors.title}
-            required={true}
-            maxLength={100}
-            description="Use descriptive names with brand, type, size, and key features. This will be used for SEO and search."
-            tooltip="Product names should be descriptive and include key details like brand, type, size, and main features. This helps customers find your product and improves search engine visibility. Avoid using special characters or excessive punctuation."
-            helpText="Include brand, type, size, and key features for better discoverability"
-            sanitize={true}
-            sanitizeOptions={{ 
-              maxLength: 100, 
-              allowNumbers: true, 
-              allowSpecialChars: false 
-            }}
-            validationRules={{
-              required: true,
-              minLength: 3,
-              maxLength: 100,
-              pattern: /^[a-zA-Z0-9\s\-&.()]+$/,
-              patternError: "Use only letters, numbers, spaces, and basic punctuation"
-            }}
-            realTimeValidation={true}
-            showValidationIcon={true}
-            ariaLabel="Product name, required field for customer display and search"
-          />
-        </div>
-
       <div>
-<div className="relative">
+        <div className="relative">
           <Input
             label="Brand/Manufacturer"
             type="text"
@@ -1720,7 +1520,7 @@ const renderBasicInfo = () => (
         </div>
       </div>
 
-<div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <h4 className="text-sm font-semibold text-gray-800 mb-4 flex items-center">
           <ApperIcon name="FolderTree" className="w-5 h-5 mr-2 text-blue-600" />
           Category Classification
@@ -1790,86 +1590,10 @@ const renderBasicInfo = () => (
                 No subcategories available for this category
               </p>
             )}
-</div>
+          </div>
         </div>
         <div className="mt-3 text-xs text-gray-500">
           <strong>Category helps with:</strong> Customer navigation, search filtering, and product organization
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Detailed Description *
-          <span className="text-gray-500 text-xs ml-1">(WYSIWYG ready - supports rich formatting)</span>
-        </label>
-        <div className="border border-gray-300 rounded-lg">
-          <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 text-xs text-gray-600 flex items-center">
-            <ApperIcon name="Type" className="w-4 h-4 mr-2" />
-            <span>Use clear, detailed descriptions with benefits, ingredients, usage, and specifications</span>
-          </div>
-          <textarea
-            rows={6}
-            placeholder="Example: Premium quality Organic Basmati Rice sourced from the foothills of Himalayas. 
-            
-Key Features:
-• 100% Organic - No pesticides or chemicals
-• Extra-long grain variety (8.2mm average)
-• Aged for 2 years for enhanced aroma
-• Low GI - Suitable for diabetics
-• Rich in fiber and essential minerals
-
-Usage: Perfect for biryanis, pulavs, and daily meals. Cooking time: 15-20 minutes.
-Storage: Store in cool, dry place. Best before 12 months from packaging."
-            value={formData.description}
-            onChange={(e) => handleInputChange("description", e.target.value)}
-            className={cn(
-              "w-full px-3 py-2 border-0 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none rounded-b-lg",
-              errors.description && "border-red-500"
-            )}
-            maxLength={2000}
-          />
-        </div>
-        {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
-        <div className="flex justify-between mt-1">
-          <p className="text-xs text-gray-500">
-            Include features, benefits, ingredients, usage instructions, and storage tips
-          </p>
-          <p className="text-xs text-gray-400">
-            {formData.description.length}/2000
-          </p>
-        </div>
-      </div>
-
-<div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Short Description
-          <span className="text-gray-500 text-xs ml-1">(For product cards and listings)</span>
-        </label>
-        <div className="relative">
-          <textarea
-            rows={3}
-            placeholder="Example: Premium Organic Basmati Rice - Extra long grain, aged 2 years, perfect aroma and texture. Ideal for special occasions and daily meals. 100% natural and chemical-free."
-            value={formData.shortDescription}
-            onChange={(e) => handleInputChange("shortDescription", e.target.value)}
-            className={cn(
-              "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none",
-              errors.shortDescription && "border-red-500"
-            )}
-            maxLength={200}
-          />
-          <div className="absolute top-2 right-2 text-xs text-gray-400 bg-white px-1">
-            {formData.shortDescription.length}/200
-          </div>
-        </div>
-        {errors.shortDescription && <p className="text-red-500 text-sm mt-1">{errors.shortDescription}</p>}
-        <div className="flex justify-between mt-1">
-          <p className="text-xs text-gray-500 flex items-center">
-            <ApperIcon name="Eye" className="w-3 h-3 mr-1" />
-            This appears on product cards, search results, and social media shares
-          </p>
-          <div className="text-xs text-gray-500">
-            {formData.shortDescription.length > 150 ? "⚠️ May be truncated on mobile" : "✅ Good length"}
-          </div>
         </div>
       </div>
     </div>
@@ -3628,7 +3352,7 @@ const renderPreviewModal = () => {
               )}
               
               <div>
-                <h3 className="text-lg font-semibold">{formData.title || "Product Name"}</h3>
+<h3 className="text-lg font-semibold">Product Name</h3>
                 {formData.brand && <p className="text-gray-600">by {formData.brand}</p>}
               </div>
               
@@ -3658,11 +3382,10 @@ const renderPreviewModal = () => {
                 </div>
               )}
               
-              {formData.description && (
-                <div>
-                  <h4 className="font-medium mb-2">Description</h4>
-                  <p className="text-gray-600 text-sm">{formData.description}</p>
-                </div>
+<div>
+                <h4 className="font-medium mb-2">Description</h4>
+                <p className="text-gray-600 text-sm">Product description will appear here</p>
+              </div>
               )}
             </div>
           </div>
