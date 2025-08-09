@@ -1,4 +1,3 @@
-import React from "react";
 import { Error } from "@/components/ui/Error";
 /**
  * Security utilities for input sanitization and CSRF protection
@@ -73,14 +72,16 @@ export const sanitizeInput = (input, options = {}) => {
   // Preserve original for logging
   const original = input;
   
-// Preserve intentional spacing between words while removing excessive whitespace
-  if (preserveSpaces) {
-    // Only collapse multiple consecutive spaces to single spaces, but preserve all single spaces
-    sanitized = sanitized.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n');
-    // Only trim leading/trailing whitespace, not internal spaces
+if (preserveSpaces) {
+    // International best practice: preserve natural word spacing
+    // Only collapse multiple consecutive spaces (2+) to single spaces
+    sanitized = sanitized.replace(/[ \t]{2,}/g, ' ');
+    // Preserve line breaks but normalize multiple line breaks
+    sanitized = sanitized.replace(/\n\s*\n/g, '\n');
+    // Only trim excessive leading/trailing whitespace, preserve intentional spacing
     sanitized = sanitized.replace(/^[\s\n]+|[\s\n]+$/g, '');
   } else {
-    // For non-preserveSpaces mode, still preserve single spaces between words
+    // Standard mode: still preserve single spaces between words for readability
     sanitized = sanitized.replace(/[ \t]+/g, ' ').trim();
   }
   
@@ -679,7 +680,9 @@ const formatFieldName = (fieldName) => {
     'sellingPrice': 'Selling Price',
     'buyingPrice': 'Buying Price',
     'stockQuantity': 'Stock Quantity',
+'productName': 'Product Name',
     'shortDescription': 'Short Description',
+    'detailedDescription': 'Detailed Description',
     'metaTitle': 'Meta Title',
     'metaDescription': 'Meta Description'
   };
@@ -1015,7 +1018,7 @@ export const initializeSecurity = () => {
     let inputEvent;
     try {
       // Check if InputEvent constructor is available
-      if (typeof InputEvent !== 'undefined' && InputEvent.length > 0) {
+      if (typeof InputEvent !== 'undefined') {
         inputEvent = new InputEvent('input', {
           data: ' ',
           bubbles: true,

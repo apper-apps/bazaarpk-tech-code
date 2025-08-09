@@ -35,6 +35,9 @@ const navigate = useNavigate();
   }, []);
 
 const [formData, setFormData] = useState({
+    productName: "",
+    shortDescription: "",
+    detailedDescription: "",
     brand: "",
     category: "",
     subcategory: "",
@@ -169,7 +172,7 @@ useEffect(() => {
 
   // Autosave functionality
   useEffect(() => {
-    if (unsavedChanges && formData.title) {
+if (unsavedChanges && formData.productName) {
       const autoSaveTimer = setTimeout(() => {
         handleAutoSave();
       }, 30000); // Autosave every 30 seconds
@@ -232,13 +235,57 @@ const handleInputChange = (field, value, validationInfo = {}) => {
     
     if (typeof value === 'string') {
 switch (field) {
+        case 'productName':
+          sanitizedValue = sanitizeInput(value, { 
+            maxLength: 150, 
+            allowNumbers: true, 
+            allowSpecialChars: true,
+            preserveSpaces: true
+          });
+          if (!sanitizedValue || sanitizedValue.trim() === '') {
+            fieldError = "Product name is required and cannot be empty";
+          } else if (sanitizedValue.length < 3) {
+            fieldError = "Product name must be at least 3 characters long";
+          } else if (sanitizedValue.length > 150) {
+            fieldError = "Product name cannot exceed 150 characters";
+          }
+          break;
+        case 'shortDescription':
+          sanitizedValue = sanitizeInput(value, { 
+            maxLength: 250, 
+            allowNumbers: true, 
+            allowSpecialChars: true,
+            preserveSpaces: true
+          });
+          if (!sanitizedValue || sanitizedValue.trim() === '') {
+            fieldError = "Short description is required for search and product cards";
+          } else if (sanitizedValue.length < 10) {
+            fieldError = "Short description should be at least 10 characters for meaningful context";
+          } else if (sanitizedValue.length > 250) {
+            fieldError = "Short description should not exceed 250 characters for optimal display";
+          }
+          break;
+        case 'detailedDescription':
+          sanitizedValue = sanitizeInput(value, { 
+            maxLength: 2000, 
+            allowNumbers: true, 
+            allowSpecialChars: true,
+            preserveSpaces: true
+          });
+          if (sanitizedValue && sanitizedValue.length < 20) {
+            fieldError = "Detailed description should be at least 20 characters if provided";
+          } else if (sanitizedValue && sanitizedValue.length > 2000) {
+            fieldError = "Detailed description should not exceed 2000 characters";
+          }
+          break;
         case 'brand':
         case 'category':
         case 'subcategory':
           sanitizedValue = sanitizeInput(value, { 
             maxLength: 100, 
             allowNumbers: true, 
-            allowSpecialChars: false 
+            allowSpecialChars: false,
+            preserveSpaces: true
           });
           if (field === 'brand' && sanitizedValue && sanitizedValue.length < 2) {
             fieldError = "Brand name must be at least 2 characters long";
@@ -313,7 +360,8 @@ switch (field) {
           sanitizedValue = sanitizeInput(value, { 
             maxLength: 125, 
             allowNumbers: true, 
-            allowSpecialChars: true 
+            allowSpecialChars: true,
+            preserveSpaces: true
           });
           if (sanitizedValue && sanitizedValue.length < 5) {
             fieldError = "Alt text should be at least 5 characters for accessibility";
@@ -330,7 +378,8 @@ switch (field) {
           sanitizedValue = sanitizeInput(value, { 
             maxLength: 60, 
             allowNumbers: true, 
-            allowSpecialChars: true 
+            allowSpecialChars: true,
+            preserveSpaces: true
           });
           if (sanitizedValue && sanitizedValue.length > 60) {
             fieldError = "Meta title should not exceed 60 characters for SEO";
@@ -340,7 +389,8 @@ switch (field) {
           sanitizedValue = sanitizeInput(value, { 
             maxLength: 160, 
             allowNumbers: true, 
-            allowSpecialChars: true 
+            allowSpecialChars: true,
+            preserveSpaces: true
           });
           if (sanitizedValue && sanitizedValue.length > 160) {
             fieldError = "Meta description should not exceed 160 characters for SEO";
@@ -368,7 +418,8 @@ switch (field) {
           sanitizedValue = sanitizeInput(value, { 
             maxLength: 100, 
             allowNumbers: true, 
-            allowSpecialChars: true 
+            allowSpecialChars: true,
+            preserveSpaces: true
           });
           if (sanitizedValue && sanitizedValue.length > 100) {
             fieldError = "Banner text should not exceed 100 characters for better display";
@@ -380,14 +431,16 @@ switch (field) {
           sanitizedValue = sanitizeInput(value, { 
             maxLength: field === 'notes' ? 300 : 100, 
             allowNumbers: true, 
-            allowSpecialChars: true 
+            allowSpecialChars: true,
+            preserveSpaces: true
           });
           break;
         default:
           sanitizedValue = sanitizeInput(value, {
             maxLength: 1000,
             allowNumbers: true,
-            allowSpecialChars: true
+            allowSpecialChars: true,
+            preserveSpaces: true
           });
       }
     }
@@ -513,8 +566,8 @@ switch (field) {
   };
 
 const getCompletionPercentage = () => {
-const requiredFields = ['category', 'sellingPrice', 'stockQuantity', 'sku'];
-    const optionalFields = ['brand', 'buyingPrice', 'mainImage', 'tags', 'metaTitle'];
+const requiredFields = ['productName', 'shortDescription', 'category', 'sellingPrice', 'stockQuantity', 'sku'];
+    const optionalFields = ['detailedDescription', 'brand', 'buyingPrice', 'mainImage', 'tags', 'metaTitle'];
     const advancedFields = ['variants', 'bundleComponents', 'seoKeywords', 'relatedProducts'];
     const requiredCompleted = requiredFields.filter(field => formData[field]).length;
     const optionalCompleted = optionalFields.filter(field => formData[field] && formData[field].length > 0).length;
@@ -570,7 +623,33 @@ const requiredFields = ['category', 'sellingPrice', 'stockQuantity', 'sku'];
 const validateForm = () => {
     const newErrors = {};
     const warnings = {};
-// Category validation - ensure consistent with backend
+    
+    // Essential Product Information validation
+    if (!formData.productName || formData.productName.trim() === '') {
+      newErrors.productName = "Product name is required and cannot be empty";
+    } else if (formData.productName.length < 3) {
+      newErrors.productName = "Product name must be at least 3 characters long";
+    } else if (formData.productName.length > 150) {
+      newErrors.productName = "Product name cannot exceed 150 characters";
+    }
+    
+    if (!formData.shortDescription || formData.shortDescription.trim() === '') {
+      newErrors.shortDescription = "Short description is required for search and product cards";
+    } else if (formData.shortDescription.length < 10) {
+      newErrors.shortDescription = "Short description should be at least 10 characters for meaningful context";
+    } else if (formData.shortDescription.length > 250) {
+      newErrors.shortDescription = "Short description should not exceed 250 characters for optimal display";
+    }
+    
+    if (formData.detailedDescription) {
+      if (formData.detailedDescription.length < 20) {
+        newErrors.detailedDescription = "Detailed description should be at least 20 characters if provided";
+      } else if (formData.detailedDescription.length > 2000) {
+        newErrors.detailedDescription = "Detailed description should not exceed 2000 characters";
+      }
+    }
+    
+    // Category validation - ensure consistent with backend
     if (!formData.category || formData.category.trim() === '') {
       newErrors.category = "Category is required and cannot be empty";
     }
@@ -842,10 +921,29 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
       const sanitizedData = {
 ...formData,
         // Enhanced field sanitization with validation
+productName: sanitizeInput(formData.productName, { 
+          maxLength: 150, 
+          allowNumbers: true, 
+          allowSpecialChars: true,
+          preserveSpaces: true
+        }),
+        shortDescription: sanitizeInput(formData.shortDescription, { 
+          maxLength: 250, 
+          allowNumbers: true, 
+          allowSpecialChars: true,
+          preserveSpaces: true
+        }),
+        detailedDescription: sanitizeInput(formData.detailedDescription, { 
+          maxLength: 2000, 
+          allowNumbers: true, 
+          allowSpecialChars: true,
+          preserveSpaces: true
+        }),
         brand: sanitizeInput(formData.brand, { 
           maxLength: 100, 
           allowNumbers: true, 
-          allowSpecialChars: false 
+          allowSpecialChars: false,
+          preserveSpaces: true
         }),
         sku: sanitizeInput(formData.sku, { 
           maxLength: 50, 
@@ -951,7 +1049,9 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
       };
 
       // Final validation before submission
-      const finalValidation = validateFormData(sanitizedData, {
+const finalValidation = validateFormData(sanitizedData, {
+        productName: { required: true, minLength: 3, maxLength: 150 },
+        shortDescription: { required: true, minLength: 10, maxLength: 250 },
         category: { required: true },
         sellingPrice: { required: true, validator: (v) => parseFloat(v) > 0 ? null : 'Must be greater than 0' },
         sku: { required: true, minLength: 3, maxLength: 50 }
@@ -1062,7 +1162,10 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
       } else if (!silent) {
         // Reset form for another product with sanitized defaults
 const cleanFormData = {
-brand: "",
+productName: "",
+          shortDescription: "",
+          detailedDescription: "",
+          brand: "",
           category: "",
           subcategory: "",
           sellingPrice: "",
@@ -1479,15 +1582,135 @@ const renderBasicInfo = () => (
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <h3 className="text-sm font-semibold text-green-900 mb-2 flex items-center">
           <ApperIcon name="Package" className="w-5 h-5 mr-2" />
-          📝 Basic Product Information
+          📝 Essential Product Information
         </h3>
         <p className="text-xs text-green-700">
-          Essential details about your product that customers will see first. Complete information builds trust and improves search visibility.
+          Core product details that customers need to make purchasing decisions. Proper spacing ensures readability and professional presentation.
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
+        {/* Product Name Section */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center">
+            <ApperIcon name="Tag" className="w-4 h-4 mr-2" />
+            Product Name *
+          </h4>
+          <Input
+            label=""
+            type="text"
+            placeholder="Enter product name with proper spacing between words..."
+            value={formData.productName}
+            onChange={(e) => handleInputChange("productName", e.target.value)}
+            error={errors.productName}
+            description="The main product title that customers will see. Use natural spacing between words for maximum readability."
+            sanitize={true}
+            sanitizeOptions={{ maxLength: 150, allowNumbers: true, allowSpecialChars: true, preserveSpaces: true }}
+            ariaLabel="Product name with proper word spacing"
+            maxLength={150}
+            required
+            className="text-lg font-medium"
+          />
+          <div className="mt-2 text-xs text-blue-700">
+            <strong>Good examples:</strong> "Fresh Organic Basmati Rice", "Premium Himalayan Pink Salt", "Extra Virgin Olive Oil"
+          </div>
+          {formData.productName && (
+            <div className="mt-2 px-3 py-2 bg-white rounded border">
+              <span className="text-xs text-gray-500">Preview: </span>
+              <span className="font-medium text-gray-900">{formData.productName}</span>
+              <span className="text-xs text-gray-400 ml-2">
+                ({formData.productName.length}/150 characters)
+              </span>
+            </div>
+          )}
+        </div>
 
+        {/* Short Description Section */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-amber-800 mb-3 flex items-center">
+            <ApperIcon name="FileText" className="w-4 h-4 mr-2" />
+            Short Description *
+          </h4>
+          <textarea
+            placeholder="Brief description for product cards and search results..."
+            value={formData.shortDescription}
+            onChange={(e) => handleInputChange("shortDescription", e.target.value)}
+            className={cn(
+              "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none",
+              "font-body text-base leading-relaxed",
+              errors.shortDescription && "border-red-500"
+            )}
+            rows={3}
+            maxLength={250}
+            style={{
+              lineHeight: '1.65',
+              letterSpacing: '0.01em',
+              wordSpacing: '0.05em'
+            }}
+          />
+          {errors.shortDescription && <p className="text-red-500 text-sm mt-1">{errors.shortDescription}</p>}
+          <div className="mt-2 text-xs text-amber-700">
+            <strong>Purpose:</strong> Appears in search results, product cards, and category listings. Keep concise but descriptive.
+          </div>
+          {formData.shortDescription && (
+            <div className="mt-2 px-3 py-2 bg-white rounded border">
+              <span className="text-xs text-gray-500">Preview: </span>
+              <span className="text-gray-900" style={{ lineHeight: '1.65', wordSpacing: '0.05em' }}>
+                {formData.shortDescription}
+              </span>
+              <span className="text-xs text-gray-400 ml-2">
+                ({formData.shortDescription.length}/250 characters)
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Detailed Description Section */}
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-purple-800 mb-3 flex items-center">
+            <ApperIcon name="BookOpen" className="w-4 h-4 mr-2" />
+            Detailed Description
+            <span className="text-xs text-purple-600 ml-1">(Optional but recommended)</span>
+          </h4>
+          <textarea
+            placeholder="Comprehensive product description with features, benefits, usage instructions, and specifications..."
+            value={formData.detailedDescription}
+            onChange={(e) => handleInputChange("detailedDescription", e.target.value)}
+            className={cn(
+              "w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none",
+              "font-body text-base leading-relaxed",
+              errors.detailedDescription && "border-red-500"
+            )}
+            rows={6}
+            maxLength={2000}
+            style={{
+              lineHeight: '1.65',
+              letterSpacing: '0.01em',
+              wordSpacing: '0.05em'
+            }}
+          />
+          {errors.detailedDescription && <p className="text-red-500 text-sm mt-1">{errors.detailedDescription}</p>}
+          <div className="mt-2 text-xs text-purple-700">
+            <strong>Include:</strong> Key features, benefits, ingredients, usage instructions, specifications, or any relevant details
+          </div>
+          {formData.detailedDescription && (
+            <div className="mt-3 px-3 py-2 bg-white rounded border">
+              <span className="text-xs text-gray-500">Preview: </span>
+              <div className="mt-1 text-gray-900 text-sm" style={{ 
+                lineHeight: '1.65', 
+                wordSpacing: '0.05em',
+                whiteSpace: 'pre-wrap'
+              }}>
+                {formData.detailedDescription}
+              </div>
+              <span className="text-xs text-gray-400 mt-2 block">
+                ({formData.detailedDescription.length}/2000 characters)
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Brand Section */}
         <div className="relative">
           <Input
             label="Brand/Manufacturer"
@@ -1499,7 +1722,7 @@ const renderBasicInfo = () => (
             list="brand-suggestions"
             description="Brand name builds trust, enables filtering, and helps with customer recognition. Searchable by customers."
             sanitize={true}
-            sanitizeOptions={{ maxLength: 50, allowNumbers: true, allowSpecialChars: false }}
+            sanitizeOptions={{ maxLength: 100, allowNumbers: true, allowSpecialChars: false, preserveSpaces: true }}
             ariaLabel="Brand or manufacturer name"
             autoComplete="organization"
           />
@@ -3348,10 +3571,14 @@ const renderPreviewModal = () => {
               )}
               
               <div>
-<h3 className="text-lg font-semibold">
-                Product Preview
+<h3 className="text-lg font-semibold" style={{ letterSpacing: '-0.02em', wordSpacing: '0.03em' }}>
+                {formData.productName || 'Product Preview'}
               </h3>
-                {formData.brand && <p className="text-gray-600">by {formData.brand}</p>}
+              {formData.brand && (
+                <p className="text-gray-600" style={{ wordSpacing: '0.05em' }}>
+                  by {formData.brand}
+                </p>
+              )}
               </div>
               
               {formData.sellingPrice && (
@@ -3380,11 +3607,39 @@ const renderPreviewModal = () => {
                 </div>
               )}
               
-<div>
-                <h4 className="font-medium mb-2">Product Information</h4>
-                <p className="text-gray-600 text-sm mb-2">
-                  Product details will be displayed here once other fields are filled.
-                </p>
+              <div>
+                <h4 className="font-medium mb-2" style={{ letterSpacing: '-0.01em', wordSpacing: '0.03em' }}>
+                  Product Information
+                </h4>
+                {formData.shortDescription ? (
+                  <p className="text-gray-700 text-sm mb-3" style={{ 
+                    lineHeight: '1.65', 
+                    wordSpacing: '0.05em',
+                    letterSpacing: '0.01em'
+                  }}>
+                    {formData.shortDescription}
+                  </p>
+                ) : (
+                  <p className="text-gray-500 text-sm mb-3 italic">
+                    Short description will appear here...
+                  </p>
+                )}
+                
+                {formData.detailedDescription && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <h5 className="text-sm font-medium text-gray-900 mb-2">Detailed Description</h5>
+                    <div className="text-gray-700 text-sm" style={{ 
+                      lineHeight: '1.65', 
+                      wordSpacing: '0.05em',
+                      letterSpacing: '0.01em',
+                      whiteSpace: 'pre-wrap'
+                    }}>
+                      {formData.detailedDescription.length > 200 
+                        ? formData.detailedDescription.substring(0, 200) + '...' 
+                        : formData.detailedDescription}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
