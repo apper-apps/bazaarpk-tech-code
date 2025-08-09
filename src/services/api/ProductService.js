@@ -281,11 +281,11 @@ const validateBulkUpdateEdgeCases = async (updates) => {
       const timeDiff = now - lastModified;
       
       if (timeDiff < 60000) { // Less than 1 minute
-warnings.push(`Product ${update.id} status changed rapidly (${timeDiff}ms ago)`);
+        warnings.push(`Product ${update.id} status changed rapidly (${timeDiff}ms ago)`);
       }
     }
   }
-return { criticalErrors, warnings };
+  return { criticalErrors, warnings };
 };
 
 export const ProductService = {
