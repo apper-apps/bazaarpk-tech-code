@@ -494,7 +494,7 @@ function ManageProducts() {
             <ApperIcon name="AlertTriangle" className="w-5 h-5 text-red-400 mr-3" />
             <div>
               <h3 className="text-sm font-medium text-red-800">Validation Errors</h3>
-              <ul className="mt-2 text-sm text-red-700 list-disc list-inside">
+<ul className="text-sm text-red-600 bg-red-50 p-3 rounded">
                 {Object.entries(validationErrors).map(([field, error]) => (
                   <li key={field}>{error}</li>
                 ))}
@@ -519,7 +519,7 @@ function ManageProducts() {
               />
             </div>
             
-            <div>
+<div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
               <select
                 value={selectedCategory}
