@@ -3386,7 +3386,7 @@ const renderPreviewModal = () => {
                   Product details will be displayed here once other fields are filled.
                 </p>
               </div>
-              )}
+))}
             </div>
           </div>
         </div>
