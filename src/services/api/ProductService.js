@@ -1,154 +1,577 @@
-import productsData from "../mockData/products.json";
-import React from "react";
-import { Error } from "@/components/ui/Error";
-import { calculateProfitMargin } from "@/utils/currency";
-// Local copy of products for manipulation
-let mockProducts = [...productsData];
+import productsData from "@/services/mockData/products.json";
+import cacheManager from "@/utils/cacheManager";
+import { storage } from "@/utils/storage";
+/**
+ * ProductService - Comprehensive product management service
+ * Handles all product CRUD operations, validation, and data sanitization
+ */
 
-// Validation helper functions
-// Validation helper functions
-const validateProductData = async (product) => {
-  const errors = [];
-  
-  // Enhanced validation with proper field name mapping for form compatibility
-  // Handle frontend field names: productName, shortDescription, category, sellingPrice, sku
-  const title = product.productName || product.title || product.name || '';
-  if (!title || title.trim().length < 3) {
-    errors.push('Product name is required and must be at least 3 characters long');
+// Internal validation utilities
+const sanitizeAndValidateText = (text, minLength = 1, maxLength = 255) => {
+  if (!text || typeof text !== 'string') {
+    return { isValid: false, sanitized: '', error: 'Text is required' };
   }
   
-  // Handle multiple field name variants for selling price
-  const sellingPrice = product.sellingPrice || product.price || '';
-  if (!sellingPrice || sellingPrice.toString().trim() === '' || isNaN(parseFloat(sellingPrice)) || parseFloat(sellingPrice) <= 0) {
-    errors.push('Selling Price is required and cannot be empty');
+  const sanitized = text.trim().replace(/<[^>]*>/g, ''); // Basic HTML sanitization
+  
+  if (sanitized.length < minLength) {
+    return { isValid: false, sanitized, error: `Minimum length is ${minLength} characters` };
   }
   
-  // Enhanced category validation with proper field mapping
-  const category = product.category || '';
-  if (!category || category.trim() === '') {
-    errors.push('Category is required and cannot be empty');
+  if (sanitized.length > maxLength) {
+    return { isValid: false, sanitized: sanitized.substring(0, maxLength), error: `Maximum length is ${maxLength} characters` };
   }
   
-  // Enhanced validation with proper field mapping - check shortDescription from frontend  
-  const shortDescription = product.shortDescription || product.description || '';
-  if (!shortDescription || shortDescription.trim() === '') {
-    errors.push('Short Description is required and cannot be empty');
-  } else if (shortDescription.trim().length < 10) {
-    errors.push('Short Description must be at least 10 characters long');
-  }
-  
-  // Enhanced SKU validation with proper field mapping
-  const sku = product.sku || '';
-  if (!sku || sku.trim() === '') {
-    errors.push('Sku is required and cannot be empty');
-  } else if (sku.trim().length < 3) {
-    errors.push('SKU must be at least 3 characters long');
-  }
-  
-  if (product.stockQuantity === undefined || isNaN(parseInt(product.stockQuantity)) || parseInt(product.stockQuantity) < 0) {
-    errors.push('Stock quantity must be a non-negative number');
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-
-const sanitizeAndValidateText = (text, options = {}) => {
-  // Enhanced validation with proper required field handling
-  const isRequired = options.required !== false;
-  
-  if (!text || text.toString().trim() === '') {
-    if (isRequired) {
-      const fieldName = options.fieldName || 'Text';
-      throw new Error(`${fieldName} is required and cannot be empty`);
-    }
-    return options.defaultValue || '';
-  }
-  
-  const sanitized = text.toString().trim();
-  
-  if (options.minLength && sanitized.length < options.minLength) {
-    const fieldName = options.fieldName || 'Text';
-    throw new Error(`${fieldName} must be at least ${options.minLength} characters long`);
-  }
-  if (options.maxLength && sanitized.length > options.maxLength) {
-    const fieldName = options.fieldName || 'Text';
-    throw new Error(`${fieldName} must not exceed ${options.maxLength} characters`);
-  }
-  
-  return sanitized;
+  return { isValid: true, sanitized, error: null };
 };
 
-const validateAndFormatPrice = (price, options = {}) => {
-  const isRequired = options.required !== false;
-  
-  if (!price || price.toString().trim() === '') {
-    if (isRequired) {
-      const fieldName = options.fieldName || 'Price';
-      throw new Error(`${fieldName} is required and cannot be empty`);
-    }
-    return options.defaultValue || 0;
-  }
-  
+const validateAndFormatPrice = (price) => {
   const numPrice = parseFloat(price);
+  
   if (isNaN(numPrice) || numPrice < 0) {
-    const fieldName = options.fieldName || 'Price';
-    throw new Error(`${fieldName} must be a valid positive number`);
+    return { isValid: false, formatted: 0, error: 'Price must be a positive number' };
   }
   
-  if (isRequired && numPrice === 0) {
-    const fieldName = options.fieldName || 'Price';
-    throw new Error(`${fieldName} must be greater than 0`);
+  if (numPrice > 999999) {
+    return { isValid: false, formatted: numPrice, error: 'Price too high' };
   }
   
-  return Math.round(numPrice * 100) / 100;
+  return { isValid: true, formatted: Math.round(numPrice * 100) / 100, error: null };
 };
 
-const validateAndFormatQuantity = (quantity, options = {}) => {
-  if (quantity === undefined || quantity === null) {
-    if (options.required === false) {
-      return options.defaultValue || 0;
-    }
-    throw new Error('Quantity is required');
-  }
-  
+const validateAndFormatQuantity = (quantity) => {
   const numQuantity = parseInt(quantity);
+  
   if (isNaN(numQuantity) || numQuantity < 0) {
-    throw new Error('Quantity must be a non-negative integer');
+    return { isValid: false, formatted: 0, error: 'Quantity must be a positive integer' };
   }
   
-  if (options.min !== undefined && numQuantity < options.min) {
-    return options.defaultValue || options.min;
+  if (numQuantity > 999999) {
+    return { isValid: false, formatted: numQuantity, error: 'Quantity too high' };
   }
   
-  return numQuantity;
+  return { isValid: true, formatted: numQuantity, error: null };
 };
 
-const determineStockStatus = (stock, threshold = 10) => {
-  const stockNum = parseInt(stock) || 0;
-  const thresholdNum = parseInt(threshold) || 10;
-  
-  if (stockNum === 0) return 'out-of-stock';
-  if (stockNum <= thresholdNum) return 'low-stock';
-  return 'in-stock';
+const determineStockStatus = (quantity, minStock = 10) => {
+  if (quantity === 0) return 'out_of_stock';
+  if (quantity <= minStock) return 'low_stock';
+  return 'in_stock';
 };
 
 const validateSku = (sku) => {
-  if (!sku) return '';
-  const cleanSku = sku.toString().trim().toUpperCase();
-  if (cleanSku.length < 2) {
-    throw new Error('SKU must be at least 2 characters long');
+  if (!sku || typeof sku !== 'string') {
+    return { isValid: false, error: 'SKU is required' };
   }
-  return cleanSku;
+  
+  const skuPattern = /^[A-Z0-9-_]{3,20}$/;
+  if (!skuPattern.test(sku.toUpperCase())) {
+    return { isValid: false, error: 'SKU must be 3-20 characters, alphanumeric with hyphens/underscores' };
+  }
+  
+  return { isValid: true, error: null };
 };
 
 const validateBarcode = (barcode) => {
-  if (!barcode) return '';
-  const cleanBarcode = barcode.toString().trim();
-  return cleanBarcode;
+  if (!barcode) return { isValid: true, error: null }; // Optional field
+  
+  const barcodePattern = /^[0-9]{8,13}$/;
+  if (!barcodePattern.test(barcode)) {
+    return { isValid: false, error: 'Barcode must be 8-13 digits' };
+  }
+  
+  return { isValid: true, error: null };
 };
 
+class ProductService {
+  constructor() {
+    this.cacheKey = 'products_cache';
+    this.cacheDuration = 5 * 60 * 1000; // 5 minutes
+  }
+
+  // Get all products with filtering and search
+  async getProducts({ 
+    category = null, 
+    search = '', 
+    sortBy = 'name', 
+    sortOrder = 'asc',
+    page = 1,
+    limit = 20,
+    inStock = null
+  } = {}) {
+    try {
+      // Check cache first
+      const cached = cacheManager.get(this.cacheKey);
+      let products = cached || productsData;
+
+      // Apply filters
+      let filteredProducts = [...products];
+
+      if (category) {
+        filteredProducts = filteredProducts.filter(product => 
+          product.category?.toLowerCase() === category.toLowerCase()
+        );
+      }
+
+      if (search) {
+        const searchLower = search.toLowerCase();
+        filteredProducts = filteredProducts.filter(product => 
+          product.name?.toLowerCase().includes(searchLower) ||
+          product.description?.toLowerCase().includes(searchLower) ||
+          product.sku?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      if (inStock !== null) {
+        filteredProducts = filteredProducts.filter(product => {
+          const hasStock = (product.quantity || 0) > 0;
+          return inStock ? hasStock : !hasStock;
+        });
+      }
+
+      // Sort products
+      filteredProducts.sort((a, b) => {
+        let aVal = a[sortBy] || '';
+        let bVal = b[sortBy] || '';
+
+        if (sortBy === 'price') {
+          aVal = parseFloat(aVal) || 0;
+          bVal = parseFloat(bVal) || 0;
+        } else if (sortBy === 'quantity') {
+          aVal = parseInt(aVal) || 0;
+          bVal = parseInt(bVal) || 0;
+        } else {
+          aVal = aVal.toString().toLowerCase();
+          bVal = bVal.toString().toLowerCase();
+        }
+
+        if (sortOrder === 'desc') {
+          return bVal > aVal ? 1 : bVal < aVal ? -1 : 0;
+        }
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      });
+
+      // Paginate
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+
+      // Cache the results
+      if (!cached) {
+        cacheManager.set(this.cacheKey, products, this.cacheDuration);
+      }
+
+      return {
+        success: true,
+        data: paginatedProducts,
+        pagination: {
+          page,
+          limit,
+          total: filteredProducts.length,
+          totalPages: Math.ceil(filteredProducts.length / limit)
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch products',
+        data: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 }
+      };
+    }
+  }
+
+  // Get single product by ID
+  async getProduct(id) {
+    try {
+      if (!id) {
+        return {
+          success: false,
+          error: 'Product ID is required'
+        };
+      }
+
+      const cached = cacheManager.get(this.cacheKey);
+      const products = cached || productsData;
+      
+      const product = products.find(p => p.id === id || p.id === parseInt(id));
+
+      if (!product) {
+        return {
+          success: false,
+          error: 'Product not found'
+        };
+      }
+
+      return {
+        success: true,
+        data: product
+      };
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch product'
+      };
+    }
+  }
+
+  // Create new product
+  async createProduct(productData) {
+    try {
+      const validationResult = this.validateProductData(productData);
+      if (!validationResult.isValid) {
+        return {
+          success: false,
+          error: 'Validation failed',
+          details: validationResult.errors
+        };
+      }
+
+      const cached = cacheManager.get(this.cacheKey);
+      const products = cached || [...productsData];
+
+      // Check for duplicate SKU
+      const existingSku = products.find(p => p.sku === validationResult.data.sku);
+      if (existingSku) {
+        return {
+          success: false,
+          error: 'SKU already exists'
+        };
+      }
+
+      const newProduct = {
+        ...validationResult.data,
+        id: Math.max(...products.map(p => p.id || 0)) + 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      products.push(newProduct);
+      
+      // Update cache and storage
+      cacheManager.set(this.cacheKey, products, this.cacheDuration);
+      storage.set('products', products);
+
+      return {
+        success: true,
+        data: newProduct
+      };
+    } catch (error) {
+      console.error('Error creating product:', error);
+      return {
+        success: false,
+        error: 'Failed to create product'
+      };
+    }
+  }
+
+  // Update existing product
+  async updateProduct(id, updates) {
+    try {
+      if (!id) {
+        return {
+          success: false,
+          error: 'Product ID is required'
+        };
+      }
+
+      const validationResult = this.validateProductData(updates, true);
+      if (!validationResult.isValid) {
+        return {
+          success: false,
+          error: 'Validation failed',
+          details: validationResult.errors
+        };
+      }
+
+      const cached = cacheManager.get(this.cacheKey);
+      const products = cached || [...productsData];
+
+      const productIndex = products.findIndex(p => p.id === id || p.id === parseInt(id));
+      if (productIndex === -1) {
+        return {
+          success: false,
+          error: 'Product not found'
+        };
+      }
+
+      // Check for duplicate SKU if SKU is being updated
+      if (validationResult.data.sku && validationResult.data.sku !== products[productIndex].sku) {
+        const existingSku = products.find(p => p.sku === validationResult.data.sku && p.id !== id);
+        if (existingSku) {
+          return {
+            success: false,
+            error: 'SKU already exists'
+          };
+        }
+      }
+
+      const updatedProduct = {
+        ...products[productIndex],
+        ...validationResult.data,
+        updatedAt: new Date().toISOString()
+      };
+
+      products[productIndex] = updatedProduct;
+
+      // Update cache and storage
+      cacheManager.set(this.cacheKey, products, this.cacheDuration);
+      storage.set('products', products);
+
+      return {
+        success: true,
+        data: updatedProduct
+      };
+    } catch (error) {
+      console.error('Error updating product:', error);
+      return {
+        success: false,
+        error: 'Failed to update product'
+      };
+    }
+  }
+
+  // Delete product
+  async deleteProduct(id) {
+    try {
+      if (!id) {
+        return {
+          success: false,
+          error: 'Product ID is required'
+        };
+      }
+
+      const cached = cacheManager.get(this.cacheKey);
+      const products = cached || [...productsData];
+
+      const productIndex = products.findIndex(p => p.id === id || p.id === parseInt(id));
+      if (productIndex === -1) {
+        return {
+          success: false,
+          error: 'Product not found'
+        };
+      }
+
+      const deletedProduct = products[productIndex];
+      products.splice(productIndex, 1);
+
+      // Update cache and storage
+      cacheManager.set(this.cacheKey, products, this.cacheDuration);
+      storage.set('products', products);
+
+      return {
+        success: true,
+        data: deletedProduct
+      };
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      return {
+        success: false,
+        error: 'Failed to delete product'
+      };
+    }
+  }
+
+  // Bulk operations
+  async bulkUpdateProducts(updates) {
+    try {
+      const results = [];
+      for (const update of updates) {
+        const result = await this.updateProduct(update.id, update.data);
+        results.push(result);
+      }
+
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+
+      return {
+        success: failed === 0,
+        processed: results.length,
+        successful,
+        failed,
+        results
+      };
+    } catch (error) {
+      console.error('Error in bulk update:', error);
+      return {
+        success: false,
+        error: 'Bulk update failed'
+      };
+    }
+  }
+
+  // Validate product data
+  validateProductData(data, isUpdate = false) {
+    const errors = {};
+    const sanitizedData = {};
+
+    // Name validation
+    if (data.name !== undefined || !isUpdate) {
+      const nameResult = sanitizeAndValidateText(data.name, 2, 100);
+      if (!nameResult.isValid) {
+        errors.name = nameResult.error;
+      } else {
+        sanitizedData.name = nameResult.sanitized;
+      }
+    }
+
+    // Description validation
+    if (data.description !== undefined || !isUpdate) {
+      const descResult = sanitizeAndValidateText(data.description, 10, 1000);
+      if (!descResult.isValid) {
+        errors.description = descResult.error;
+      } else {
+        sanitizedData.description = descResult.sanitized;
+      }
+    }
+
+    // Category validation
+    if (data.category !== undefined) {
+      const categoryResult = sanitizeAndValidateText(data.category, 2, 50);
+      if (!categoryResult.isValid) {
+        errors.category = categoryResult.error;
+      } else {
+        sanitizedData.category = categoryResult.sanitized;
+      }
+    }
+
+    // Price validation
+    if (data.price !== undefined || !isUpdate) {
+      const priceResult = validateAndFormatPrice(data.price);
+      if (!priceResult.isValid) {
+        errors.price = priceResult.error;
+      } else {
+        sanitizedData.price = priceResult.formatted;
+        sanitizedData.originalPrice = data.originalPrice ? 
+          validateAndFormatPrice(data.originalPrice).formatted : priceResult.formatted;
+        sanitizedData.salePrice = data.salePrice ? 
+          validateAndFormatPrice(data.salePrice).formatted : null;
+        sanitizedData.costPrice = data.costPrice ? 
+          validateAndFormatPrice(data.costPrice).formatted : null;
+      }
+    }
+
+    // Quantity validation
+    if (data.quantity !== undefined || !isUpdate) {
+      const qtyResult = validateAndFormatQuantity(data.quantity);
+      if (!qtyResult.isValid) {
+        errors.quantity = qtyResult.error;
+      } else {
+        sanitizedData.quantity = qtyResult.formatted;
+        sanitizedData.minStock = data.minStock ? 
+          validateAndFormatQuantity(data.minStock).formatted : 10;
+        sanitizedData.stockStatus = determineStockStatus(qtyResult.formatted, sanitizedData.minStock);
+      }
+    }
+
+    // SKU validation
+    if (data.sku !== undefined || !isUpdate) {
+      const skuResult = validateSku(data.sku);
+      if (!skuResult.isValid) {
+        errors.sku = skuResult.error;
+      } else {
+        sanitizedData.sku = data.sku.toUpperCase();
+      }
+    }
+
+    // Barcode validation
+    if (data.barcode !== undefined) {
+      const barcodeResult = validateBarcode(data.barcode);
+      if (!barcodeResult.isValid) {
+        errors.barcode = barcodeResult.error;
+      } else if (data.barcode) {
+        sanitizedData.barcode = data.barcode;
+      }
+    }
+
+    // Other optional fields
+    if (data.brand !== undefined) {
+      const brandResult = sanitizeAndValidateText(data.brand, 2, 50);
+      if (brandResult.isValid) {
+        sanitizedData.brand = brandResult.sanitized;
+      }
+    }
+
+    // Weight and dimensions
+    if (data.weight !== undefined) {
+      const weightResult = validateAndFormatQuantity(data.weight);
+      if (weightResult.isValid) {
+        sanitizedData.weight = weightResult.formatted;
+      }
+    }
+
+    if (data.dimensions) {
+      sanitizedData.dimensions = {
+        length: data.dimensions.length ? validateAndFormatQuantity(data.dimensions.length).formatted : 0,
+        width: data.dimensions.width ? validateAndFormatQuantity(data.dimensions.width).formatted : 0,
+        height: data.dimensions.height ? validateAndFormatQuantity(data.dimensions.height).formatted : 0
+      };
+    }
+
+    // Images
+    if (data.images && Array.isArray(data.images)) {
+      sanitizedData.images = data.images.filter(img => typeof img === 'string' && img.trim());
+    }
+
+    // Tags
+    if (data.tags && Array.isArray(data.tags)) {
+      sanitizedData.tags = data.tags.map(tag => sanitizeAndValidateText(tag).sanitized).filter(Boolean);
+    }
+
+    // Attributes
+    if (data.attributes && typeof data.attributes === 'object') {
+      sanitizedData.attributes = data.attributes;
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      data: sanitizedData,
+      errors
+    };
+  }
+
+  // Get products by category
+  async getProductsByCategory(category) {
+    return this.getProducts({ category });
+  }
+
+  // Search products
+  async searchProducts(query, options = {}) {
+    return this.getProducts({ search: query, ...options });
+  }
+
+  // Get low stock products
+  async getLowStockProducts() {
+    try {
+      const { data: products } = await this.getProducts({ limit: 1000 });
+      const lowStockProducts = products.filter(product => {
+        const qty = product.quantity || 0;
+        const minStock = product.minStock || 10;
+        return qty <= minStock;
+      });
+
+      return {
+        success: true,
+        data: lowStockProducts
+      };
+    } catch (error) {
+      console.error('Error fetching low stock products:', error);
+      return {
+        success: false,
+        error: 'Failed to fetch low stock products',
+        data: []
+      };
+    }
+  }
+
+  // Clear cache
+  clearCache() {
+    cacheManager.remove(this.cacheKey);
+  }
+}
+// Helper functions for validation
 const validateUrl = (url) => {
   if (!url) return '';
   try {
@@ -167,23 +590,22 @@ const generateProductChecksum = (data) => {
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash;
   }
-  return Math.abs(hash).toString(16);
+  return hash.toString(16);
 };
 
 const validateBusinessLogic = (product) => {
   const errors = [];
   
-  if (product.sellingPrice && product.buyingPrice && product.sellingPrice <= product.buyingPrice) {
-    errors.push('Selling price should be higher than buying price');
+  if (!product.title || product.title.length < 2) {
+    errors.push('Title is required and must be at least 2 characters');
   }
   
-  if (product.discountedPrice && product.discountedPrice >= product.sellingPrice) {
-    errors.push('Discounted price should be lower than selling price');
+  if (!product.sku || product.sku.length < 3) {
+    errors.push('SKU is required and must be at least 3 characters');
   }
   
-  if (product.minimumOrderQuantity && product.maximumOrderQuantity && 
-      product.minimumOrderQuantity > product.maximumOrderQuantity) {
-    errors.push('Minimum order quantity cannot be greater than maximum order quantity');
+  if (typeof product.price !== 'number' || product.price <= 0) {
+    errors.push('Price must be a positive number');
   }
   
   return {
@@ -195,48 +617,12 @@ const validateBusinessLogic = (product) => {
 const validateProductUpdateData = async (data, originalProduct) => {
   const errors = [];
   
-// Enhanced validation with field name mapping for frontend compatibility
-  const title = data.productName || data.title || data.name;
-  if (title !== undefined && (!title || title.trim().length < 3)) {
-    errors.push('Product name must be at least 3 characters long');
+  if (data.price !== undefined && (typeof data.price !== 'number' || data.price <= 0)) {
+    errors.push('Price must be a positive number');
   }
   
-  // Handle multiple selling price field variants
-  const sellingPrice = data.sellingPrice || data.price;
-  if (sellingPrice !== undefined) {
-    const price = parseFloat(sellingPrice);
-    if (isNaN(price) || price <= 0) {
-      errors.push('Selling Price is required and cannot be empty');
-    }
-  }
-  
-  if (data.stockQuantity !== undefined) {
-    const stock = parseInt(data.stockQuantity);
-    if (isNaN(stock) || stock < 0) {
-      errors.push('Stock quantity must be a non-negative number');
-    }
-  }
-  
-// Enhanced category and description validation for updates with field mapping
-  const category = data.category;
-  if (category !== undefined && (!category || category.trim() === '')) {
-    errors.push('Category is required and cannot be empty');
-  }
-  
-  // Check shortDescription field from frontend form
-  const shortDescription = data.shortDescription || data.description;
-  if (shortDescription !== undefined) {
-    if (!shortDescription || shortDescription.trim() === '') {
-      errors.push('Short Description is required and cannot be empty');
-    } else if (shortDescription.trim().length < 10) {
-      errors.push('Short Description must be at least 10 characters long');
-    }
-  }
-  
-  // Enhanced SKU validation for updates
-  const sku = data.sku;
-  if (sku !== undefined && (!sku || sku.trim() === '')) {
-    errors.push('Sku is required and cannot be empty');
+  if (data.stock !== undefined && (typeof data.stock !== 'number' || data.stock < 0)) {
+    errors.push('Stock must be a non-negative number');
   }
   
   return {
@@ -244,371 +630,142 @@ const validateProductUpdateData = async (data, originalProduct) => {
     errors
   };
 };
-// Helper function for bulk update validation - moved here for proper scope
+
 const validateBulkUpdateEdgeCases = async (updates) => {
   const criticalErrors = [];
   const warnings = [];
   
-  for (const update of updates) {
-    const product = mockProducts.find(p => p.Id === update.id);
-    if (!product) {
-      criticalErrors.push(`Product ${update.id} not found`);
-      continue;
-    }
-    
-    // Edge case: Approve product without images
-    if (update.data.status === 'approved') {
-      if (!product.image && (!product.images || product.images.length === 0)) {
-        warnings.push(`Product ${update.id} (${product.name}) approved without images`);
-      }
-      
-      // Edge case: Approve product with negative stock
-      if (product.stock < 0 || product.stockCount < 0) {
-        warnings.push(`Product ${update.id} (${product.name}) approved with negative stock: ${product.stock}`);
-      }
-      
-      // Edge case: Approve product with invalid pricing
-      if (!product.price || product.price <= 0 || isNaN(product.price)) {
-        warnings.push(`Product ${update.id} (${product.name}) approved with invalid pricing: ${product.price}`);
-      }
-    }
-    
-    // Edge case: Approve then immediately reject (rapid status changes)
-    if (update.data.status && product.lastModified) {
-      const lastModified = new Date(product.lastModified);
-      const now = new Date();
-      const timeDiff = now - lastModified;
-      
-      if (timeDiff < 60000) { // Less than 1 minute
-        warnings.push(`Product ${update.id} status changed rapidly (${timeDiff}ms ago)`);
-      }
-    }
+  const duplicateIds = updates.map(u => u.id).filter((id, index, arr) => arr.indexOf(id) !== index);
+  if (duplicateIds.length > 0) {
+    criticalErrors.push(`Duplicate product IDs found: ${duplicateIds.join(', ')}`);
   }
-}
+  
   return { criticalErrors, warnings };
 };
 
-// Export the main ProductService object
-export const ProductService = {
-  getAll: async () => {
+// Mock products data for service operations
+const mockProducts = productsData || [];
+
+// Main service export
+const productService = {
+  // Extended service with all the existing methods from lines 691-1976
+// Enhanced toggle product visibility with approval workflow
+  async toggleVisibility(id) {
+    const product = mockProducts.find(p => p.Id === parseInt(id));
+    if (!product) {
+      throw new Error('Product not found');
+    }
+    
+    const currentVisibility = product.visibility || 'draft';
+    const currentStatus = product.status || 'pending';
+    
+    // If making visible, ensure product is approved
+    if (currentVisibility === 'draft') {
+      if (currentStatus !== 'approved') {
+        throw new Error('Product must be approved before it can be published');
+      }
+      product.visibility = 'published';
+      product.publishedAt = new Date().toISOString();
+      product.publishedBy = 'system'; // Should be passed from caller
+    } else {
+      product.visibility = 'draft';
+      product.publishedAt = null;
+      product.publishedBy = null;
+    }
+    
+    product.lastModified = new Date().toISOString();
+    
+    // Add to audit log
+    product.auditLog = product.auditLog || [];
+    product.auditLog.push({
+      action: 'visibility_toggled',
+      timestamp: new Date().toISOString(),
+      user: 'system',
+      details: `Product ${product.visibility === 'published' ? 'published' : 'hidden'}`,
+      oldValue: currentVisibility,
+      newValue: product.visibility
+    });
+    
+    return product;
+  },
+
+  // Enhanced toggle featured status with approval workflow
+  async toggleFeatured(id) {
+    const product = mockProducts.find(p => p.Id === parseInt(id));
+    if (!product) {
+      throw new Error('Product not found');
+    }
+    
+    // Only allow featuring approved, published products
+    if (product.status !== 'approved' || product.visibility !== 'published') {
+      throw new Error('Only approved and published products can be featured');
+    }
+    
+    const wasFeatured = product.featured;
+    product.featured = !product.featured;
+    product.priority = product.featured ? Date.now() : 0;
+    product.lastModified = new Date().toISOString();
+    
+    // Add to audit log
+    product.auditLog = product.auditLog || [];
+    product.auditLog.push({
+      action: 'featured_toggled',
+      timestamp: new Date().toISOString(),
+      user: 'system',
+      details: `Product ${product.featured ? 'marked as featured' : 'removed from featured'}`,
+      oldValue: wasFeatured,
+      newValue: product.featured
+    });
+    
+    return product;
+  },
+  
+  // Bulk price adjustment
+  async bulkPriceAdjustment(productIds, adjustment) {
+    const updatedProducts = [];
+    
+    for (const id of productIds) {
+      const product = mockProducts.find(p => p.Id === parseInt(id));
+      if (product) {
+        const currentPrice = parseFloat(product.price) || 0;
+        let newPrice = currentPrice;
+        
+        if (adjustment.type === 'percentage') {
+          newPrice = currentPrice * (1 + adjustment.value / 100);
+        } else {
+          newPrice = currentPrice + adjustment.value;
+        }
+        
+        product.price = Math.max(0, newPrice);
+        product.lastModified = new Date().toISOString();
+        updatedProducts.push(product);
+      }
+    }
+    
+    return updatedProducts;
+  },
+
+  update: async (id, updates) => {
+    await new Promise(resolve => setTimeout(resolve, 350));
+    const index = productsData.findIndex(p => p.Id === id);
+    if (index !== -1) {
+      productsData[index] = { ...productsData[index], ...updates };
+      return { ...productsData[index] };
+    }
+    return null;
+  },
+
+  delete: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 300));
-    return [...productsData];
-  },
-  getAllProducts: async () => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return [...productsData];
-  },
-
-  getById: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const product = mockProducts.find(p => p.Id === id);
-    return product ? { ...product } : null;
-  },
-getByCategory: async (category) => {
-    await new Promise(resolve => setTimeout(resolve, 250));
-    return productsData.filter(p => 
-      p.category.toLowerCase() === category.toLowerCase()
-    ).map(p => ({ ...p }));
-  },
-
-  getRelatedProducts: async (productId, category, options = {}) => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const { priceRange = {}, badges = [], limit = 8 } = options;
-    
-    const allProducts = [...productsData];
-    const currentProduct = allProducts.find(p => p.Id === productId);
-    
-    if (!currentProduct) return [];
-    
-    // Score-based matching algorithm
-    const scoredProducts = allProducts
-      .filter(p => p.Id !== productId)
-      .map(product => {
-        let score = 0;
-        
-        // Category match (highest priority)
-        if (product.category.toLowerCase() === category.toLowerCase()) {
-          score += 100;
-        }
-        
-        // Price range similarity
-        if (priceRange.min !== undefined && priceRange.max !== undefined) {
-          if (product.price >= priceRange.min && product.price <= priceRange.max) {
-            score += 50;
-          }
-        }
-        
-        // Badge similarity
-        if (badges && badges.length > 0) {
-          const matchingBadges = product.badges?.filter(badge => badges.includes(badge)) || [];
-          score += matchingBadges.length * 15;
-        }
-        
-        // Stock availability bonus
-        if (product.stock > 0) {
-          score += 10;
-        }
-        
-        // Featured product bonus
-        if (product.featured) {
-          score += 5;
-        }
-        
-        // Price proximity bonus (closer prices get higher scores)
-        const priceDifference = Math.abs(product.price - currentProduct.price);
-        const maxPrice = Math.max(product.price, currentProduct.price);
-        const priceProximity = 1 - (priceDifference / maxPrice);
-        score += priceProximity * 20;
-        
-        return { ...product, relatedScore: score };
-      })
-      .sort((a, b) => b.relatedScore - a.relatedScore)
-      .slice(0, limit)
-      .map(p => {
-        // Remove the score before returning
-        const { relatedScore, ...productWithoutScore } = p;
-        return productWithoutScore;
-      });
-    
-    return scoredProducts;
-  },
-
-  search: async (query) => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const searchTerm = query.toLowerCase();
-    return productsData.filter(p =>
-      p.title.toLowerCase().includes(searchTerm) ||
-      p.description.toLowerCase().includes(searchTerm) ||
-      p.category.toLowerCase().includes(searchTerm)
-    ).map(p => ({ ...p }));
-  },
-
-create: async (product) => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    // Enhanced validation before creation
-    const validationResult = await validateProductData(product);
-    if (!validationResult.isValid) {
-      throw new Error(`Product validation failed: ${validationResult.errors.join(', ')}`);
+    const index = productsData.findIndex(product => product.Id === parseInt(id));
+    if (index !== -1) {
+      const deleted = productsData.splice(index, 1)[0];
+      // Store deletion timestamp for audit
+      deleted.deletedAt = new Date().toISOString();
+      return { ...deleted };
     }
-    
-    // Generate new ID with validation
-    const maxId = Math.max(...productsData.map(p => p.Id));
-    const newId = maxId + 1;
-    
-    // Check for duplicate SKU
-    const existingSku = productsData.find(p => p.sku?.toLowerCase() === product.sku?.toLowerCase());
-    if (existingSku) {
-      throw new Error(`SKU '${product.sku}' already exists. Please use a unique SKU.`);
-    }
-    
-// Enhanced data processing with comprehensive validation and field mapping
-const processedProduct = {
-      ...product,
-      Id: newId,
-      
-      // Core product fields with validation and proper field name mapping from frontend
-      title: sanitizeAndValidateText(product.productName || product.title || product.name, { 
-        fieldName: 'Product name',
-        minLength: 3, 
-        maxLength: 100 
-      }),
-      name: sanitizeAndValidateText(product.productName || product.title || product.name, { 
-        fieldName: 'Product name',
-        minLength: 3, 
-        maxLength: 100 
-      }),
-      brand: sanitizeAndValidateText(product.brand, { maxLength: 100, required: false }),
-      category: sanitizeAndValidateText(product.category, {
-        fieldName: 'Category',
-        required: true
-      }),
-      subcategory: product.subcategory || "",
-      // Map shortDescription from frontend to description for backend compatibility
-      description: sanitizeAndValidateText(product.shortDescription || product.description, { 
-        fieldName: 'Short Description',
-        minLength: 10, 
-        maxLength: 2000 
-      }),
-      shortDescription: sanitizeAndValidateText(product.shortDescription, { 
-        fieldName: 'Short Description',
-        minLength: 10,
-        maxLength: 250,
-        required: true
-      }),
-      
-      // Enhanced pricing fields with business logic validation and field mapping
-      price: validateAndFormatPrice(product.sellingPrice || product.price, {
-        fieldName: 'Selling Price'
-      }),
-      sellingPrice: validateAndFormatPrice(product.sellingPrice || product.price, {
-        fieldName: 'Selling Price'
-      }),
-      buyingPrice: validateAndFormatPrice(product.buyingPrice, { required: false }),
-      costPrice: validateAndFormatPrice(product.buyingPrice, { required: false }),
-      discountedPrice: validateAndFormatPrice(product.discountedPrice, { required: false }),
-      discountAmount: validateAndFormatPrice(product.discountAmount, { required: false }),
-      discountType: product.discountType || "percentage",
-      
-      // Calculate profit metrics with validation
-      profitMargin: calculateProfitMargin(product.sellingPrice, product.buyingPrice),
-      
-      // Inventory management with validation
-      stock: validateAndFormatQuantity(product.stockQuantity),
-      stockQuantity: validateAndFormatQuantity(product.stockQuantity),
-      stockStatus: determineStockStatus(product.stockQuantity, product.lowStockThreshold),
-      
-      // Product identification with validation
-      sku: validateSku(product.sku),
-      barcode: validateBarcode(product.barcode),
-      
-      // Media and content
-      mainImage: product.mainImage || "",
-      mainImageAltText: sanitizeAndValidateText(product.mainImageAltText, { maxLength: 125, required: false }),
-      images: product.images || [],
-      tags: product.tags || [],
-      
-      // Physical properties
-      weight: product.weight || "",
-      dimensions: product.dimensions || "",
-      
-      // Order management with validation
-      unitOfMeasurement: product.unitOfMeasurement || "piece",
-      minimumOrderQuantity: validateAndFormatQuantity(product.minimumOrderQuantity, { min: 1, defaultValue: 1 }),
-      maximumOrderQuantity: validateAndFormatQuantity(product.maximumOrderQuantity, { required: false }),
-      reorderLevel: validateAndFormatQuantity(product.reorderLevel, { defaultValue: 0 }),
-      lowStockThreshold: validateAndFormatQuantity(product.lowStockThreshold, { defaultValue: 10 }),
-      
-      // Supply chain information
-      location: sanitizeAndValidateText(product.location, { maxLength: 100, required: false }),
-      supplierInfo: sanitizeAndValidateText(product.supplierInfo, { maxLength: 200, required: false }),
-      lastRestocked: product.lastRestocked || "",
-      expiryDate: product.expiryDate || "",
-      batchNumber: sanitizeAndValidateText(product.batchNumber, { maxLength: 50, required: false }),
-      notes: sanitizeAndValidateText(product.notes, { maxLength: 300, required: false }),
-      
-      // Enhanced marketing fields
-      bannerText: sanitizeAndValidateText(product.bannerText, { maxLength: 100, required: false }),
-      badges: Array.isArray(product.badges) ? product.badges.filter(badge => typeof badge === 'string') : [],
-      includeInDeals: Boolean(product.includeInDeals),
-      countdownHours: product.countdownHours ? parseInt(product.countdownHours) : null,
-      countdownMinutes: product.countdownMinutes ? parseInt(product.countdownMinutes) : null,
-      countdownSeconds: product.countdownSeconds ? parseInt(product.countdownSeconds) : null,
-      
-      // SEO and marketing
-      metaTitle: sanitizeAndValidateText(product.metaTitle, { maxLength: 60, required: false }),
-      metaDescription: sanitizeAndValidateText(product.metaDescription, { maxLength: 160, required: false }),
-      videoUrl: validateUrl(product.videoUrl),
-      
-      // Enhanced scheduling fields with validation
-      scheduledPublish: product.scheduledPublish || null,
-      scheduledPublishType: product.scheduledPublishType || "none",
-      publishImmediately: Boolean(product.publishImmediately),
-      recurringSchedule: product.recurringSchedule ? {
-        frequency: product.recurringSchedule.frequency || "daily",
-        dayOfWeek: parseInt(product.recurringSchedule.dayOfWeek) || 1,
-        dayOfMonth: parseInt(product.recurringSchedule.dayOfMonth) || 1,
-        time: product.recurringSchedule.time || "09:00"
-      } : null,
-      scheduledAt: product.scheduledPublish ? new Date().toISOString() : null,
-      autoPublishEnabled: Boolean(product.scheduledPublish || product.recurringSchedule),
-      
-      // System fields with audit trail
-      createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-      createdBy: product.createdBy || 'system',
-      modifiedBy: product.modifiedBy || 'system',
-      version: 1,
-      
-      // Enhanced approval workflow fields
-      status: product.status || 'pending', // pending, approved, rejected
-      visibility: product.visibility || "draft", // draft, published
-      workflowStatus: product.workflowStatus || "draft", // draft, review, approved, published
-      requiresApproval: product.requiresApproval !== false, // default true for new products
-      
-      // Approval tracking
-      approvedAt: product.status === 'approved' ? new Date().toISOString() : null,
-      approvedBy: product.status === 'approved' ? (product.approvedBy || 'system') : null,
-      rejectedAt: product.status === 'rejected' ? new Date().toISOString() : null,
-      rejectedBy: product.status === 'rejected' ? (product.rejectedBy || 'system') : null,
-      rejectionReason: product.status === 'rejected' ? product.rejectionReason : null,
-      
-      // Publication tracking
-      publishedAt: product.visibility === 'published' && product.status === 'approved' ? new Date().toISOString() : null,
-      publishedBy: product.visibility === 'published' && product.status === 'approved' ? (product.publishedBy || 'system') : null,
-      
-      // Data integrity
-      dataChecksum: generateProductChecksum({
-        title: product.title,
-        sku: product.sku,
-        sellingPrice: product.sellingPrice,
-        stockQuantity: product.stockQuantity
-      }),
-      
-      // Validation metadata
-      validatedAt: new Date().toISOString(),
-      validationVersion: '1.0',
-      
-      // Enhanced audit trail with approval workflow
-      auditLog: [{
-        action: product.scheduledPublish ? 'scheduled' : 'created',
-        timestamp: new Date().toISOString(),
-        user: product.createdBy || 'system',
-        details: product.scheduledPublish ? 
-          `Product scheduled for publication on ${new Date(product.scheduledPublish).toLocaleString()}` : 
-          'Product created and pending approval',
-        validation: 'passed',
-        workflowStep: 'creation',
-        approvalStatus: product.status || 'pending',
-        schedulingInfo: product.scheduledPublish ? {
-          type: product.scheduledPublishType || "date",
-          scheduledTime: product.scheduledPublish,
-          recurring: product.recurringSchedule || null
-        } : null
-      }],
-      
-      // Legacy compatibility fields
-      image: product.mainImage || "",
-      oldPrice: validateAndFormatPrice(product.sellingPrice),
-      featured: Boolean(product.featured),
-      moderatorApproved: product.status === 'approved' // backward compatibility
-    };
-    
-    // Final business logic validation
-    const businessValidation = validateBusinessLogic(processedProduct);
-    if (!businessValidation.isValid) {
-      throw new Error(`Business logic validation failed: ${businessValidation.errors.join(', ')}`);
-    }
-    
-    // Add to products array with error handling
-    try {
-      productsData.push(processedProduct);
-      
-      // Log successful creation
-      console.log(`✅ Product created successfully:`, {
-        id: newId,
-        title: processedProduct.title,
-        sku: processedProduct.sku,
-        price: processedProduct.sellingPrice,
-        status: processedProduct.status,
-        visibility: processedProduct.visibility,
-        requiresApproval: processedProduct.requiresApproval,
-        marketing: {
-          tags: processedProduct.tags,
-          badges: processedProduct.badges,
-          dealOfDay: processedProduct.includeInDeals,
-          bannerText: processedProduct.bannerText
-        }
-      });
-      
-      return { ...processedProduct };
-      
-    } catch (error) {
-      console.error('❌ Error adding product to data store:', error);
-      throw new Error('Failed to save product to database');
-    }
-},
-
+    return null;
+  },
   // Enhanced toggle product visibility with approval workflow
   async toggleVisibility(id) {
     const product = mockProducts.find(p => p.Id === parseInt(id));
@@ -1892,5 +2049,9 @@ getTrendingByLocation: async (location) => {
       .sort((a, b) => b.score - a.score)
       .slice(0, 8)
       .map(({ score, ...product }) => ({ ...product })); // Remove score from final result
-  }
+}
 };
+
+// Export singleton instance
+export const productService = new ProductService();
+export default productService;
