@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { getCartFromStorage, saveCartToStorage } from "@/utils/storage";
-import { ProductService } from "@/services/api/ProductService";
+import ProductService from "@/services/api/ProductService";
 
 export const useCart = () => {
   const [cartItems, setCartItems] = useState([]);
