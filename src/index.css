@@ -18,14 +18,59 @@ html {
 body {
   font-family: 'Inter', sans-serif;
   line-height: 1.6;
+  letter-spacing: 0.01em;
   color: #333;
   background-color: #F5F5F5;
+  word-spacing: 0.05em;
 }
-
 .font-display {
   font-family: 'Poppins', sans-serif;
+  letter-spacing: -0.01em;
+  word-spacing: 0.05em;
 }
 
+/* Global text spacing standards */
+p, .text-content {
+  margin-bottom: 1rem;
+  word-spacing: 0.05em;
+  line-height: 1.65;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.02em;
+  word-spacing: 0.03em;
+  line-height: 1.3;
+  margin-bottom: 0.75rem;
+}
+
+/* Enhanced spacing for lists */
+ul, ol {
+  margin-bottom: 1rem;
+}
+
+li {
+  margin-bottom: 0.25rem;
+  word-spacing: 0.05em;
+}
+
+/* Form element spacing */
+label {
+  display: block;
+  margin-bottom: 0.375rem;
+  letter-spacing: 0.01em;
+  word-spacing: 0.05em;
+}
+
+input, textarea, select {
+  margin-bottom: 1rem;
+  letter-spacing: 0.01em;
+}
+
+/* Button spacing */
+button {
+  letter-spacing: 0.025em;
+  word-spacing: 0.05em;
+}
 .Toastify__toast-container {
   z-index: 9999;
 }
@@ -136,6 +181,11 @@ body.admin-emergency-cleanup .backdrop {
   z-index: 10000 !important;
   position: relative !important;
   background: white !important;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  word-spacing: 0.05em;
 }
 
 /* Force hide any persistent overlays on admin routes */
@@ -292,21 +342,56 @@ div[class*="mask"][style*="position: fixed"],
 .admin-content {
   z-index: 1001;
 }
-
 .admin-content {
   z-index: 1001;
   position: relative;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+  word-spacing: 0.05em;
 }
 
+/* Enhanced spacing for admin text content */
+.admin-content p {
+  margin-bottom: 1rem;
+  line-height: 1.65;
+  word-spacing: 0.05em;
+}
+
+.admin-content h1, .admin-content h2, .admin-content h3 {
+  margin-bottom: 1rem;
+  margin-top: 1.5rem;
+  letter-spacing: -0.02em;
+  word-spacing: 0.03em;
+  line-height: 1.3;
+}
+
+.admin-content ul, .admin-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.admin-content li {
+  margin-bottom: 0.375rem;
+  line-height: 1.6;
+  word-spacing: 0.05em;
+}
+
+/* ESSENTIAL INPUT STYLING */
 /* ESSENTIAL INPUT STYLING */
 
 /* Basic input normalization */
 input, textarea, [contenteditable] {
   font-family: inherit;
   font-size: inherit;
-  line-height: inherit;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  word-spacing: 0.05em;
   color: inherit;
   background: inherit;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 /* Ensure proper text cursor behavior */
