@@ -244,7 +244,6 @@ const validateProductUpdateData = async (data, originalProduct) => {
     errors
   };
 };
-
 // Helper function for bulk update validation - moved here for proper scope
 const validateBulkUpdateEdgeCases = async (updates) => {
   const criticalErrors = [];
@@ -1890,7 +1889,7 @@ getTrendingByLocation: async (location) => {
     return scoredProducts
       .filter(p => p.score > 0) // Only products with positive scores
       .sort((a, b) => b.score - a.score)
-.slice(0, 8)
+      .slice(0, 8)
       .map(({ score, ...product }) => ({ ...product })); // Remove score from final result
   }
 };
