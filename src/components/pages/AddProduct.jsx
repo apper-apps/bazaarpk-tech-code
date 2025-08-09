@@ -34,8 +34,8 @@ const navigate = useNavigate();
     return () => {};
   }, []);
 
-  const [formData, setFormData] = useState({
-brand: "",
+const [formData, setFormData] = useState({
+    brand: "",
     category: "",
     subcategory: "",
     sellingPrice: "",
@@ -47,7 +47,7 @@ brand: "",
     stockQuantity: "",
     lowStockThreshold: "10",
     sku: "",
-barcode: "",
+    barcode: "",
     mainImage: null,
     mainImageAltText: "",
     additionalImages: [],
@@ -69,7 +69,7 @@ barcode: "",
     bundleSavings: "",
     preparationTime: "",
     servings: "",
-visibility: "draft",
+    visibility: "draft",
     moderatorApproved: false,
     requiresApproval: true,
     scheduledPublish: "",
@@ -81,7 +81,7 @@ visibility: "draft",
       dayOfMonth: 1, // 1-31 for monthly
       time: "09:00"
     },
-metaTitle: "",
+    metaTitle: "",
     metaDescription: "",
     urlSlug: "",
     seoKeywords: [],
@@ -231,7 +231,7 @@ const handleInputChange = (field, value, validationInfo = {}) => {
     let fieldError = null;
     
     if (typeof value === 'string') {
-      switch (field) {
+switch (field) {
         case 'brand':
         case 'category':
         case 'subcategory':
@@ -243,9 +243,7 @@ const handleInputChange = (field, value, validationInfo = {}) => {
           if (field === 'brand' && sanitizedValue && sanitizedValue.length < 2) {
             fieldError = "Brand name must be at least 2 characters long";
           }
-          break;
-        case 'category':
-          if (!sanitizedValue || sanitizedValue.trim() === '') {
+          if (field === 'category' && (!sanitizedValue || sanitizedValue.trim() === '')) {
             fieldError = "Category is required and cannot be empty";
           }
           break;
