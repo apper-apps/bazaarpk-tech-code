@@ -343,68 +343,17 @@ useEffect(() => {
     // Nuclear Option - Fallback Spacebar Handler
     const nuclearSpacebarHandler = function(e) {
       if (e.key === ' ' && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        const active = document.activeElement;
-        
-        // Only handle for text input elements
-        if (active && (
-          active.tagName === 'INPUT' && ['text', 'email', 'search', 'url', 'tel'].includes(active.type) ||
-          active.tagName === 'TEXTAREA' ||
-          active.isContentEditable
-        )) {
-          
-          // Check if space was actually prevented
-          setTimeout(() => {
-            const currentValue = active.value || active.innerText || '';
-            const cursorPos = active.selectionStart !== undefined ? active.selectionStart : 0;
-            
-            // If no space was inserted where expected, force it
-            if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') {
-              const beforeCursor = currentValue.substring(0, cursorPos);
-              const afterCursor = currentValue.substring(active.selectionEnd || cursorPos);
-              
-              // Check if we need to insert a space
-              if (beforeCursor && !beforeCursor.endsWith(' ') && afterCursor && !afterCursor.startsWith(' ')) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                
-                const newValue = beforeCursor + ' ' + afterCursor;
-                active.value = newValue;
-                active.selectionStart = active.selectionEnd = cursorPos + 1;
-                
-                // Trigger input events for React reactivity
-                const inputEvent = new Event('input', { bubbles: true });
-                const changeEvent = new Event('change', { bubbles: true });
-                active.dispatchEvent(inputEvent);
-                active.dispatchEvent(changeEvent);
-                
-                console.log('🚀 Nuclear option: Space inserted manually');
-              }
-            } else if (active.isContentEditable) {
-              // Handle contentEditable elements
-              const selection = window.getSelection();
-              if (selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
-                const textNode = document.createTextNode(' ');
-                range.insertNode(textNode);
-                range.setStartAfter(textNode);
-                range.setEndAfter(textNode);
-                selection.removeAllRanges();
-                selection.addRange(range);
-                
-                console.log('🚀 Nuclear option: Space inserted in contentEditable');
-              }
-            }
-          }, 1); // Minimal delay to check if space was inserted naturally
-        }
+// Allow natural keyboard input without interference
       }
     };
 
-    // Add nuclear option handler with highest priority
-    document.addEventListener('keydown', nuclearSpacebarHandler, {
-      capture: true,
-      passive: false
+    // Simple keyboard event listener for accessibility
+    document.addEventListener('keydown', (e) => {
+      // Let browser handle all input naturally
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
+        return; // Allow natural input behavior
+      }
     });
-
     // Enhanced input field initialization
     const initializeInputFields = () => {
       const inputs = document.querySelectorAll('input, textarea, [contenteditable]');

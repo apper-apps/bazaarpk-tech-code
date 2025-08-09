@@ -39,7 +39,7 @@ const PriceDisplay = ({
 
 return (
     <div className={cn("space-y-2", className)} {...props}>
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center gap-2">
         <span className={cn("price-highlight", sizes[size].current)}>
           {formatPrice(price)}
         </span>
@@ -59,8 +59,8 @@ return (
         )}
       </div>
 
-      {showBulkDiscount && bulkSavings > 0 && (
-        <div className="flex items-center space-x-2">
+{showBulkDiscount && bulkSavings > 0 && (
+        <div className="flex items-center gap-2">
           <span className="text-green-600 font-semibold text-sm">
             Bulk Savings: {formatPrice(bulkSavings)}
           </span>

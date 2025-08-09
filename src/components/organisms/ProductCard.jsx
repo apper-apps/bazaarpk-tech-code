@@ -113,10 +113,10 @@ const handleAddToCart = (e) => {
             {product.title}
           </h3>
 
-          {/* Variants */}
+{/* Variants */}
           {product.variants && product.variants.length > 0 && (
             <div className="mb-3">
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-2">
                 {product.variants.slice(0, 3).map((variant, index) => (
                   <button
                     key={index}
@@ -139,11 +139,11 @@ const handleAddToCart = (e) => {
               </div>
             </div>
           )}
-
-          {/* Price */}
-          <div className="mb-3">
+{/* Price */}
+          <div className="mb-4">
             <PriceDisplay 
               price={currentPrice}
+              oldPrice={currentOldPrice}
               oldPrice={currentOldPrice}
               size="sm"
             />
