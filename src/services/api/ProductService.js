@@ -11,7 +11,7 @@ const validateProductData = async (product) => {
     errors.push('Product name is required and must be at least 3 characters long');
   }
   
-  if (!product.sellingPrice || product.sellingPrice.toString().trim() === '' || isNaN(parseFloat(product.sellingPrice)) || parseFloat(product.sellingPrice) <= 0) {
+if (!product.sellingPrice || product.sellingPrice.toString().trim() === '' || isNaN(parseFloat(product.sellingPrice)) || parseFloat(product.sellingPrice) <= 0) {
     errors.push('Selling Price is required and cannot be empty');
   }
   
@@ -19,7 +19,7 @@ const validateProductData = async (product) => {
     errors.push('Category is required and cannot be empty');
   }
   
-  if (!product.description || product.description.trim() === '') {
+if (!product.description || product.description.trim() === '') {
     errors.push('Description is required and cannot be empty');
   } else if (product.description.trim().length < 20) {
     errors.push('Description must be at least 20 characters long');
@@ -165,10 +165,10 @@ const validateProductUpdateData = async (data, originalProduct) => {
     errors.push('Title must be at least 3 characters long');
   }
   
-  if (data.sellingPrice !== undefined) {
+if (data.sellingPrice !== undefined) {
     const price = parseFloat(data.sellingPrice);
     if (isNaN(price) || price <= 0) {
-      errors.push('Selling price must be a positive number');
+      errors.push('Selling Price is required and cannot be empty');
     }
   }
   
@@ -176,6 +176,19 @@ const validateProductUpdateData = async (data, originalProduct) => {
     const stock = parseInt(data.stockQuantity);
     if (isNaN(stock) || stock < 0) {
 errors.push('Stock quantity must be a non-negative number');
+    }
+  }
+  
+  // Add category and description validation for updates
+  if (data.category !== undefined && (!data.category || data.category.trim() === '')) {
+    errors.push('Category is required and cannot be empty');
+  }
+  
+  if (data.description !== undefined) {
+    if (!data.description || data.description.trim() === '') {
+      errors.push('Description is required and cannot be empty');
+    } else if (data.description.trim().length < 20) {
+      errors.push('Description must be at least 20 characters long');
     }
   }
   
