@@ -527,8 +527,11 @@ function ManageProducts() {
 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               >
 <option value="">All Categories</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.name}>
+                {categories.map((category, index) => (
+                  <option 
+                    key={category.id || category.name || `category-${index}`} 
+                    value={category.name}
+                  >
                     {category.name}
                   </option>
                 ))}
