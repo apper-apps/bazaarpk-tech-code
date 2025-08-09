@@ -1273,10 +1273,10 @@ productName: "",
           <p className="text-xs text-gray-500">
             {formData.metaTitle.length}/60 characters
           </p>
-          {!formData.metaTitle && formData.title && (
+{!formData.metaTitle && formData.productName && (
             <button
               type="button"
-              onClick={() => handleInputChange('metaTitle', formData.title)}
+              onClick={() => handleInputChange('metaTitle', formData.productName)}
               className="text-xs text-primary-600 hover:text-primary-700"
             >
               Use product title
@@ -1343,11 +1343,11 @@ productName: "",
                 </p>
               )}
             </div>
-            {!formData.urlSlug && formData.title && (
+{!formData.urlSlug && formData.productName && (
               <button
                 type="button"
                 onClick={() => {
-                  const autoSlug = formData.title.toLowerCase()
+                  const autoSlug = formData.productName.toLowerCase()
                     .replace(/[^a-z0-9\s-]/g, '')
                     .replace(/\s+/g, '-')
                     .replace(/-+/g, '-')
@@ -1357,7 +1357,7 @@ productName: "",
                 }}
                 className="text-xs text-primary-600 hover:text-primary-700 whitespace-nowrap"
               >
-                Generate from title
+                Generate from product name
               </button>
             )}
           </div>
@@ -2366,7 +2366,7 @@ const renderInventory = () => (
                 variant="outline"
                 onClick={() => {
                   const categoryPrefix = formData.category?.substring(0,3).toUpperCase() || 'PRD';
-                  const titlePrefix = formData.title?.substring(0,3).toUpperCase() || 'ITM';
+const titlePrefix = formData.productName?.substring(0,3).toUpperCase() || 'ITM';
                   const timestamp = Date.now().toString().slice(-4);
                   const autoSku = `${categoryPrefix}-${titlePrefix}-${timestamp}`;
                   handleInputChange("sku", autoSku);
@@ -2970,8 +2970,8 @@ const handleAdditionalImageUpload = (files) => {
       const newImages = validImages.map(file => ({
         file,
         preview: URL.createObjectURL(file),
-        id: Date.now() + Math.random(),
-        altText: `${formData.title || 'Product'} - Additional Image`,
+id: Date.now() + Math.random(),
+        altText: `${formData.productName || 'Product'} - Additional Image`,
         order: formData.additionalImages.length
       }));
       
