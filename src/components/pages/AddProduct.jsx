@@ -923,7 +923,7 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
       const sanitizedData = {
 ...formData,
         // Enhanced field sanitization with validation
-productName: sanitizeInput(formData.productName, { 
+productName: sanitizeInput(formData.productName || '', { 
           maxLength: 150, 
           allowNumbers: true, 
           allowSpecialChars: true,

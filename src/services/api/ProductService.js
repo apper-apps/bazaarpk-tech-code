@@ -1564,27 +1564,41 @@ return null;
       });
       
       // Enhanced validation with multiple field name checks
+// Enhanced validation with comprehensive field checking
       const validationErrors = [];
       
-      // Category validation - check both original and mapped field names
+      // Category validation - check both original and mapped field names with null safety
       const categoryValue = mappedData.category || productData.category;
-      if (!categoryValue || (typeof categoryValue === 'string' && categoryValue.trim() === '')) {
+      if (!categoryValue || 
+          (typeof categoryValue === 'string' && categoryValue.trim() === '') ||
+          categoryValue === null || 
+          categoryValue === undefined) {
         validationErrors.push('Category is required and cannot be empty');
       }
       
-      // Price validation - check both sellingPrice and price fields
-      const priceValue = mappedData.price || productData.sellingPrice || productData.price;
-      if (!priceValue || (typeof priceValue === 'string' && priceValue.trim() === '') || isNaN(parseFloat(priceValue)) || parseFloat(priceValue) <= 0) {
+      // Price validation - comprehensive check for all possible price field variations
+      const priceValue = mappedData.price || productData.sellingPrice || productData.price || mappedData.sellingPrice;
+      const numericPrice = typeof priceValue === 'string' ? parseFloat(priceValue.trim()) : parseFloat(priceValue);
+      
+      if (!priceValue || 
+          (typeof priceValue === 'string' && priceValue.trim() === '') || 
+          priceValue === null || 
+          priceValue === undefined ||
+          isNaN(numericPrice) || 
+          numericPrice <= 0) {
         validationErrors.push('Selling Price is required and cannot be empty');
       }
       
-      // SKU validation - check both original and mapped field names  
+      // SKU validation - check both original and mapped field names with comprehensive validation
       const skuValue = mappedData.sku || productData.sku;
-      if (!skuValue || (typeof skuValue === 'string' && skuValue.trim() === '')) {
+      if (!skuValue || 
+          (typeof skuValue === 'string' && skuValue.trim() === '') ||
+          skuValue === null || 
+          skuValue === undefined) {
         validationErrors.push('Sku is required and cannot be empty');
       }
       
-      if (validationErrors.length > 0) {
+if (validationErrors.length > 0) {
         const error = new Error(`Final validation failed: ${validationErrors.join(', ')}`);
         error.validationErrors = validationErrors;
         throw error;
