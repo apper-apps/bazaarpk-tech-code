@@ -1,21 +1,15 @@
-import React from "react";
-import { Error } from "@/components/ui/Error";
 import productsData from "@/services/mockData/products.json";
 import { storage } from "@/utils/storage";
 import cacheManager from "@/utils/cacheManager";
-/**
- * ProductService - Comprehensive product management service
- * Handles all product CRUD operations, validation, and data sanitization
- */
 
-// Internal validation utilities
-const sanitizeAndValidateText = (text, minLength = 1, maxLength = 255) => {
-  if (!text || typeof text !== 'string') {
-    return { isValid: false, sanitized: '', error: 'Text is required' };
-  }
+function sanitizeAndValidateText(text, minLength = 1, maxLength = 255) { 
+  if (typeof text !== 'string') return { isValid: false, sanitized: '', error: 'Text must be a string' };
   
-  const sanitized = text.trim().replace(/<[^>]*>/g, ''); // Basic HTML sanitization
-  
+  const sanitized = text
+    .trim()
+    .replace(/<[^>]*>/g, '') // Remove potential HTML tags
+    .replace(/\s+/g, ' '); // Normalize whitespace
+      
   if (sanitized.length < minLength) {
     return { isValid: false, sanitized, error: `Minimum length is ${minLength} characters` };
   }
@@ -25,7 +19,7 @@ const sanitizeAndValidateText = (text, minLength = 1, maxLength = 255) => {
   }
   
   return { isValid: true, sanitized, error: null };
-};
+}
 
 const validateAndFormatPrice = (price) => {
   const numPrice = parseFloat(price);
@@ -893,30 +887,26 @@ throw new Error('Invalid product IDs provided');
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
     if (index === -1) {
-      return null;
+return null;
     }
     
     const product = productsData[index];
     const currentVisibility = product.visibility || 'draft';
     const currentStatus = product.status || 'pending';
-    
-    // Enhanced workflow validation - auto-approve if admin/moderator
-    if (currentVisibility === 'draft' && currentStatus !== 'approved') {
-      // Auto-approve and publish for admin users
-      const timestamp = new Date().toISOString();
-      
+    const timestamp = new Date().toISOString();
+
+    // Auto-approve and publish if needed
+    if (currentVisibility === 'draft' && currentStatus === 'pending') {
       productsData[index] = {
         ...product,
-        status: 'approved',
         visibility: 'published',
+        status: 'approved',
         approvedAt: timestamp,
         approvedBy: 'admin',
         publishedAt: timestamp,
         publishedBy: 'admin',
         lastModified: timestamp,
-        moderatorApproved: true,
         
-        // Update audit log
         auditLog: [
           ...(product.auditLog || []),
           {
@@ -936,7 +926,7 @@ throw new Error('Invalid product IDs provided');
         ]
       };
       
-// Trigger cache invalidation for homepage
+      // Trigger cache invalidation for homepage
       try {
         if (typeof window !== 'undefined' && window.CustomEvent) {
           window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
@@ -962,7 +952,6 @@ throw new Error('Invalid product IDs provided');
     
     // Regular visibility toggle for approved products
     const newVisibility = currentVisibility === 'published' ? 'draft' : 'published';
-    const timestamp = new Date().toISOString();
     const affectsHomepage = newVisibility === 'published' || currentVisibility === 'published';
     
     productsData[index] = {
@@ -988,7 +977,7 @@ throw new Error('Invalid product IDs provided');
       ]
     };
     
-// Cache invalidation for homepage-affecting changes
+    // Cache invalidation for homepage-affecting changes
     if (affectsHomepage) {
       try {
         if (typeof window !== 'undefined' && window.CustomEvent) {
@@ -1015,7 +1004,7 @@ throw new Error('Invalid product IDs provided');
     return { ...productsData[index] };
   },
 // Enhanced async toggleFeatured with approval workflow
-toggleFeatured: async (id) => {
+  toggleFeatured: async (id) => {
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
     if (index === -1) {
@@ -1058,7 +1047,7 @@ toggleFeatured: async (id) => {
       ]
     };
     
-// Cache invalidation for featured changes (affects homepage)
+    // Cache invalidation for featured changes (affects homepage)
     try {
       if (typeof window !== 'undefined' && window.CustomEvent) {
         window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
@@ -1083,7 +1072,7 @@ toggleFeatured: async (id) => {
     return { ...productsData[index] };
   },
 
-// Enhanced status update with workflow validation and cache invalidation
+  // Enhanced status update with workflow validation and cache invalidation
   updateStatus: async (id, status) => {
     await new Promise(resolve => setTimeout(resolve, 200));
     const index = productsData.findIndex(product => product.Id === parseInt(id));
@@ -1150,7 +1139,7 @@ toggleFeatured: async (id) => {
       ]
     };
     
-// Cache invalidation for homepage-affecting status changes
+    // Cache invalidation for homepage-affecting status changes
     if (affectsHomepage) {
       try {
         if (typeof window !== 'undefined' && window.CustomEvent) {
@@ -1178,7 +1167,7 @@ toggleFeatured: async (id) => {
     return { ...productsData[index] };
   },
 
-// Enhanced get featured products with approval workflow
+  // Enhanced get featured products with approval workflow
   getFeaturedProducts: async () => {
     await new Promise(resolve => setTimeout(resolve, 300));
     return productsData
@@ -1226,8 +1215,6 @@ toggleFeatured: async (id) => {
     };
   },
 
-// Removed duplicate getByCategory function - already defined earlier in the service
-
   searchProducts: async (query) => {
     await new Promise(resolve => setTimeout(resolve, 300));
     if (!query) return productsData.map(product => ({ ...product }));
@@ -1245,7 +1232,7 @@ toggleFeatured: async (id) => {
   },
 
   // Advanced filtering
-filterProducts: async (filters) => {
+  filterProducts: async (filters) => {
     await new Promise(resolve => setTimeout(resolve, 400));
     let filtered = [...productsData];
 
@@ -1298,7 +1285,7 @@ filterProducts: async (filters) => {
       }
     }
 
-// Enhanced status filtering with approval workflow
+    // Enhanced status filtering with approval workflow
     if (filters.status && filters.status !== 'all') {
       if (filters.status === 'published') {
         filtered = filtered.filter(p => 
@@ -1350,7 +1337,7 @@ filterProducts: async (filters) => {
     return Array.from(allTags).sort();
   },
 
-// Enhanced method for getting featured products with approval workflow
+  // Enhanced method for getting featured products with approval workflow
   getFeaturedProductsAdvanced: async (options = {}) => {
     await new Promise(resolve => setTimeout(resolve, 300));
     const { limit = 8, category = null, excludeIds = [] } = options;
@@ -1444,85 +1431,97 @@ filterProducts: async (filters) => {
 
     return sorted;
   },
-getTrendingByLocation: async (location) => {
+
+  getTrendingByLocation: async (location) => {
     await new Promise(resolve => setTimeout(resolve, 400));
     
     if (!location) {
       // Fallback to general trending if no location
+      const mockProducts = productsData;
       return mockProducts
         .filter(p => p.badges?.includes("BESTSELLER"))
         .slice(0, 8)
         .map(product => ({ ...product }));
     }
 
-    const { LocationService } = await import('@/services/api/LocationService');
-    
-    // Get weather-appropriate categories
-    const preferredCategories = LocationService.getWeatherBasedCategories(
-      location.weather, 
-      location.temperature
-    );
-    
-    // Get seasonal product names
-    const seasonalProducts = LocationService.getSeasonalProducts(location.weather);
-    
-    // Score products based on location context
-    const scoredProducts = mockProducts.map(product => {
-      let score = 0;
+    try {
+      const { LocationService } = await import('@/services/api/LocationService');
       
-      // Base score for bestsellers
-      if (product.badges?.includes("BESTSELLER")) score += 10;
-      if (product.badges?.includes("PREMIUM")) score += 5;
-      if (product.badges?.includes("FRESH")) score += 3;
-      
-      // Weather-based category bonus
-      if (preferredCategories.includes(product.category)) {
-        score += 15;
-      }
-      
-      // Seasonal product name match bonus
-      const isSeasonalMatch = seasonalProducts.some(seasonal => 
-        product.title?.toLowerCase().includes(seasonal.toLowerCase()) ||
-        seasonal.toLowerCase().includes(product.title?.toLowerCase().split(' ')[0])
+      // Get weather-appropriate categories
+      const preferredCategories = LocationService.getWeatherBasedCategories(
+        location.weather, 
+        location.temperature
       );
-      if (isSeasonalMatch) score += 20;
       
-      // Weather-specific bonuses
-      if (location.weather === 'hot' || location.weather === 'warm') {
-        if (product.category === 'diet' || product.category === 'fruits') score += 12;
-        if (product.title?.toLowerCase().includes('tea') || 
-            product.title?.toLowerCase().includes('cold') ||
-            product.title?.toLowerCase().includes('fresh')) score += 8;
-      }
+      // Get seasonal product names
+      const seasonalProducts = LocationService.getSeasonalProducts(location.weather);
       
-      if (location.weather === 'cool' || location.weather === 'cold') {
-        if (product.category === 'electric' || product.category === 'foods') score += 12;
-        if (product.title?.toLowerCase().includes('heater') || 
-            product.title?.toLowerCase().includes('warm') ||
-            product.title?.toLowerCase().includes('ghee') ||
-            product.title?.toLowerCase().includes('honey')) score += 8;
-      }
+      // Score products based on location context
+      const mockProducts = productsData;
+      const scoredProducts = mockProducts.map(product => {
+        let score = 0;
+        
+        // Base score for bestsellers
+        if (product.badges?.includes("BESTSELLER")) score += 10;
+        if (product.badges?.includes("PREMIUM")) score += 5;
+        if (product.badges?.includes("FRESH")) score += 3;
+        
+        // Weather-based category bonus
+        if (preferredCategories.includes(product.category)) {
+          score += 15;
+        }
+        
+        // Seasonal product name match bonus
+        const isSeasonalMatch = seasonalProducts.some(seasonal => 
+          product.title?.toLowerCase().includes(seasonal.toLowerCase()) ||
+          seasonal.toLowerCase().includes(product.title?.toLowerCase().split(' ')[0])
+        );
+        if (isSeasonalMatch) score += 20;
+        
+        // Weather-specific bonuses
+        if (location.weather === 'hot' || location.weather === 'warm') {
+          if (product.category === 'diet' || product.category === 'fruits') score += 12;
+          if (product.title?.toLowerCase().includes('tea') || 
+              product.title?.toLowerCase().includes('cold') ||
+              product.title?.toLowerCase().includes('fresh')) score += 8;
+        }
+        
+        if (location.weather === 'cool' || location.weather === 'cold') {
+          if (product.category === 'electric' || product.category === 'foods') score += 12;
+          if (product.title?.toLowerCase().includes('heater') || 
+              product.title?.toLowerCase().includes('warm') ||
+              product.title?.toLowerCase().includes('ghee') ||
+              product.title?.toLowerCase().includes('honey')) score += 8;
+        }
+        
+        // Stock availability penalty
+        if (product.stock === 0) score -= 50;
+        else if (product.stock < 10) score -= 5;
+        
+        // Discount bonus
+        if (product.oldPrice && product.oldPrice > product.price) {
+          const discountPercent = ((product.oldPrice - product.price) / product.oldPrice) * 100;
+          score += Math.floor(discountPercent / 5); // 1 point per 5% discount
+        }
+        
+        return { ...product, score };
+      });
       
-      // Stock availability penalty
-      if (product.stock === 0) score -= 50;
-      else if (product.stock < 10) score -= 5;
-      
-      // Discount bonus
-      if (product.oldPrice && product.oldPrice > product.price) {
-        const discountPercent = ((product.oldPrice - product.price) / product.oldPrice) * 100;
-        score += Math.floor(discountPercent / 5); // 1 point per 5% discount
-      }
-      
-      return { ...product, score };
-    });
-    
-// Sort by score and return top 8
-    return scoredProducts
-      .filter(p => p.score > 0) // Only products with positive scores
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 8)
-      .map(({ score, ...product }) => ({ ...product })); // Remove score from final result
-}
+      // Sort by score and return top 8
+      return scoredProducts
+        .filter(p => p.score > 0) // Only products with positive scores
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 8)
+        .map(({ score, ...product }) => ({ ...product })); // Remove score from final result
+    } catch (error) {
+      console.warn('LocationService import failed, using fallback:', error);
+      const mockProducts = productsData;
+      return mockProducts
+        .filter(p => p.badges?.includes("BESTSELLER"))
+        .slice(0, 8)
+        .map(product => ({ ...product }));
+    }
+  }
 };
 
 // Export both named and default for compatibility
