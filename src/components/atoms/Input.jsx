@@ -270,6 +270,26 @@ onChange={(e) => {
                   }
                 }, 0);
               }
+              
+              // FALLBACK MECHANISM: Check for remaining merged words after auto-spacing
+              const mergedWordPattern = /[a-z][A-Z]|[a-zA-Z],[a-zA-Z]|[a-zA-Z]-[a-z][A-Z]/;
+              if (mergedWordPattern.test(newValue)) {
+                // Alert user about manual correction needed
+                setTimeout(() => {
+                  alert("Please separate words with spaces. Example: 'gluten-free, non GMO' instead of 'gluten-free,nonGMO'");
+                  // Return focus to the field for immediate correction
+                  if (e.target && e.target.focus) {
+                    e.target.focus();
+                    // Select the problematic text if possible
+                    const match = newValue.match(mergedWordPattern);
+                    if (match && e.target.setSelectionRange) {
+                      const startPos = match.index;
+                      const endPos = startPos + match[0].length;
+                      e.target.setSelectionRange(startPos, endPos);
+                    }
+                  }
+                }, 100);
+              }
             }
             
             handleChange({ ...e, target: { ...e.target, value: newValue } });
