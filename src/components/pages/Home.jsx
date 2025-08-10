@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/useToast";
 import { LocationService } from "@/services/api/LocationService";
 import { CategoryService } from "@/services/api/CategoryService";
-import { ProductService } from "@/services/api/ProductService";
+import ProductService from "@/services/api/ProductService";
 import { RecipeBundleService } from "@/services/api/RecipeBundleService";
 import RecipeBundles from "@/components/organisms/RecipeBundles";
 import DealsSection from "@/components/organisms/DealsSection";
