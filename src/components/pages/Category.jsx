@@ -8,7 +8,7 @@ import ProductCard from "@/components/organisms/ProductCard";
 import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
 import Empty from "@/components/ui/Empty";
-import { ProductService } from "@/services/api/ProductService";
+import productService from "@/services/api/ProductService";
 import { CategoryService } from "@/services/api/CategoryService";
 import { cn } from "@/utils/cn";
 
@@ -32,13 +32,13 @@ const [selectedCategory, setSelectedCategory] = useState(searchParams.get("categ
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  const loadData = async () => {
+const loadData = async () => {
     try {
       setLoading(true);
       setError("");
 
       const [productsData, categoriesData] = await Promise.all([
-        ProductService.getAll(),
+        productService.getAll(),
         CategoryService.getAll()
       ]);
 
