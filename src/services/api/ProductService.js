@@ -1,3 +1,5 @@
+import React from "react";
+import { Error } from "@/components/ui/Error";
 import productsData from "@/services/mockData/products.json";
 import { storage } from "@/utils/storage";
 import cacheManager from "@/utils/cacheManager";
@@ -389,7 +391,7 @@ if (!Array.isArray(ids) || ids.length === 0) {
             recoverable: true,
             recoveryExpires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
             
-            // Add to audit log
+// Add to audit log
             auditLog: [
               ...(product.auditLog || []),
               {
@@ -397,7 +399,13 @@ if (!Array.isArray(ids) || ids.length === 0) {
                 timestamp,
                 user: 'admin',
                 details: 'Product deleted via bulk operation',
-                recoverable: true
+                oldValues: { 
+                  title: product.title,
+                  price: product.price,
+                  stock: product.stock,
+                  status: product.status,
+                  visibility: product.visibility
+                }
               }
             ]
           };
@@ -437,6 +445,8 @@ if (!Array.isArray(ids) || ids.length === 0) {
       }
     };
   },
+
+// Enhanced bulk update with comprehensive approval workflow and cache invalidation
 
 // Enhanced bulk update with comprehensive approval workflow and cache invalidation
   bulkUpdate: async (updates) => {
@@ -1527,3 +1537,4 @@ return null;
 // Export both named and default for compatibility
 export { productService };
 export default productService;
+export { productService as ProductService };
