@@ -169,18 +169,17 @@ useEffect(() => {
       });
     }
   }, [formData.category, categories]);
-
-  // Autosave functionality
+// Autosave functionality with enhanced monitoring
   useEffect(() => {
-if (unsavedChanges && formData.productName) {
+    if (unsavedChanges && formData.productName) {
       const autoSaveTimer = setTimeout(() => {
+        console.log("Auto-save triggered for product:", formData.productName);
         handleAutoSave();
       }, 30000); // Autosave every 30 seconds
       
       return () => clearTimeout(autoSaveTimer);
     }
   }, [formData, unsavedChanges]);
-
   // Calculated values
 const sellingPrice = parseFloat(formData.sellingPrice) || 0;
   const buyingPrice = parseFloat(formData.buyingPrice) || 0;
@@ -1619,7 +1618,13 @@ const renderBasicInfo = () => (
             ariaLabel="Product name with automatic word spacing correction"
             maxLength={150}
             required
-            className="text-lg font-medium product-name"
+            className="text-lg font-medium product-name text-preview-enhanced"
+            id="product-name"
+            style={{
+              letterSpacing: '0.5px',
+              wordSpacing: '1.2px',
+              lineHeight: '1.65'
+            }}
           />
           <div className="mt-2 text-xs text-blue-700">
             <strong>Good examples:</strong> "Fresh Organic Basmati Rice", "Premium Himalayan Pink Salt", "Extra Virgin Olive Oil"
@@ -1647,16 +1652,17 @@ const renderBasicInfo = () => (
             onChange={(e) => handleInputChange("shortDescription", e.target.value)}
             className={cn(
               "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none",
-              "font-body text-base leading-relaxed product-description",
+              "font-body text-base leading-relaxed product-description text-preview-enhanced",
               errors.shortDescription && "border-red-500"
             )}
             rows={3}
             maxLength={250}
             data-auto-spacing="enabled"
+            id="short-description"
             style={{
               lineHeight: '1.65',
-              letterSpacing: '0.02em',
-              wordSpacing: '0.08em'
+              letterSpacing: '0.5px',
+              wordSpacing: '1.2px'
             }}
           />
           {errors.shortDescription && <p className="text-red-500 text-sm mt-1">{errors.shortDescription}</p>}
@@ -3599,7 +3605,11 @@ const renderPreviewModal = () => {
               )}
               
               <div>
-<h3 className="text-lg font-semibold product-title" style={{ letterSpacing: '-0.02em', wordSpacing: '0.05em' }}>
+<h3 className="text-lg font-semibold product-title text-preview-enhanced" style={{ 
+                  letterSpacing: '0.5px', 
+                  wordSpacing: '1.2px',
+                  lineHeight: '1.65'
+                }}>
                 {formData.productName || 'Product Preview'}
               </h3>
               {formData.brand && (
@@ -3640,10 +3650,10 @@ const renderPreviewModal = () => {
                   Product Information
                 </h4>
                 {formData.shortDescription ? (
-<p className="text-gray-700 text-sm mb-3 product-description" style={{ 
+<p className="text-gray-700 text-sm mb-3 product-description text-preview-enhanced" style={{ 
                     lineHeight: '1.65', 
-                    wordSpacing: '0.08em',
-                    letterSpacing: '0.02em'
+                    letterSpacing: '0.5px',
+                    wordSpacing: '1.2px'
                   }}>
                     {formData.shortDescription}
                   </p>
@@ -3656,13 +3666,13 @@ const renderPreviewModal = () => {
                 {formData.detailedDescription && (
                   <div className="mt-3 pt-3 border-t border-gray-200">
                     <h5 className="text-sm font-medium text-gray-900 mb-2">Detailed Description</h5>
-<div className="text-gray-700 text-sm product-description" style={{ 
+<div className="text-gray-700 text-sm product-description text-preview-enhanced" style={{ 
                       lineHeight: '1.65', 
-                      wordSpacing: '0.08em',
-                      letterSpacing: '0.02em',
+                      letterSpacing: '0.5px',
+                      wordSpacing: '1.2px',
                       whiteSpace: 'pre-wrap'
                     }}>
-                      {formData.detailedDescription.length > 200 
+                      {formData.detailedDescription.length > 200
                         ? formData.detailedDescription.substring(0, 200) + '...' 
                         : formData.detailedDescription}
                     </div>

@@ -532,5 +532,154 @@ td, th, .table-cell {
 .badge, .tag, [class*="badge"], [class*="tag"] {
   word-spacing: 0.05em;
   letter-spacing: 0.02em;
-  padding: 0.25rem 0.75rem;
+padding: 0.25rem 0.75rem;
+}
+
+/* ENHANCED CSS TYPOGRAPHY ENFORCEMENT */
+
+/* Real-time preview styling with enhanced letter and word spacing */
+#text-preview, .text-preview-enhanced, 
+#product-name, #short-description,
+[data-preview="true"], .product-preview {
+  letter-spacing: 0.5px !important;
+  word-spacing: 1.2px !important;
+  line-height: 1.65 !important;
+  font-feature-settings: 'kern' 1;
+  text-rendering: optimizeLegibility;
+}
+
+/* Enhanced typography for product content areas */
+.product-content-enhanced,
+.text-content-preview,
+.enhanced-spacing {
+  letter-spacing: 0.5px;
+  word-spacing: 1.2px;
+  line-height: 1.65;
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Specific styling for form inputs with auto-spacing */
+input[data-auto-spacing="enabled"],
+textarea[data-auto-spacing="enabled"] {
+  letter-spacing: 0.5px !important;
+  word-spacing: 1.2px !important;
+  line-height: 1.65 !important;
+  transition: letter-spacing 0.2s ease, word-spacing 0.2s ease;
+}
+
+/* Focus states for enhanced typography */
+input[data-auto-spacing="enabled"]:focus,
+textarea[data-auto-spacing="enabled"]:focus {
+  letter-spacing: 0.6px !important;
+  word-spacing: 1.3px !important;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+}
+
+/* Placeholder text with enhanced spacing */
+input[data-auto-spacing="enabled"]::placeholder,
+textarea[data-auto-spacing="enabled"]::placeholder {
+  letter-spacing: 0.4px;
+  word-spacing: 1.0px;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* User guidance hints styling */
+.spacing-hint {
+  animation: slideInFromTop 0.3s ease-out;
+  border-left: 4px solid #3B82F6;
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced readability for dynamic content */
+[data-enhanced-typography="true"] {
+  letter-spacing: 0.5px;
+  word-spacing: 1.2px;
+  line-height: 1.65;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+/* Print-friendly enhanced typography */
+@media print {
+  .text-preview-enhanced,
+  .product-content-enhanced {
+    letter-spacing: 0.3px !important;
+    word-spacing: 1.0px !important;
+    line-height: 1.6 !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .text-preview-enhanced,
+  #text-preview {
+    letter-spacing: 0.6px !important;
+    word-spacing: 1.4px !important;
+    font-weight: 500;
+  }
+}
+
+/* Responsive typography adjustments */
+@media (max-width: 640px) {
+  .text-preview-enhanced,
+  #text-preview {
+    letter-spacing: 0.4px !important;
+    word-spacing: 1.0px !important;
+    line-height: 1.6 !important;
+  }
+}
+
+/* Animation for text transformation feedback */
+.text-transform-applied {
+  animation: highlightTransform 0.5s ease-in-out;
+}
+
+@keyframes highlightTransform {
+  0% { background-color: transparent; }
+  50% { background-color: rgba(34, 197, 94, 0.1); }
+  100% { background-color: transparent; }
+}
+
+/* Enhanced spacing for specific content types */
+.enhanced-product-title {
+  letter-spacing: 0.5px;
+  word-spacing: 1.3px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.enhanced-product-description {
+  letter-spacing: 0.5px;
+  word-spacing: 1.2px;
+  line-height: 1.65;
+  text-align: left;
+}
+
+/* Admin notification banner styling */
+[data-spacing-banner] {
+  animation: slideInBanner 0.5s ease-out;
+}
+
+@keyframes slideInBanner {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

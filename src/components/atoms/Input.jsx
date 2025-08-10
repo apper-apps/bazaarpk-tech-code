@@ -254,10 +254,13 @@ onChange={(e) => {
                 preserveSpaces: true
               });
               
-              // If spacing was added, update value and maintain cursor position
+// If spacing was added, update value and maintain cursor position
               if (spacedValue !== newValue) {
                 const spacesAdded = spacedValue.length - newValue.length;
                 newValue = spacedValue;
+                
+                // MONITORING: Console log text transformations
+                console.log("Spacing applied:", e.target.value + " → " + spacedValue);
                 
                 // Maintain cursor position accounting for added spaces
                 setTimeout(() => {
@@ -344,6 +347,26 @@ onChange={(e) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-sm text-red-600 flex-1">{error}</p>
+        </div>
+      )}
+
+{/* Spacing Hints - User Guidance System */}
+      {sanitize && sanitizeOptions?.autoSpacing && (
+        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md spacing-hint">
+          <div className="flex items-start space-x-2">
+            <svg className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="text-xs text-blue-700">
+              {props.id?.includes('product-name') || className?.includes('product-name') ? (
+                <p><strong>Smart Spacing:</strong> Type without spaces: "OrganicRice" → Auto-converts to "Organic Rice"</p>
+              ) : props.id?.includes('description') || className?.includes('description') ? (
+                <p><strong>Auto Word Spacing:</strong> We automatically space words for readability</p>
+              ) : (
+                <p><strong>Intelligent Spacing:</strong> Merged words are automatically separated as you type</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

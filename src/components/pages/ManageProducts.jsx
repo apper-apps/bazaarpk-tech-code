@@ -483,9 +483,42 @@ function clearAllFilters() {
               </Button>
             </div>
           </div>
-        </div>
+</div>
       </div>
       
+      {/* User Communication Banner - New Spacing System */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <ApperIcon name="Sparkles" className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-green-900 mb-2">
+                ✨ New Spacing System Active!
+              </h3>
+              <p className="text-sm text-green-800 leading-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>
+                Your entries like <span className="font-mono bg-white px-2 py-1 rounded border">BasmatiRice</span> will now display as 
+                <span className="font-medium text-green-900 ml-1">Basmati Rice</span> with enhanced readability and professional spacing.
+              </p>
+              <div className="mt-2 text-xs text-green-700">
+                <span className="font-medium">Benefits:</span> Better SEO, improved customer experience, automatic word separation
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                const banner = document.querySelector('[data-spacing-banner]');
+                if (banner) banner.style.display = 'none';
+              }}
+              className="flex-shrink-0 text-green-600 hover:text-green-800 transition-colors"
+              aria-label="Dismiss banner"
+            >
+              <ApperIcon name="X" className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Validation Errors Display */}
       {Object.keys(validationErrors).length > 0 && (
         <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
