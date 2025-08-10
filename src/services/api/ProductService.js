@@ -1,6 +1,8 @@
+import React from "react";
+import { Error } from "@/components/ui/Error";
 import productsData from "@/services/mockData/products.json";
-import cacheManager from "@/utils/cacheManager";
 import { storage } from "@/utils/storage";
+import cacheManager from "@/utils/cacheManager";
 /**
  * ProductService - Comprehensive product management service
  * Handles all product CRUD operations, validation, and data sanitization
@@ -161,8 +163,82 @@ const mockProducts = productsData || [];
 
 // Main service export
 const productService = {
-  // Extended service with all the existing methods from lines 691-1976
-// Enhanced toggle product visibility with approval workflow
+  // Core CRUD operations
+  async getById(id) {
+    try {
+      if (!id) throw new Error('Product ID is required');
+      
+      const products = await this.getAll();
+      const product = products.find(p => p.Id === parseInt(id));
+      
+      if (!product) {
+        throw new Error(`Product with ID ${id} not found`);
+      }
+      
+      return product;
+    } catch (error) {
+      console.error('Error fetching product by ID:', error);
+      throw error;
+    }
+  },
+
+  async getAll() {
+    try {
+      // Get from cache first
+      const cached = cacheManager.get('products:all');
+      if (cached) return cached;
+      
+      // Load from mock data
+      const products = productsData.map(product => ({
+        ...product,
+        Id: parseInt(product.Id),
+        price: parseFloat(product.price),
+        oldPrice: product.oldPrice ? parseFloat(product.oldPrice) : null,
+        stock: parseInt(product.stock || 0)
+      }));
+      
+      // Cache results
+      cacheManager.set('products:all', products, 300000); // 5 minutes
+      return products;
+    } catch (error) {
+      console.error('Error fetching all products:', error);
+      throw error;
+    }
+  },
+
+  async getRelatedProducts(productId, category, options = {}) {
+    try {
+      const { priceRange, badges, limit = 8 } = options;
+      const allProducts = await this.getAll();
+      
+      let related = allProducts.filter(p => 
+        p.Id !== parseInt(productId) && p.category === category
+      );
+      
+      // Apply price range filter if provided
+      if (priceRange) {
+        related = related.filter(p => 
+          p.price >= priceRange.min && p.price <= priceRange.max
+        );
+      }
+      
+      // Prioritize products with similar badges
+      if (badges && badges.length > 0) {
+        related.sort((a, b) => {
+          const aMatches = (a.badges || []).filter(badge => badges.includes(badge)).length;
+          const bMatches = (b.badges || []).filter(badge => badges.includes(badge)).length;
+          return bMatches - aMatches;
+        });
+      }
+      
+      return related.slice(0, limit);
+    } catch (error) {
+      console.error('Error fetching related products:', error);
+      return [];
+    }
+  },
+
+  // Enhanced toggle product visibility with approval workflow
   async toggleVisibility(id) {
     const product = mockProducts.find(p => p.Id === parseInt(id));
     if (!product) {
@@ -259,27 +335,6 @@ const productService = {
   },
 
   update: async (id, updates) => {
-    await new Promise(resolve => setTimeout(resolve, 350));
-    const index = productsData.findIndex(p => p.Id === id);
-    if (index !== -1) {
-      productsData[index] = { ...productsData[index], ...updates };
-      return { ...productsData[index] };
-    }
-    return null;
-  },
-
-  delete: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const index = productsData.findIndex(product => product.Id === parseInt(id));
-    if (index !== -1) {
-      const deleted = productsData.splice(index, 1)[0];
-      // Store deletion timestamp for audit
-      deleted.deletedAt = new Date().toISOString();
-      return { ...deleted };
-    }
-    return null;
-  },
-update: async (id, updates) => {
     await new Promise(resolve => setTimeout(resolve, 350));
     const index = productsData.findIndex(p => p.Id === id);
     if (index !== -1) {
@@ -1470,13 +1525,6 @@ getTrendingByLocation: async (location) => {
 }
 };
 
-// Export the comprehensive service object
-// Named export for compatibility with named imports
-// Main service instance
-const ProductService = productService;
-
-// Named export
-export { ProductService };
-
-// Default export for backward compatibility  
+// Export both named and default for compatibility
+export { productService };
 export default productService;

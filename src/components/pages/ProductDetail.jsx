@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import QuantityDiscountTable from "@/components/molecules/QuantityDiscountTable";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/useToast";
-import { ProductService } from "@/services/api/ProductService";
+import ProductService from "@/services/api/ProductService";
 import ApperIcon from "@/components/ApperIcon";
 import ProductBadges from "@/components/molecules/ProductBadges";
 import PriceDisplay from "@/components/molecules/PriceDisplay";
