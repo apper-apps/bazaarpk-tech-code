@@ -2053,4 +2053,8 @@ getTrendingByLocation: async (location) => {
 };
 
 // Export the comprehensive service object
+// Named export for compatibility with named imports
+export const ProductService = productService;
+
+// Default export for backward compatibility  
 export default productService;
