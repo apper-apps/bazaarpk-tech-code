@@ -1531,6 +1531,89 @@ return null;
         .slice(0, 8)
         .map(product => ({ ...product }));
     }
+}
+  },
+
+  // Enhanced create method with comprehensive validation
+  async create(productData) {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Generate new ID
+      const maxId = Math.max(...productsData.map(p => p.Id || 0), 0);
+      const newId = maxId + 1;
+      
+      // Field mapping from form to expected service fields
+      const fieldMapping = {
+        'sellingPrice': 'price',
+        'category': 'category',
+        'sku': 'sku'
+      };
+      
+      // Map form fields to service expected fields
+      const mappedData = { ...productData };
+      Object.keys(fieldMapping).forEach(formField => {
+        const serviceField = fieldMapping[formField];
+        if (productData[formField] !== undefined) {
+          mappedData[serviceField] = productData[formField];
+        }
+      });
+      
+      // Final validation with proper field names
+      const validationErrors = [];
+      
+      if (!mappedData.category || mappedData.category.toString().trim() === '') {
+        validationErrors.push('Category is required and cannot be empty');
+      }
+      
+      if (!mappedData.price || mappedData.price.toString().trim() === '' || parseFloat(mappedData.price) <= 0) {
+        validationErrors.push('Selling Price is required and cannot be empty');
+      }
+      
+      if (!mappedData.sku || mappedData.sku.toString().trim() === '') {
+        validationErrors.push('Sku is required and cannot be empty');
+      }
+      
+      if (validationErrors.length > 0) {
+        const error = new Error(`Final validation failed: ${validationErrors.join(', ')}`);
+        error.validationErrors = validationErrors;
+        throw error;
+      }
+      
+      // Create the new product
+      const newProduct = {
+        ...mappedData,
+        Id: newId,
+        price: parseFloat(mappedData.price),
+        sellingPrice: parseFloat(mappedData.sellingPrice || mappedData.price),
+        stock: parseInt(mappedData.stock || 0),
+        status: 'pending',
+        visibility: 'draft',
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        version: 1,
+        auditLog: [{
+          action: 'created',
+          timestamp: new Date().toISOString(),
+          user: 'admin',
+          details: 'Product created via form submission'
+        }]
+      };
+      
+      // Add to products array
+      productsData.push(newProduct);
+      
+      // Clear cache
+      cacheManager.clear('products:all');
+      
+      console.log(`✅ Product created successfully: ${newProduct.title} (ID: ${newId})`);
+      
+      return { ...newProduct };
+      
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw error;
+    }
   }
 };
 

@@ -1,3 +1,4 @@
+import React from "react";
 import { Error } from "@/components/ui/Error";
 /**
  * Security utilities for input sanitization and CSRF protection
@@ -680,11 +681,13 @@ const formatFieldName = (fieldName) => {
     'sellingPrice': 'Selling Price',
     'buyingPrice': 'Buying Price',
     'stockQuantity': 'Stock Quantity',
-'productName': 'Product Name',
+    'productName': 'Product Name',
     'shortDescription': 'Short Description',
     'detailedDescription': 'Detailed Description',
     'metaTitle': 'Meta Title',
-    'metaDescription': 'Meta Description'
+    'metaDescription': 'Meta Description',
+    'sku': 'Sku',
+    'category': 'Category'
   };
   
   if (fieldMappings[fieldName]) {
@@ -1017,9 +1020,9 @@ export const initializeSecurity = () => {
 // Create input event with fallback for older browsers
     let inputEvent;
     try {
-      // Check if InputEvent constructor is available
-      if (typeof InputEvent !== 'undefined') {
-        inputEvent = new InputEvent('input', {
+      // Check if InputEvent constructor is available in global scope
+      if (typeof window !== 'undefined' && window.InputEvent && typeof window.InputEvent === 'function') {
+        inputEvent = new window.InputEvent('input', {
           data: ' ',
           bubbles: true,
           cancelable: true

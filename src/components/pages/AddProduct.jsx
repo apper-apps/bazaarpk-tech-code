@@ -302,8 +302,8 @@ switch (field) {
             allowSpecialChars: false 
           }).toUpperCase();
           // Enhanced SKU/Barcode validation
-          if (field === 'sku' && sanitizedValue && sanitizedValue.length < 3) {
-            fieldError = "SKU must be at least 3 characters long";
+if (field === 'sku' && sanitizedValue && sanitizedValue.length < 3) {
+            fieldError = "Sku is required and cannot be empty";
           }
           if (field === 'barcode' && sanitizedValue && (sanitizedValue.length < 8 || sanitizedValue.length > 18)) {
             fieldError = "Barcode should be between 8-18 characters";
