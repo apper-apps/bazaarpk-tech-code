@@ -229,18 +229,19 @@ const tabs = [
     { id: "approval", label: "Approval Settings", icon: "Shield" }
   ];
 const handleInputChange = (field, value, validationInfo = {}) => {
-    // Input sanitization based on field type with enhanced validation
+    // Input sanitization based on field type with ENHANCED WORD SPACING
     let sanitizedValue = value;
     let fieldError = null;
     
     if (typeof value === 'string') {
-switch (field) {
+      switch (field) {
         case 'productName':
           sanitizedValue = sanitizeInput(value, { 
             maxLength: 150, 
             allowNumbers: true, 
             allowSpecialChars: true,
-            preserveSpaces: true
+            preserveSpaces: true, // CRITICAL: Enable auto word spacing
+            autoSpacing: true     // Enable intelligent word detection
           });
           if (!sanitizedValue || sanitizedValue.trim() === '') {
             fieldError = "Product name is required and cannot be empty";
@@ -255,7 +256,8 @@ switch (field) {
             maxLength: 250, 
             allowNumbers: true, 
             allowSpecialChars: true,
-            preserveSpaces: true
+            preserveSpaces: true, // CRITICAL: Enable auto word spacing
+            autoSpacing: true     // Enable intelligent word detection
           });
           if (!sanitizedValue || sanitizedValue.trim() === '') {
             fieldError = "Short description is required for search and product cards";
@@ -270,7 +272,8 @@ switch (field) {
             maxLength: 2000, 
             allowNumbers: true, 
             allowSpecialChars: true,
-            preserveSpaces: true
+            preserveSpaces: true, // CRITICAL: Enable auto word spacing
+            autoSpacing: true     // Enable intelligent word detection
           });
           if (sanitizedValue && sanitizedValue.length < 20) {
             fieldError = "Detailed description should be at least 20 characters if provided";
@@ -1603,20 +1606,20 @@ const renderBasicInfo = () => (
             <ApperIcon name="Tag" className="w-4 h-4 mr-2" />
             Product Name *
           </h4>
-          <Input
+<Input
             label=""
             type="text"
-            placeholder="Enter product name with proper spacing between words..."
+            placeholder="Product name (auto-spacing: BestPunjabBasmatiRice → Best Punjab Basmati Rice)..."
             value={formData.productName}
             onChange={(e) => handleInputChange("productName", e.target.value)}
             error={errors.productName}
-            description="The main product title that customers will see. Use natural spacing between words for maximum readability."
+            description="Smart word spacing automatically separates merged words as you type. Example: 'extraVirginOliveOil' becomes 'extra Virgin Olive Oil'"
             sanitize={true}
-            sanitizeOptions={{ maxLength: 150, allowNumbers: true, allowSpecialChars: true, preserveSpaces: true }}
-            ariaLabel="Product name with proper word spacing"
+            sanitizeOptions={{ maxLength: 150, allowNumbers: true, allowSpecialChars: true, preserveSpaces: true, autoSpacing: true }}
+            ariaLabel="Product name with automatic word spacing correction"
             maxLength={150}
             required
-            className="text-lg font-medium"
+            className="text-lg font-medium product-name"
           />
           <div className="mt-2 text-xs text-blue-700">
             <strong>Good examples:</strong> "Fresh Organic Basmati Rice", "Premium Himalayan Pink Salt", "Extra Virgin Olive Oil"
@@ -1638,21 +1641,22 @@ const renderBasicInfo = () => (
             <ApperIcon name="FileText" className="w-4 h-4 mr-2" />
             Short Description *
           </h4>
-          <textarea
-            placeholder="Brief description for product cards and search results..."
+<textarea
+            placeholder="Brief description with auto word spacing (e.g., OrganicBasmatiRice → Organic Basmati Rice)..."
             value={formData.shortDescription}
             onChange={(e) => handleInputChange("shortDescription", e.target.value)}
             className={cn(
               "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none",
-              "font-body text-base leading-relaxed",
+              "font-body text-base leading-relaxed product-description",
               errors.shortDescription && "border-red-500"
             )}
             rows={3}
             maxLength={250}
+            data-auto-spacing="enabled"
             style={{
               lineHeight: '1.65',
-              letterSpacing: '0.01em',
-              wordSpacing: '0.05em'
+              letterSpacing: '0.02em',
+              wordSpacing: '0.08em'
             }}
           />
           {errors.shortDescription && <p className="text-red-500 text-sm mt-1">{errors.shortDescription}</p>}
@@ -1680,20 +1684,22 @@ const renderBasicInfo = () => (
             <span className="text-xs text-purple-600 ml-1">(Optional but recommended)</span>
           </h4>
           <textarea
-            placeholder="Comprehensive product description with features, benefits, usage instructions, and specifications..."
+placeholder="Detailed description with intelligent spacing (automatically fixes: bestQualityBasmatiRice → best Quality Basmati Rice)..."
             value={formData.detailedDescription}
             onChange={(e) => handleInputChange("detailedDescription", e.target.value)}
             className={cn(
               "w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none",
-              "font-body text-base leading-relaxed",
+              "font-body text-base leading-relaxed product-description",
               errors.detailedDescription && "border-red-500"
             )}
             rows={6}
             maxLength={2000}
+            data-auto-spacing="enabled"
             style={{
               lineHeight: '1.65',
-              letterSpacing: '0.01em',
-              wordSpacing: '0.05em'
+              letterSpacing: '0.02em',
+              wordSpacing: '0.08em',
+              whiteSpace: 'pre-wrap'
             }}
           />
           {errors.detailedDescription && <p className="text-red-500 text-sm mt-1">{errors.detailedDescription}</p>}
@@ -3593,7 +3599,7 @@ const renderPreviewModal = () => {
               )}
               
               <div>
-<h3 className="text-lg font-semibold" style={{ letterSpacing: '-0.02em', wordSpacing: '0.03em' }}>
+<h3 className="text-lg font-semibold product-title" style={{ letterSpacing: '-0.02em', wordSpacing: '0.05em' }}>
                 {formData.productName || 'Product Preview'}
               </h3>
               {formData.brand && (
@@ -3634,10 +3640,10 @@ const renderPreviewModal = () => {
                   Product Information
                 </h4>
                 {formData.shortDescription ? (
-                  <p className="text-gray-700 text-sm mb-3" style={{ 
+<p className="text-gray-700 text-sm mb-3 product-description" style={{ 
                     lineHeight: '1.65', 
-                    wordSpacing: '0.05em',
-                    letterSpacing: '0.01em'
+                    wordSpacing: '0.08em',
+                    letterSpacing: '0.02em'
                   }}>
                     {formData.shortDescription}
                   </p>
@@ -3650,10 +3656,10 @@ const renderPreviewModal = () => {
                 {formData.detailedDescription && (
                   <div className="mt-3 pt-3 border-t border-gray-200">
                     <h5 className="text-sm font-medium text-gray-900 mb-2">Detailed Description</h5>
-                    <div className="text-gray-700 text-sm" style={{ 
+<div className="text-gray-700 text-sm product-description" style={{ 
                       lineHeight: '1.65', 
-                      wordSpacing: '0.05em',
-                      letterSpacing: '0.01em',
+                      wordSpacing: '0.08em',
+                      letterSpacing: '0.02em',
                       whiteSpace: 'pre-wrap'
                     }}>
                       {formData.detailedDescription.length > 200 

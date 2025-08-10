@@ -74,15 +74,22 @@ export const sanitizeInput = (input, options = {}) => {
   const original = input;
   
 if (preserveSpaces) {
-    // International best practice: preserve natural word spacing
+    // ENHANCED WORD SPACING ENFORCEMENT - Core Functionality
+    // Step 1: Auto-detect and fix merged words
+    sanitized = autoSpaceWords(sanitized);
+    
+    // Step 2: International best practice: preserve natural word spacing
     // Only collapse multiple consecutive spaces (2+) to single spaces
     sanitized = sanitized.replace(/[ \t]{2,}/g, ' ');
-    // Preserve line breaks but normalize multiple line breaks
+    
+    // Step 3: Preserve line breaks but normalize multiple line breaks
     sanitized = sanitized.replace(/\n\s*\n/g, '\n');
-    // Only trim excessive leading/trailing whitespace, preserve intentional spacing
+    
+    // Step 4: Only trim excessive leading/trailing whitespace, preserve intentional spacing
     sanitized = sanitized.replace(/^[\s\n]+|[\s\n]+$/g, '');
   } else {
-    // Standard mode: still preserve single spaces between words for readability
+    // Standard mode: still apply word spacing but with standard space normalization
+    sanitized = autoSpaceWords(sanitized);
     sanitized = sanitized.replace(/[ \t]+/g, ' ').trim();
   }
   
@@ -161,6 +168,47 @@ if (preserveSpaces) {
     });
   }
 return sanitized;
+};
+
+// CORE FUNCTIONALITY: Auto-insert spaces between merged words
+const autoSpaceWords = (text) => {
+  if (typeof text !== 'string' || !text) return text;
+  
+  let result = text;
+  
+  // Pattern 1: camelCase detection (e.g., "bestPunjab" → "best Punjab")
+  result = result.replace(/([a-z])([A-Z])/g, '$1 $2');
+  
+  // Pattern 2: Capitalized words merged (e.g., "BestPunjab" → "Best Punjab")
+  result = result.replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+  
+  // Pattern 3: Number-letter boundaries (e.g., "500ml" → "500 ml", "2kg" → "2 kg")
+  result = result.replace(/([0-9])([a-zA-Z])/g, '$1 $2');
+  result = result.replace(/([a-zA-Z])([0-9])/g, '$1 $2');
+  
+  // Pattern 4: Common word boundaries with specific patterns
+  result = result.replace(/([a-z])([A-Z][a-z])/g, '$1 $2');
+  
+  // Pattern 5: Handle specific product naming patterns
+  // Common merged words in product names
+  const commonMergedPatterns = [
+    { pattern: /BasmatiRice/gi, replacement: 'Basmati Rice' },
+    { pattern: /OliveOil/gi, replacement: 'Olive Oil' },
+    { pattern: /GreenTea/gi, replacement: 'Green Tea' },
+    { pattern: /BlackPepper/gi, replacement: 'Black Pepper' },
+    { pattern: /WhiteRice/gi, replacement: 'White Rice' },
+    { pattern: /RedChili/gi, replacement: 'Red Chili' },
+    { pattern: /extraVirgin/gi, replacement: 'extra Virgin' },
+  ];
+  
+  commonMergedPatterns.forEach(({ pattern, replacement }) => {
+    result = result.replace(pattern, replacement);
+  });
+  
+  // Pattern 6: Clean up any excessive spacing created
+  result = result.replace(/\s{2,}/g, ' ').trim();
+  
+  return result;
 };
 
 // Enhanced email sanitization with comprehensive validation

@@ -241,13 +241,44 @@ const handleChange = useCallback((e) => {
           id={inputId}
           type={type}
           value={internalValue}
-          onChange={handleChange}
+          onChange={(e) => {
+            let newValue = e.target.value;
+            
+            // ENHANCED WORD SPACING: Apply auto-spacing for text inputs
+            if (type === 'text' && sanitize && sanitizeOptions?.preserveSpaces) {
+              const cursorPosition = e.target.selectionStart;
+              const { sanitizeInput } = require('@/utils/security');
+              
+              // Apply intelligent word spacing
+              const spacedValue = sanitizeInput(newValue, {
+                ...sanitizeOptions,
+                preserveSpaces: true
+              });
+              
+              // If spacing was added, update value and maintain cursor position
+              if (spacedValue !== newValue) {
+                const spacesAdded = spacedValue.length - newValue.length;
+                newValue = spacedValue;
+                
+                // Maintain cursor position accounting for added spaces
+                setTimeout(() => {
+                  if (e.target.setSelectionRange && cursorPosition !== null) {
+                    const newPosition = Math.min(cursorPosition + spacesAdded, spacedValue.length);
+                    e.target.setSelectionRange(newPosition, newPosition);
+                  }
+                }, 0);
+              }
+            }
+            
+            handleChange({ ...e, target: { ...e.target, value: newValue } });
+          }}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           maxLength={maxLength}
           pattern={pattern}
           autoComplete={autoComplete}
           data-spacebar-fixed="true"
+          data-auto-spacing={sanitize && sanitizeOptions?.preserveSpaces ? "enabled" : "disabled"}
           className={cn(
             "flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-500 transition-all duration-200",
             "focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-0",
@@ -257,8 +288,16 @@ const handleChange = useCallback((e) => {
             "aria-[invalid=true]:border-red-500",
             showValidationIcon && internalValue && !error && "pr-10",
             tooltip && "cursor-help",
+            // Enhanced spacing classes for better text rendering
+            "product-text-field word-spacing-relaxed letter-spacing-wide",
             className
           )}
+          style={{
+            wordSpacing: '0.1em',
+            letterSpacing: '0.02em',
+            lineHeight: '1.6',
+            ...props.style
+          }}
           ref={ref}
           {...ariaAttributes}
         />
