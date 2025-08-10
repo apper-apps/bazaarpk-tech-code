@@ -1564,32 +1564,43 @@ return null;
       });
       
       // Enhanced validation with multiple field name checks
-// Enhanced validation with comprehensive field checking
+// Enhanced validation with comprehensive field checking and null safety
       const validationErrors = [];
       
-      // Category validation - check both original and mapped field names with null safety
+      // Product Name validation - check for title or productName field
+      const titleValue = mappedData.title || mappedData.productName || productData.title || productData.productName;
+      if (!titleValue || 
+          (typeof titleValue === 'string' && titleValue.trim() === '') ||
+          titleValue === null || 
+          titleValue === undefined) {
+        validationErrors.push('Short Description is required and cannot be empty');
+      }
+      
+      // Category validation - comprehensive empty check with multiple field variations
       const categoryValue = mappedData.category || productData.category;
       if (!categoryValue || 
-          (typeof categoryValue === 'string' && categoryValue.trim() === '') ||
+          (typeof categoryValue === 'string' && (categoryValue.trim() === '' || categoryValue === 'select')) ||
           categoryValue === null || 
           categoryValue === undefined) {
         validationErrors.push('Category is required and cannot be empty');
       }
       
-      // Price validation - comprehensive check for all possible price field variations
+      // Price validation - check all possible price field variations with comprehensive validation
       const priceValue = mappedData.price || productData.sellingPrice || productData.price || mappedData.sellingPrice;
-      const numericPrice = typeof priceValue === 'string' ? parseFloat(priceValue.trim()) : parseFloat(priceValue);
       
       if (!priceValue || 
           (typeof priceValue === 'string' && priceValue.trim() === '') || 
           priceValue === null || 
-          priceValue === undefined ||
-          isNaN(numericPrice) || 
-          numericPrice <= 0) {
+          priceValue === undefined) {
         validationErrors.push('Selling Price is required and cannot be empty');
+      } else {
+        const numericPrice = typeof priceValue === 'string' ? parseFloat(priceValue.trim()) : parseFloat(priceValue);
+        if (isNaN(numericPrice) || numericPrice <= 0) {
+          validationErrors.push('Selling Price is required and cannot be empty');
+        }
       }
       
-      // SKU validation - check both original and mapped field names with comprehensive validation
+      // SKU validation - comprehensive validation with whitespace and null checks
       const skuValue = mappedData.sku || productData.sku;
       if (!skuValue || 
           (typeof skuValue === 'string' && skuValue.trim() === '') ||
@@ -1598,7 +1609,7 @@ return null;
         validationErrors.push('Sku is required and cannot be empty');
       }
       
-if (validationErrors.length > 0) {
+      if (validationErrors.length > 0) {
         const error = new Error(`Final validation failed: ${validationErrors.join(', ')}`);
         error.validationErrors = validationErrors;
         throw error;

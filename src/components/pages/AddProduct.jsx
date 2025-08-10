@@ -846,7 +846,8 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
     }
 
     // Pre-save validation with comprehensive checks
-    if (!validateForm() && !silent) {
+const validationResult = validateForm();
+    if (!validationResult && !silent) {
       showToast("Please fix the validation errors before saving", "error");
       announceToScreenReader("Form contains validation errors. Please review all highlighted fields.", "assertive");
       
@@ -1051,16 +1052,33 @@ productName: sanitizeInput(formData.productName || '', {
       };
 
       // Final validation before submission
-const finalValidation = validateFormData(sanitizedData, {
-        productName: { required: true, minLength: 3, maxLength: 150 },
-        shortDescription: { required: true, minLength: 10, maxLength: 250 },
-        category: { required: true },
-        sellingPrice: { required: true, validator: (v) => parseFloat(v) > 0 ? null : 'Must be greater than 0' },
-        sku: { required: true, minLength: 3, maxLength: 50 }
-      });
+// Enhanced validation with comprehensive empty checks
+      const validationErrors = [];
+      
+      // Check required fields with comprehensive empty validation
+      if (!sanitizedData.productName || sanitizedData.productName.trim() === '') {
+        validationErrors.push('Product Name is required and cannot be empty');
+      }
+      
+      if (!sanitizedData.shortDescription || sanitizedData.shortDescription.trim() === '') {
+        validationErrors.push('Short Description is required and cannot be empty');
+      }
+      
+      if (!sanitizedData.category || sanitizedData.category.trim() === '' || sanitizedData.category === 'select') {
+        validationErrors.push('Category is required and cannot be empty');
+      }
+      
+      const priceValue = sanitizedData.sellingPrice || sanitizedData.price;
+      if (!priceValue || priceValue.toString().trim() === '' || parseFloat(priceValue) <= 0 || isNaN(parseFloat(priceValue))) {
+        validationErrors.push('Selling Price is required and cannot be empty');
+      }
+      
+      if (!sanitizedData.sku || sanitizedData.sku.trim() === '') {
+        validationErrors.push('Sku is required and cannot be empty');
+      }
 
-      if (!finalValidation.isValid) {
-        throw new Error(`Final validation failed: ${Object.values(finalValidation.errors).join(', ')}`);
+      if (validationErrors.length > 0) {
+        throw new Error(`Final validation failed: ${validationErrors.join(', ')}`);
       }
 
 const productData = {
