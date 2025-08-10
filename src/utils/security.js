@@ -176,37 +176,74 @@ const autoSpaceWords = (text) => {
   
   let result = text;
   
-  // Pattern 1: camelCase detection (e.g., "bestPunjab" → "best Punjab")
+  // ENHANCED PATTERN RECOGNITION for comprehensive word spacing
+  
+  // Pattern 1: Enhanced camelCase detection with context awareness
   result = result.replace(/([a-z])([A-Z])/g, '$1 $2');
   
-  // Pattern 2: Capitalized words merged (e.g., "BestPunjab" → "Best Punjab")
+  // Pattern 2: Multiple capital letters followed by lowercase (e.g., "HTMLParser" → "HTML Parser")
   result = result.replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
   
-  // Pattern 3: Number-letter boundaries (e.g., "500ml" → "500 ml", "2kg" → "2 kg")
+  // Pattern 3: Enhanced number-letter boundaries with unit awareness
   result = result.replace(/([0-9])([a-zA-Z])/g, '$1 $2');
   result = result.replace(/([a-zA-Z])([0-9])/g, '$1 $2');
   
-  // Pattern 4: Common word boundaries with specific patterns
+  // Pattern 4: Comma-separated words without spaces (e.g., "organic,natural" → "organic, natural")
+  result = result.replace(/([a-zA-Z]),([a-zA-Z])/g, '$1, $2');
+  
+  // Pattern 5: Hyphenated compound words with merged components
+  result = result.replace(/([a-z])-([A-Z])/g, '$1-$2'.toLowerCase());
   result = result.replace(/([a-z])([A-Z][a-z])/g, '$1 $2');
   
-  // Pattern 5: Handle specific product naming patterns
-  // Common merged words in product names
+  // Pattern 6: Enhanced product naming patterns with more coverage
   const commonMergedPatterns = [
+    // Food products
     { pattern: /BasmatiRice/gi, replacement: 'Basmati Rice' },
-    { pattern: /OliveOil/gi, replacement: 'Olive Oil' },
-    { pattern: /GreenTea/gi, replacement: 'Green Tea' },
-    { pattern: /BlackPepper/gi, replacement: 'Black Pepper' },
+    { pattern: /BrownRice/gi, replacement: 'Brown Rice' },
     { pattern: /WhiteRice/gi, replacement: 'White Rice' },
+    { pattern: /OliveOil/gi, replacement: 'Olive Oil' },
+    { pattern: /CoconutOil/gi, replacement: 'Coconut Oil' },
+    { pattern: /SunflowerOil/gi, replacement: 'Sunflower Oil' },
+    { pattern: /GreenTea/gi, replacement: 'Green Tea' },
+    { pattern: /BlackTea/gi, replacement: 'Black Tea' },
+    { pattern: /BlackPepper/gi, replacement: 'Black Pepper' },
     { pattern: /RedChili/gi, replacement: 'Red Chili' },
-    { pattern: /extraVirgin/gi, replacement: 'extra Virgin' },
+    { pattern: /GreenChili/gi, replacement: 'Green Chili' },
+    { pattern: /extraVirgin/gi, replacement: 'Extra Virgin' },
+    { pattern: /organicFood/gi, replacement: 'Organic Food' },
+    { pattern: /wholeWheat/gi, replacement: 'Whole Wheat' },
+    { pattern: /seaSalt/gi, replacement: 'Sea Salt' },
+    { pattern: /rockSalt/gi, replacement: 'Rock Salt' },
+    
+    // Common product attributes
+    { pattern: /glutenFree/gi, replacement: 'Gluten Free' },
+    { pattern: /dairyFree/gi, replacement: 'Dairy Free' },
+    { pattern: /sugarFree/gi, replacement: 'Sugar Free' },
+    { pattern: /lowFat/gi, replacement: 'Low Fat' },
+    { pattern: /highProtein/gi, replacement: 'High Protein' },
+    { pattern: /vitaminC/gi, replacement: 'Vitamin C' },
+    { pattern: /vitaminD/gi, replacement: 'Vitamin D' },
+    
+    // Brand and location patterns
+    { pattern: /bestPunjab/gi, replacement: 'Best Punjab' },
+    { pattern: /freshFarm/gi, replacement: 'Fresh Farm' },
+    { pattern: /pureNature/gi, replacement: 'Pure Nature' },
   ];
   
   commonMergedPatterns.forEach(({ pattern, replacement }) => {
     result = result.replace(pattern, replacement);
   });
   
-  // Pattern 6: Clean up any excessive spacing created
+  // Pattern 7: Handle special characters with merged words
+  result = result.replace(/([a-zA-Z])([&@#%])/g, '$1 $2');
+  result = result.replace(/([&@#%])([a-zA-Z])/g, '$1 $2');
+  
+  // Pattern 8: Clean up excessive spacing and normalize
   result = result.replace(/\s{2,}/g, ' ').trim();
+  
+  // Pattern 9: Ensure proper spacing around punctuation
+  result = result.replace(/([a-zA-Z])([.!?])/g, '$1$2');
+  result = result.replace(/([.!?])([a-zA-Z])/g, '$1 $2');
   
   return result;
 };
@@ -934,24 +971,51 @@ export const initializeSecurity = () => {
   }
 
   // Enhanced input field protection
-  const ensureSpacebarWorksInInputs = () => {
+const ensureSpacebarWorksInInputs = () => {
     const inputElements = document.querySelectorAll('input, textarea, [contenteditable="true"]');
     
     inputElements.forEach(element => {
-      // Mark as spacebar-protected
+      // Mark as spacebar-protected with enhanced attributes
       element.setAttribute('data-spacebar-fixed', 'true');
+      element.setAttribute('data-typography-enhanced', 'true');
       
-      // Ensure proper input properties
+      // ENHANCED INPUT PROPERTIES for optimal typography
       if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+        // Core spacing properties following WCAG 2.1 guidelines
         element.style.whiteSpace = 'pre-wrap';
-        element.style.wordSpacing = 'normal';
-        element.style.letterSpacing = 'normal';
+        element.style.wordSpacing = '0.1em';
+        element.style.letterSpacing = '0.025em';
+        element.style.lineHeight = '1.65';
         element.style.textTransform = 'none';
+        
+        // Enhanced font rendering
+        element.style.fontKerning = 'normal';
+        element.style.textRendering = 'optimizeLegibility';
+        element.style.fontFeatureSettings = '"kern" 1';
+        
+        // User interaction properties
         element.style.userSelect = 'text';
         element.style.WebkitUserSelect = 'text';
         element.style.MozUserSelect = 'text';
         element.style.pointerEvents = 'auto';
         element.style.touchAction = 'manipulation';
+        
+        // Advanced typography properties
+        element.style.wordBreak = 'keep-all';
+        element.style.overflowWrap = 'break-word';
+        element.style.hyphens = 'auto';
+        
+        // Ensure proper text cursor
+        element.style.cursor = 'text';
+      }
+      
+      // Special handling for contenteditable elements
+      if (element.hasAttribute('contenteditable')) {
+        element.style.minHeight = '2.5rem';
+        element.style.outline = 'none';
+        element.style.wordSpacing = '0.1em';
+        element.style.letterSpacing = '0.025em';
+        element.style.lineHeight = '1.65';
       }
       
       // Add keydown protection

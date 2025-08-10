@@ -427,8 +427,36 @@ div[class*="mask"][style*="position: fixed"],
 }
 
 /* ESSENTIAL INPUT STYLING */
-/* ESSENTIAL INPUT STYLING */
+/* ENHANCED CSS TYPOGRAPHY ENFORCEMENT SYSTEM */
 
+/* Product text field class for comprehensive typography control */
+.product-text-field {
+  word-break: keep-all !important;
+  font-kerning: normal !important;
+  text-rendering: optimizeLegibility !important;
+  font-feature-settings: "kern" 1 !important;
+  word-spacing: 0.1em !important;
+  letter-spacing: 0.025em !important;
+  line-height: 1.65 !important;
+  white-space: pre-wrap !important;
+  overflow-wrap: break-word !important;
+  hyphens: auto !important;
+}
+
+/* Enhanced typography classes for different spacing levels */
+.word-spacing-relaxed { word-spacing: 0.08em !important; }
+.word-spacing-loose { word-spacing: 0.1em !important; }
+.letter-spacing-wide { letter-spacing: 0.025em !important; }
+.text-rendering-optimized { 
+  text-rendering: optimizeLegibility !important; 
+  font-feature-settings: "kern" 1 !important;
+}
+
+/* Prevent text collapse classes */
+.word-break-keep-all { word-break: keep-all !important; }
+.font-kerning-normal { font-kerning: normal !important; }
+
+/* ESSENTIAL INPUT STYLING WITH ENHANCED TYPOGRAPHY */
 /* COMPREHENSIVE INPUT AND TEXT SPACING */
 
 /* Enhanced input normalization with proper spacing */

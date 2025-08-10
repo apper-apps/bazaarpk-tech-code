@@ -60,16 +60,67 @@ theme: {
         body: ['Inter', 'sans-serif'],
       },
 fontSize: {
-        'xs': ['0.75rem', { lineHeight: '1.5', letterSpacing: '0.025em', wordSpacing: '0.08em' }],
-        'sm': ['0.875rem', { lineHeight: '1.5', letterSpacing: '0.02em', wordSpacing: '0.08em' }],
-        'base': ['1rem', { lineHeight: '1.6', letterSpacing: '0.015em', wordSpacing: '0.08em' }],
-        'lg': ['1.125rem', { lineHeight: '1.6', letterSpacing: '0.015em', wordSpacing: '0.08em' }],
-        'xl': ['1.25rem', { lineHeight: '1.5', letterSpacing: '0.01em', wordSpacing: '0.06em' }],
-        '2xl': ['1.5rem', { lineHeight: '1.4', letterSpacing: '0.01em', wordSpacing: '0.06em' }],
-        '3xl': ['1.875rem', { lineHeight: '1.3', letterSpacing: '0.005em', wordSpacing: '0.05em' }],
-        '4xl': ['2.25rem', { lineHeight: '1.2', letterSpacing: '0', wordSpacing: '0.05em' }],
-        '5xl': ['3rem', { lineHeight: '1.1', letterSpacing: '-0.01em', wordSpacing: '0.03em' }],
-        '6xl': ['3.75rem', { lineHeight: '1', letterSpacing: '-0.02em', wordSpacing: '0.03em' }],
+        // ENHANCED FONT SIZES with integrated typography following Material Design & WCAG 2.1
+        'xs': ['0.75rem', { 
+          lineHeight: '1.5', 
+          letterSpacing: '0.025em', 
+          wordSpacing: '0.08em',
+          fontFeatureSettings: '"kern" 1'
+        }],
+        'sm': ['0.875rem', { 
+          lineHeight: '1.5', 
+          letterSpacing: '0.025em', 
+          wordSpacing: '0.08em',
+          fontFeatureSettings: '"kern" 1'
+        }],
+        'base': ['1rem', { 
+          lineHeight: '1.65', 
+          letterSpacing: '0.025em', 
+          wordSpacing: '0.1em',
+          fontFeatureSettings: '"kern" 1'
+        }],
+        'lg': ['1.125rem', { 
+          lineHeight: '1.65', 
+          letterSpacing: '0.02em', 
+          wordSpacing: '0.08em',
+          fontFeatureSettings: '"kern" 1'
+        }],
+        'xl': ['1.25rem', { 
+          lineHeight: '1.5', 
+          letterSpacing: '0.015em', 
+          wordSpacing: '0.06em',
+          fontFeatureSettings: '"kern" 1'
+        }],
+        '2xl': ['1.5rem', { 
+          lineHeight: '1.4', 
+          letterSpacing: '0.01em', 
+          wordSpacing: '0.06em',
+          fontFeatureSettings: '"kern" 1'
+        }],
+        '3xl': ['1.875rem', { 
+          lineHeight: '1.3', 
+          letterSpacing: '0.005em', 
+          wordSpacing: '0.05em',
+          fontFeatureSettings: '"kern" 1'
+        }],
+        '4xl': ['2.25rem', { 
+          lineHeight: '1.2', 
+          letterSpacing: '0', 
+          wordSpacing: '0.05em',
+          fontFeatureSettings: '"kern" 1'
+        }],
+        '5xl': ['3rem', { 
+          lineHeight: '1.1', 
+          letterSpacing: '-0.01em', 
+          wordSpacing: '0.03em',
+          fontFeatureSettings: '"kern" 1'
+        }],
+        '6xl': ['3.75rem', { 
+          lineHeight: '1', 
+          letterSpacing: '-0.02em', 
+          wordSpacing: '0.03em',
+          fontFeatureSettings: '"kern" 1'
+        }],
       },
       lineHeight: {
         'extra-loose': '2.2',
@@ -89,12 +140,17 @@ letterSpacing: {
         'wider': '0.05em',
         'widest': '0.1em',
       },
-      wordSpacing: {
+wordSpacing: {
+        // ENHANCED WORD SPACING utilities following typography best practices
         'tight': '0.03em',
-        'normal': '0.05em',
+        'normal': '0.05em', 
         'relaxed': '0.08em',
         'loose': '0.1em',
         'extra-loose': '0.15em',
+        // Additional spacing levels for precise control
+        'minimal': '0.02em',
+        'comfortable': '0.06em',
+        'generous': '0.12em',
       },
       boxShadow: {
         'soft': '0 2px 4px 0 rgba(0, 0, 0, 0.05)',

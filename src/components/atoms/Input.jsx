@@ -244,51 +244,67 @@ const handleChange = useCallback((e) => {
 onChange={(e) => {
             let newValue = e.target.value;
             
-            // ENHANCED WORD SPACING: Apply auto-spacing for text inputs
+            // ENHANCED WORD SPACING: Apply auto-spacing for text inputs with improved logic
             if (type === 'text' && sanitize && sanitizeOptions?.preserveSpaces) {
               const cursorPosition = e.target.selectionStart;
+              const originalValue = newValue;
               
-              // Apply intelligent word spacing
+              // Apply intelligent word spacing with enhanced pattern recognition
               const spacedValue = sanitizeInput(newValue, {
                 ...sanitizeOptions,
-                preserveSpaces: true
+                preserveSpaces: true,
+                autoSpacing: true
               });
               
-// If spacing was added, update value and maintain cursor position
-              if (spacedValue !== newValue) {
-                const spacesAdded = spacedValue.length - newValue.length;
+              // If spacing was applied, update value and maintain cursor position
+              if (spacedValue !== originalValue) {
+                const spacesAdded = spacedValue.length - originalValue.length;
                 newValue = spacedValue;
                 
-                // MONITORING: Console log text transformations
-                console.log("Spacing applied:", e.target.value + " → " + spacedValue);
+                // ENHANCED MONITORING: Console log transformations with context
+                console.log("Typography Enhancement Applied:", {
+                  original: originalValue,
+                  enhanced: spacedValue,
+                  spacesAdded: spacesAdded,
+                  field: props.id || 'input'
+                });
                 
-                // Maintain cursor position accounting for added spaces
+                // Maintain cursor position accounting for added spaces with improved logic
                 setTimeout(() => {
-                  if (e.target.setSelectionRange && cursorPosition !== null) {
+                  if (e.target && e.target.setSelectionRange && cursorPosition !== null) {
                     const newPosition = Math.min(cursorPosition + spacesAdded, spacedValue.length);
                     e.target.setSelectionRange(newPosition, newPosition);
                   }
                 }, 0);
               }
               
-              // FALLBACK MECHANISM: Check for remaining merged words after auto-spacing
-              const mergedWordPattern = /[a-z][A-Z]|[a-zA-Z],[a-zA-Z]|[a-zA-Z]-[a-z][A-Z]/;
-              if (mergedWordPattern.test(newValue)) {
-                // Alert user about manual correction needed
+              // ENHANCED FALLBACK MECHANISM: Check for complex merged patterns
+              const complexMergedPattern = /[a-z][A-Z]|[a-zA-Z],[a-zA-Z]|[a-zA-Z]-[a-z][A-Z]|[0-9][a-zA-Z](?![a-z])|[a-zA-Z][0-9](?![0-9])/;
+              
+              if (complexMergedPattern.test(newValue)) {
+                // Provide user feedback with enhanced guidance
                 setTimeout(() => {
-                  alert("Please separate words with spaces. Example: 'gluten-free, non GMO' instead of 'gluten-free,nonGMO'");
-                  // Return focus to the field for immediate correction
+                  const examples = [
+                    "'glutenfree' → 'gluten free'",
+                    "'bestPunjab' → 'best Punjab'", 
+                    "'500ml' → '500 ml'",
+                    "'gluten-free,nonGMO' → 'gluten-free, non GMO'"
+                  ];
+                  
+                  alert(`Text Spacing Helper: Please separate words with spaces.\n\nExamples:\n${examples.join('\n')}\n\nThis improves readability for all users.`);
+                  
+                  // Enhanced focus restoration with text selection
                   if (e.target && e.target.focus) {
                     e.target.focus();
-                    // Select the problematic text if possible
-                    const match = newValue.match(mergedWordPattern);
+                    // Select problematic text for easy correction
+                    const match = newValue.match(complexMergedPattern);
                     if (match && e.target.setSelectionRange) {
                       const startPos = match.index;
-                      const endPos = startPos + match[0].length;
-                      e.target.setSelectionRange(startPos, endPos);
+                      const endPos = startPos + match[0].length + 2; // Select a bit more context
+                      e.target.setSelectionRange(startPos, Math.min(endPos, newValue.length));
                     }
                   }
-                }, 100);
+                }, 150);
               }
             }
             
@@ -301,7 +317,7 @@ onChange={(e) => {
           autoComplete={autoComplete}
           data-spacebar-fixed="true"
           data-auto-spacing={sanitize && sanitizeOptions?.preserveSpaces ? "enabled" : "disabled"}
-          className={cn(
+className={cn(
             "flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-500 transition-all duration-200",
             "focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-0",
             "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50",
@@ -310,14 +326,26 @@ onChange={(e) => {
             "aria-[invalid=true]:border-red-500",
             showValidationIcon && internalValue && !error && "pr-10",
             tooltip && "cursor-help",
-            // Enhanced spacing classes for better text rendering
-            "product-text-field word-spacing-relaxed letter-spacing-wide",
+            // ENHANCED CSS TYPOGRAPHY ENFORCEMENT
+            "product-text-field word-spacing-loose letter-spacing-wide",
+            "word-break-keep-all font-kerning-normal text-rendering-optimizeLegibility",
+            // Advanced typography classes for enhanced readability
+            sanitize && sanitizeOptions?.preserveSpaces && "text-preview-enhanced",
             className
           )}
           style={{
+            // CSS Typography Enforcement following Material Design & WCAG 2.1
             wordSpacing: '0.1em',
-            letterSpacing: '0.02em',
-            lineHeight: '1.6',
+            letterSpacing: '0.025em', 
+            lineHeight: '1.65',
+            wordBreak: 'keep-all',
+            fontKerning: 'normal',
+            textRendering: 'optimizeLegibility',
+            fontFeatureSettings: '"kern" 1',
+            // Prevent text collapse with advanced CSS
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'break-word',
+            hyphens: 'auto',
             ...props.style
           }}
           ref={ref}
