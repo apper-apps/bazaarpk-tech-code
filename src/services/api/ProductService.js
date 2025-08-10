@@ -1529,9 +1529,8 @@ return null;
       return mockProducts
         .filter(p => p.badges?.includes("BESTSELLER"))
         .slice(0, 8)
-        .map(product => ({ ...product }));
+.map(product => ({ ...product }));
     }
-}
   },
 
   // Enhanced create method with comprehensive validation
