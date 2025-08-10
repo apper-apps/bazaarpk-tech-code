@@ -1533,11 +1533,10 @@ return null;
     }
   },
 
-  // Enhanced create method with comprehensive validation
+// Enhanced create method with comprehensive validation
   async create(productData) {
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      
       // Generate new ID
       const maxId = Math.max(...productsData.map(p => p.Id || 0), 0);
       const newId = maxId + 1;
