@@ -1542,34 +1542,46 @@ return null;
       const maxId = Math.max(...productsData.map(p => p.Id || 0), 0);
       const newId = maxId + 1;
       
-      // Field mapping from form to expected service fields
+// Enhanced field mapping from form to expected service fields
       const fieldMapping = {
         'sellingPrice': 'price',
         'category': 'category',
         'sku': 'sku'
       };
       
-      // Map form fields to service expected fields
+      // Create mapped data with proper field transformation
       const mappedData = { ...productData };
+      
+      // Apply field mapping transformations
       Object.keys(fieldMapping).forEach(formField => {
         const serviceField = fieldMapping[formField];
-        if (productData[formField] !== undefined) {
+        if (productData[formField] !== undefined && productData[formField] !== null) {
           mappedData[serviceField] = productData[formField];
+          // Keep original field for backward compatibility
+          if (formField !== serviceField) {
+            mappedData[formField] = productData[formField];
+          }
         }
       });
       
-      // Final validation with proper field names
+      // Enhanced validation with multiple field name checks
       const validationErrors = [];
       
-      if (!mappedData.category || mappedData.category.toString().trim() === '') {
+      // Category validation - check both original and mapped field names
+      const categoryValue = mappedData.category || productData.category;
+      if (!categoryValue || (typeof categoryValue === 'string' && categoryValue.trim() === '')) {
         validationErrors.push('Category is required and cannot be empty');
       }
       
-      if (!mappedData.price || mappedData.price.toString().trim() === '' || parseFloat(mappedData.price) <= 0) {
+      // Price validation - check both sellingPrice and price fields
+      const priceValue = mappedData.price || productData.sellingPrice || productData.price;
+      if (!priceValue || (typeof priceValue === 'string' && priceValue.trim() === '') || isNaN(parseFloat(priceValue)) || parseFloat(priceValue) <= 0) {
         validationErrors.push('Selling Price is required and cannot be empty');
       }
       
-      if (!mappedData.sku || mappedData.sku.toString().trim() === '') {
+      // SKU validation - check both original and mapped field names  
+      const skuValue = mappedData.sku || productData.sku;
+      if (!skuValue || (typeof skuValue === 'string' && skuValue.trim() === '')) {
         validationErrors.push('Sku is required and cannot be empty');
       }
       
@@ -1580,12 +1592,12 @@ return null;
       }
       
       // Create the new product
-      const newProduct = {
+const newProduct = {
         ...mappedData,
         Id: newId,
-        price: parseFloat(mappedData.price),
-        sellingPrice: parseFloat(mappedData.sellingPrice || mappedData.price),
-        stock: parseInt(mappedData.stock || 0),
+        price: parseFloat(mappedData.price || productData.sellingPrice || productData.price || 0),
+        sellingPrice: parseFloat(mappedData.sellingPrice || mappedData.price || productData.sellingPrice || 0),
+        stock: parseInt(mappedData.stock || mappedData.stockQuantity || 0),
         status: 'pending',
         visibility: 'draft',
         createdAt: new Date().toISOString(),

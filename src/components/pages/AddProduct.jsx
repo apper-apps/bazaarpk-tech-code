@@ -1856,7 +1856,20 @@ const renderPricing = () => (
 type="number"
                 placeholder="0.00"
                 value={formData.sellingPrice}
-                onChange={(e) => handleInputChange("sellingPrice", e.target.value, e.target.validationInfo)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const numValue = parseFloat(value);
+                  
+                  // Enhanced validation with proper field mapping awareness
+                  if (value && (!isNaN(numValue) && numValue > 0)) {
+                    // Clear any existing price-related errors
+                    if (errors.sellingPrice) {
+                      setErrors(prev => ({ ...prev, sellingPrice: "" }));
+                    }
+                  }
+                  
+                  handleInputChange("sellingPrice", value, e.target.validationInfo);
+                }}
                 className={cn(
                   errors.sellingPrice && "border-red-500", 
                   "pl-8 text-lg font-semibold pr-10 focus:ring-2 focus:ring-primary-500/20"
@@ -1870,9 +1883,10 @@ type="number"
                   min: 0.01,
                   max: 10000000,
                   validator: (v) => {
+                    if (!v || v.trim() === '') return "Selling Price is required and cannot be empty";
                     const num = parseFloat(v);
                     if (isNaN(num)) return "Please enter a valid price";
-                    if (num <= 0) return "Price must be greater than 0";
+                    if (num <= 0) return "Selling Price is required and cannot be empty";
                     if (num > 1000000) return "Please verify this high price is correct";
                     return null;
                   }
@@ -1880,6 +1894,7 @@ type="number"
                 realTimeValidation={true}
                 showValidationIcon={true}
                 ariaLabel="Product selling price in PKR, required for customer purchases"
+                data-field-mapping="price"
               />
               
               {/* Price indicators */}
