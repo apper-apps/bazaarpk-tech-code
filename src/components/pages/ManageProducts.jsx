@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { ProductService } from "@/services/api/ProductService";
-import { CategoryService } from "@/services/api/CategoryService";
-import { useToast } from "@/hooks/useToast";
+import React, { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
+import ProductService from '@/services/api/ProductService'
+import { CategoryService } from '@/services/api/CategoryService'
+import { useToast } from '@/hooks/useToast'
 import ApperIcon from "@/components/ApperIcon";
 import Category from "@/components/pages/Category";
 import ProductManagementCard from "@/components/organisms/ProductManagementCard";
