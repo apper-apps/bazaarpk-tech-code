@@ -241,13 +241,12 @@ const handleChange = useCallback((e) => {
           id={inputId}
           type={type}
           value={internalValue}
-          onChange={(e) => {
+onChange={(e) => {
             let newValue = e.target.value;
             
             // ENHANCED WORD SPACING: Apply auto-spacing for text inputs
             if (type === 'text' && sanitize && sanitizeOptions?.preserveSpaces) {
               const cursorPosition = e.target.selectionStart;
-              const { sanitizeInput } = require('@/utils/security');
               
               // Apply intelligent word spacing
               const spacedValue = sanitizeInput(newValue, {
