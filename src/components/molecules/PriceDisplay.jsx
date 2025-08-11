@@ -40,7 +40,7 @@ const PriceDisplay = ({
 return (
     <div className={cn("space-y-2", className)} {...props}>
       <div className="flex items-center gap-2">
-        <span className={cn("price-highlight", sizes[size].current)}>
+<span className={cn("price-highlight product-text-field", sizes[size].current)} style={{ wordSpacing: '0.06em', letterSpacing: '0.015em' }}>
           {formatPrice(price)}
         </span>
         
@@ -51,7 +51,7 @@ return (
             </span>
             
             {showDiscount && discount > 0 && (
-              <span className={cn("text-accent-600 font-medium", sizes[size].discount)}>
+<span className={cn("text-accent-600 font-medium word-spacing-relaxed", sizes[size].discount)} style={{ wordSpacing: '0.06em', letterSpacing: '0.015em' }}>
                 {discount}% OFF
               </span>
             )}
@@ -61,10 +61,10 @@ return (
 
 {showBulkDiscount && bulkSavings > 0 && (
         <div className="flex items-center gap-2">
-          <span className="text-green-600 font-semibold text-sm">
+<span className="text-green-600 font-semibold text-sm word-spacing-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>
             Bulk Savings: {formatPrice(bulkSavings)}
           </span>
-          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+<span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.015em' }}>
             Extra Discount Applied
           </span>
         </div>

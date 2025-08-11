@@ -41,11 +41,11 @@ const RecipeBundles = ({
     <div className={cn("px-4 md:px-6 lg:px-8 mb-16", className)} {...props}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-display font-bold text-gray-900 mb-2">
+<div>
+          <h2 className="text-2xl md:text-3xl font-display font-bold text-gray-900 mb-2 product-text-field word-spacing-loose letter-spacing-wide" style={{ wordSpacing: '0.1em', letterSpacing: '0.02em' }}>
             {title}
           </h2>
-          <p className="text-gray-600 max-w-lg">
+          <p className="text-gray-600 max-w-lg product-text-field word-spacing-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em', lineHeight: '1.65' }}>
             {subtitle}
           </p>
         </div>
@@ -54,8 +54,8 @@ const RecipeBundles = ({
           <Button
             variant="outline" 
             className="hidden md:flex items-center gap-2"
-          >
-            View All Bundles
+>
+            <span className="word-spacing-loose" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>View All Bundles</span>
             <ApperIcon name="ArrowRight" className="w-4 h-4" />
           </Button>
         )}
@@ -84,9 +84,9 @@ const RecipeBundles = ({
           <Button
             className="px-8"
             size="lg"
-          >
+>
             <ApperIcon name="ChefHat" className="w-5 h-5 mr-2" />
-            View All Recipe Bundles
+            <span className="word-spacing-loose" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>View All Recipe Bundles</span>
           </Button>
         </div>
       )}

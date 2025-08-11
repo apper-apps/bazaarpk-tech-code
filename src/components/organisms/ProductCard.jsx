@@ -100,8 +100,8 @@ const handleAddToCart = (e) => {
               size="sm"
               className="transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
             >
-              <ApperIcon name="Eye" className="w-4 h-4 mr-2" />
-              Quick View
+<ApperIcon name="Eye" className="w-4 h-4 mr-2" />
+              <span className="word-spacing-loose" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Quick View</span>
             </Button>
           </div>
         </div>
@@ -109,7 +109,7 @@ const handleAddToCart = (e) => {
         {/* Product Info */}
         <div className="p-4">
           {/* Product Title */}
-          <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors duration-200">
+<h3 className="font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors duration-200 product-text-field enhanced-product-title" style={{ wordSpacing: '0.1em', letterSpacing: '0.025em', lineHeight: '1.4' }}>
             {product.title}
           </h3>
 
@@ -127,12 +127,12 @@ const handleAddToCart = (e) => {
                         ? "border-primary-500 bg-primary-50 text-primary-700"
                         : "border-gray-200 bg-white text-gray-600 hover:border-primary-300"
                     )}
-                  >
-                    {variant.name}
+>
+                    <span className="word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>{variant.name}</span>
                   </button>
                 ))}
                 {product.variants.length > 3 && (
-                  <span className="px-2 py-1 text-xs text-gray-500">
+<span className="px-2 py-1 text-xs text-gray-500 word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>
                     +{product.variants.length - 3} more
                   </span>
                 )}
@@ -162,14 +162,14 @@ const handleAddToCart = (e) => {
             size="sm"
           >
             {product.stock <= 0 ? (
-              <>
+<>
                 <ApperIcon name="AlertCircle" className="w-4 h-4 mr-2" />
-                Out of Stock
+                <span className="word-spacing-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Out of Stock</span>
               </>
             ) : (
               <>
-                <ApperIcon name="ShoppingCart" className="w-4 h-4 mr-2" />
-                Add to Cart
+<ApperIcon name="ShoppingCart" className="w-4 h-4 mr-2" />
+                <span className="word-spacing-loose" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Add to Cart</span>
               </>
             )}
           </Button>

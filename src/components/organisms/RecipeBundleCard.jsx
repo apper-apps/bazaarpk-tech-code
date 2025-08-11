@@ -112,35 +112,35 @@ const handleAddBundleToCart = async (e) => {
 
         {/* Recipe Info */}
         <div className="p-4 flex-1 flex flex-col">
-          <div className="mb-4">
-            <h3 className="font-display font-bold text-lg text-gray-900 mb-2 line-clamp-2">
+<div className="mb-4">
+            <h3 className="font-display font-bold text-lg text-gray-900 mb-2 line-clamp-2 product-text-field enhanced-product-title" style={{ wordSpacing: '0.1em', letterSpacing: '0.025em' }}>
               {bundle.name}
             </h3>
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+            <p className="text-gray-600 text-sm mb-3 line-clamp-2 product-text-field enhanced-product-description" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em', lineHeight: '1.65' }}>
               {bundle.description}
             </p>
             
             {/* Recipe Stats */}
             <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
               <div className="flex items-center gap-1">
-                <ApperIcon name="Clock" className="w-3 h-3" />
-                <span>{bundle.cookTime}</span>
+<ApperIcon name="Clock" className="w-3 h-3" />
+                <span className="word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>{bundle.cookTime}</span>
               </div>
               <div className="flex items-center gap-1">
-                <ApperIcon name="Users" className="w-3 h-3" />
-                <span>{bundle.servings} servings</span>
+<ApperIcon name="Users" className="w-3 h-3" />
+                <span className="word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>{bundle.servings} servings</span>
               </div>
               <div className="flex items-center gap-1">
-                <ApperIcon name="ChefHat" className="w-3 h-3" />
-                <span>{bundle.difficulty}</span>
+<ApperIcon name="ChefHat" className="w-3 h-3" />
+                <span className="word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>{bundle.difficulty}</span>
               </div>
             </div>
           </div>
 
           {/* Products Grid */}
           <div className="mb-4">
-            <h4 className="font-medium text-gray-900 mb-3 text-sm">
-              Included Ingredients ({bundle.products.length} items)
+<h4 className="font-medium text-gray-900 mb-3 text-sm word-spacing-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>
+              <span style={{ wordSpacing: '0.08em' }}>Included Ingredients</span> <span style={{ wordSpacing: '0.06em' }}>({bundle.products.length} items)</span>
             </h4>
             <div className="grid grid-cols-2 gap-2">
               {bundle.products.slice(0, 4).map((item, index) => (
@@ -154,10 +154,10 @@ const handleAddBundleToCart = async (e) => {
                     }}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-900 truncate">
+<p className="text-xs font-medium text-gray-900 truncate word-spacing-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>
                       {item.product.name}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>
                       {item.quantity} {item.unit || 'pc'}
                     </p>
                   </div>
@@ -167,7 +167,7 @@ const handleAddBundleToCart = async (e) => {
             
             {bundle.products.length > 4 && (
               <div className="mt-2 text-center">
-                <span className="text-xs text-gray-500">
+<span className="text-xs text-gray-500 word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>
                   +{bundle.products.length - 4} more ingredients
                 </span>
               </div>
@@ -188,7 +188,7 @@ const handleAddBundleToCart = async (e) => {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500">
+<p className="text-xs text-gray-500 word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>
                   {formatPrice(totalBundlePrice / bundle.servings)} per serving
                 </p>
               </div>
@@ -202,14 +202,14 @@ const handleAddBundleToCart = async (e) => {
               size="sm"
             >
               {isLoading ? (
-                <>
+<>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Adding...
+                  <span className="word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>Adding...</span>
                 </>
               ) : (
                 <>
-                  <ApperIcon name="ShoppingCart" className="w-4 h-4 mr-2" />
-                  Get Complete Bundle
+<ApperIcon name="ShoppingCart" className="w-4 h-4 mr-2" />
+                  <span className="word-spacing-loose" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Get Complete Bundle</span>
                 </>
               )}
             </Button>

@@ -295,7 +295,7 @@ useEffect(() => {
     });
 
     // Add CSS override for extension conflicts
-    const extensionOverrideStyle = document.createElement('style');
+const extensionOverrideStyle = document.createElement('style');
     extensionOverrideStyle.id = 'extension-conflict-override';
     extensionOverrideStyle.textContent = `
       /* Extension Conflict Overrides */
@@ -310,14 +310,38 @@ useEffect(() => {
         z-index: -9999 !important;
       }
       
+      /* COMPREHENSIVE WORD SPACING ENFORCEMENT */
+      /* Apply enhanced word spacing to ALL text elements */
+      *, *::before, *::after {
+        word-spacing: 0.08em !important;
+        letter-spacing: 0.015em !important;
+      }
+      
+      /* Enhanced spacing for specific text elements */
+      p, span, div, h1, h2, h3, h4, h5, h6, 
+      button, a, label, li, td, th {
+        word-spacing: 0.1em !important;
+        letter-spacing: 0.02em !important;
+        line-height: 1.6 !important;
+      }
+      
+      /* Product-specific enhanced spacing */
+      [class*="product"], [class*="title"], [class*="name"],
+      [class*="description"], [class*="text"] {
+        word-spacing: 0.12em !important;
+        letter-spacing: 0.025em !important;
+        line-height: 1.65 !important;
+      }
+      
       /* Prevent extension CSS from interfering with inputs */
       input, textarea, [contenteditable] {
         -webkit-user-modify: read-write !important;
         -moz-user-modify: read-write !important;
         user-modify: read-write !important;
         white-space: pre-wrap !important;
-        word-spacing: normal !important;
-        letter-spacing: normal !important;
+        word-spacing: 0.1em !important;
+        letter-spacing: 0.025em !important;
+        line-height: 1.6 !important;
       }
       
       /* Override extension-injected styles */
@@ -332,6 +356,8 @@ useEffect(() => {
         opacity: 1 !important;
         visibility: visible !important;
         pointer-events: auto !important;
+        word-spacing: 0.1em !important;
+        letter-spacing: 0.025em !important;
       }
     `;
     
@@ -340,26 +366,49 @@ useEffect(() => {
       console.log('✅ Extension conflict CSS overrides applied');
     }
 
-    // Nuclear Option - Fallback Spacebar Handler
+// Nuclear Option - Fallback Spacebar Handler with Enhanced Text Spacing
     const nuclearSpacebarHandler = function(e) {
       if (e.key === ' ' && !e.ctrlKey && !e.altKey && !e.metaKey) {
-// Allow natural keyboard input without interference
+        // Allow natural keyboard input without interference
+        // Ensure proper spacing is maintained in text inputs
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
+          setTimeout(() => {
+            e.target.style.wordSpacing = '0.1em';
+            e.target.style.letterSpacing = '0.025em';
+          }, 10);
+        }
       }
     };
 
     // Simple keyboard event listener for accessibility
-    document.addEventListener('keydown', (e) => {
-      // Let browser handle all input naturally
+document.addEventListener('keydown', (e) => {
+      // Let browser handle all input naturally with enhanced spacing
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
+        // Apply enhanced spacing after input
+        setTimeout(() => {
+          e.target.style.wordSpacing = '0.1em';
+          e.target.style.letterSpacing = '0.025em';
+          e.target.style.lineHeight = '1.6';
+        }, 10);
         return; // Allow natural input behavior
       }
     });
-    // Enhanced input field initialization
-    const initializeInputFields = () => {
+    
+    // Enhanced input field initialization with comprehensive spacing
+const initializeInputFields = () => {
       const inputs = document.querySelectorAll('input, textarea, [contenteditable]');
       inputs.forEach(input => {
-        // Add spacebar-fixed attribute for CSS targeting
+        // Add enhanced typography attributes
         input.setAttribute('data-spacebar-fixed', 'true');
+        input.setAttribute('data-enhanced-typography', 'true');
+        input.classList.add('product-text-field', 'word-spacing-loose');
+        
+        // Apply enhanced spacing styles directly
+        input.style.wordSpacing = '0.1em';
+        input.style.letterSpacing = '0.025em';
+        input.style.lineHeight = '1.6';
+        input.style.fontKerning = 'normal';
+        input.style.textRendering = 'optimizeLegibility';
         
         // Ensure proper event handling
         input.addEventListener('keydown', function(e) {
@@ -367,6 +416,12 @@ useEffect(() => {
             e.stopPropagation();
           }
         }, { passive: false });
+        
+        // Maintain spacing on input events
+        input.addEventListener('input', function() {
+          this.style.wordSpacing = '0.1em';
+          this.style.letterSpacing = '0.025em';
+        });
         
         // Fix any extension-modified attributes
         if (input.hasAttribute('data-gramm_editor')) {
@@ -377,7 +432,15 @@ useEffect(() => {
         }
       });
       
-      console.log(`✅ Initialized ${inputs.length} input fields with spacebar fixes`);
+      // Apply enhanced typography to all text elements
+      const textElements = document.querySelectorAll('p, span, div, h1, h2, h3, h4, h5, h6, button, a, label, li');
+      textElements.forEach(element => {
+        element.style.wordSpacing = '0.08em';
+        element.style.letterSpacing = '0.015em';
+        element.classList.add('word-spacing-relaxed');
+      });
+      
+      console.log(`✅ Initialized ${inputs.length} input fields and enhanced typography for all text elements`);
     };
 
     // Initialize existing fields and observe for new ones

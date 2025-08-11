@@ -114,18 +114,18 @@ const ProductGrid = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-2xl md:text-3xl font-display font-bold text-gray-900 mb-2">
+<h2 className="text-2xl md:text-3xl font-display font-bold text-gray-900 mb-2 product-text-field enhanced-product-title" style={{ wordSpacing: '0.1em', letterSpacing: '0.02em' }}>
             {title}
           </h2>
-          <p className="text-gray-600">
-            Showing {visibleProducts.length} of {products.length} products
+          <p className="text-gray-600 word-spacing-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em', lineHeight: '1.6' }}>
+            <span style={{ wordSpacing: '0.08em' }}>Showing</span> <span style={{ wordSpacing: '0.06em' }}>{visibleProducts.length}</span> <span style={{ wordSpacing: '0.08em' }}>of</span> <span style={{ wordSpacing: '0.06em' }}>{products.length}</span> <span style={{ wordSpacing: '0.08em' }}>products</span>
           </p>
         </div>
         
 {products.length > initialCount && (
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">
+<span className="text-sm text-gray-500 word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>
                 {isMobile ? 
                   `${visibleCount}/${products.length}` :
                   `${Math.round((visibleCount / products.length) * 100)}% loaded`
@@ -139,7 +139,7 @@ const ProductGrid = ({
               </div>
             </div>
             {!isMobile && (
-              <span className="text-xs text-gray-400">
+<span className="text-xs text-gray-400 word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>
                 {hasMore ? `${products.length - visibleCount} more` : 'All loaded'}
               </span>
             )}
@@ -189,14 +189,14 @@ className={`grid gap-4 ${
             {isLoading ? (
               <div className="flex items-center">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                <span className={isMobile ? 'text-sm' : ''}>
+<span className={`${isMobile ? 'text-sm' : ''} word-spacing-relaxed`} style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>
                   Loading{isMobile ? '...' : ' more products...'}
                 </span>
               </div>
             ) : (
               <div className="flex items-center">
                 <ApperIcon name="Plus" className="w-4 h-4 mr-2" />
-                <span className={isMobile ? 'text-sm' : ''}>
+<span className={`${isMobile ? 'text-sm' : ''} word-spacing-loose`} style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>
                   {isMobile ? 
                     `Load More (${products.length - visibleCount})` :
                     `Load More Products (${products.length - visibleCount} remaining)`
@@ -213,8 +213,8 @@ className={`grid gap-4 ${
         <div className="flex justify-center mt-12">
           <div className="text-center">
             <ApperIcon name="CheckCircle" className="w-8 h-8 text-primary-500 mx-auto mb-2" />
-            <p className="text-gray-600 font-medium">
-              You've viewed all {products.length} products
+<p className="text-gray-600 font-medium word-spacing-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em', lineHeight: '1.6' }}>
+              <span style={{ wordSpacing: '0.08em' }}>You've viewed all</span> <span style={{ wordSpacing: '0.06em' }}>{products.length}</span> <span style={{ wordSpacing: '0.08em' }}>products</span>
             </p>
           </div>
         </div>
