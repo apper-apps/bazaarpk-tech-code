@@ -10,7 +10,7 @@ import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/utils/cn";
 
-const ProductCard = ({ product, className, ...props }) => {
+const ProductCard = ({ product, mode = 'default', className, ...props }) => {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const { addToCart } = useCart();
@@ -122,7 +122,7 @@ const handleAddToCart = (e) => {
           </h3>
 
 {/* Variants */}
-{product.variants && product.variants.length > 0 && (
+{product.variants && product.variants.length > 0 && mode !== 'suggestion' && (
             <div className="mb-3">
               <select
                 value={selectedVariant?.name || ''}
@@ -142,40 +142,58 @@ const handleAddToCart = (e) => {
               </select>
             </div>
           )}
-{/* Price */}
-          <div className="mb-4">
+
+          {/* Price */}
+          <div className="mb-3">
             <PriceDisplay 
               price={currentPrice}
               oldPrice={currentOldPrice}
-              oldPrice={currentOldPrice}
-              size="sm"
+              size={mode === 'suggestion' ? 'xs' : 'sm'}
             />
           </div>
 
-          {/* Stock Status */}
-          <div className="mb-4">
-            <StockIndicator stock={product.stock} size="xs" />
-          </div>
+          {/* Stock Status - only show for default mode */}
+          {mode !== 'suggestion' && (
+            <div className="mb-4">
+              <StockIndicator stock={product.stock} size="xs" />
+            </div>
+          )}
 
           {/* Add to Cart Button */}
-          <Button
-            onClick={handleAddToCart}
-            disabled={product.stock <= 0}
-            className="w-full"
-            size="sm"
-          >
-            {product.stock <= 0 ? (
-<>
-                <ApperIcon name="AlertCircle" className="w-4 h-4 mr-2" />
-                <span className="word-spacing-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Out of Stock</span>
-              </>
-            ) : (
-              <>
-<ApperIcon name="ShoppingCart" className="w-4 h-4 mr-2" />
-                <span className="word-spacing-loose" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Add to Cart</span>
-              </>
-            )}
-          </Button>
+          {mode === 'suggestion' ? (
+            <Button
+              onClick={handleAddToCart}
+              disabled={product.stock <= 0}
+              variant="outline"
+              size="sm"
+              className="w-full h-8 p-0 hover:bg-primary-50 hover:border-primary-300 group"
+            >
+              {product.stock <= 0 ? (
+                <ApperIcon name="AlertCircle" size={14} className="text-gray-400" />
+              ) : (
+                <ApperIcon name="Plus" size={14} className="text-primary-600 group-hover:text-primary-700 transition-colors" />
+              )}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleAddToCart}
+              disabled={product.stock <= 0}
+              className="w-full"
+              size="sm"
+            >
+              {product.stock <= 0 ? (
+                <>
+                  <ApperIcon name="AlertCircle" className="w-4 h-4 mr-2" />
+                  <span className="word-spacing-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Out of Stock</span>
+                </>
+              ) : (
+                <>
+                  <ApperIcon name="ShoppingCart" className="w-4 h-4 mr-2" />
+                  <span className="word-spacing-loose" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Add to Cart</span>
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </Link>
     </Card>

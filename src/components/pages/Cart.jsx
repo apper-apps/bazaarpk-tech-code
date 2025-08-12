@@ -9,6 +9,7 @@ import PriceDisplay from "@/components/molecules/PriceDisplay";
 import Empty from "@/components/ui/Empty";
 import Button from "@/components/atoms/Button";
 import Card from "@/components/atoms/Card";
+import ProductSuggestionsCarousel from "@/components/organisms/ProductSuggestionsCarousel";
 import { formatPrice } from "@/utils/currency";
 
 const Cart = () => {
@@ -382,7 +383,13 @@ const totalPrice = getTotalPrice();
               </div>
             </Card>
           </div>
-        </div>
+</div>
+
+        {/* Product Suggestions Carousel */}
+        <ProductSuggestionsCarousel 
+          cartItems={cartItems}
+          className="mt-8"
+        />
       </div>
     </div>
   );
