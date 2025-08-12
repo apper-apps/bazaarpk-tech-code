@@ -1,20 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import ApperIcon from "@/components/ApperIcon";
 import Button from "@/components/atoms/Button";
 import SearchBar from "@/components/molecules/SearchBar";
 import { useCart } from "@/hooks/useCart";
 import { cn } from "@/utils/cn";
-
 const Header = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [cartPulse, setCartPulse] = useState(false);
   const { getTotalItems } = useCart();
   const navigate = useNavigate();
   const totalItems = getTotalItems();
+  const [previousItemCount, setPreviousItemCount] = useState(0);
+
+  // Trigger cart animation when items change
+  useEffect(() => {
+    if (totalItems !== previousItemCount && totalItems > 0) {
+      setCartPulse(true);
+      setTimeout(() => setCartPulse(false), 600);
+    }
+    setPreviousItemCount(totalItems);
+  }, [totalItems, previousItemCount]);
 
   const searchSuggestions = [
     "Fresh Vegetables",
-    "Organic Fruits",
+    "Organic Fruits", 
     "Basmati Rice",
     "Desi Ghee",
     "Halal Meat",
@@ -81,17 +91,23 @@ const Header = () => {
               </Link>
               
               {/* Cart Button */}
-              <Button
+<Button
                 variant="ghost"
                 onClick={() => navigate("/cart")}
-                className="relative p-2"
+                className={cn(
+                  "relative p-2 transition-all duration-300",
+                  cartPulse && "animate-pulse scale-110"
+                )}
                 aria-label={totalItems > 0 ? `Shopping cart with ${totalItems} items` : 'Shopping cart (empty)'}
                 title={totalItems > 0 ? `${totalItems} items in cart` : 'Shopping cart is empty'}
               >
                 <ApperIcon name="ShoppingCart" className="w-6 h-6" aria-hidden="true" />
                 {totalItems > 0 && (
                   <span 
-                    className="absolute -top-1 -right-1 bg-accent-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium"
+                    className={cn(
+                      "absolute -top-1 -right-1 bg-accent-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium transition-all duration-300",
+                      cartPulse && "animate-bounce bg-green-500"
+                    )}
                     aria-label={`${totalItems} items`}
                     role="status"
                   >
@@ -118,17 +134,23 @@ const Header = () => {
 
             {/* Mobile Menu Button */}
             <div className="md:hidden flex items-center space-x-2">
-              <Button
+<Button
                 variant="ghost"
                 onClick={() => navigate("/cart")}
-                className="relative p-2"
+                className={cn(
+                  "relative p-2 transition-all duration-300",
+                  cartPulse && "animate-pulse scale-110"
+                )}
                 aria-label={totalItems > 0 ? `Shopping cart with ${totalItems} items` : 'Shopping cart (empty)'}
                 title={totalItems > 0 ? `${totalItems} items in cart` : 'Shopping cart is empty'}
               >
                 <ApperIcon name="ShoppingCart" className="w-6 h-6" aria-hidden="true" />
                 {totalItems > 0 && (
                   <span 
-                    className="absolute -top-1 -right-1 bg-accent-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium"
+                    className={cn(
+                      "absolute -top-1 -right-1 bg-accent-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium transition-all duration-300",
+                      cartPulse && "animate-bounce bg-green-500"
+                    )}
                     aria-label={`${totalItems} items`}
                     role="status"
                   >

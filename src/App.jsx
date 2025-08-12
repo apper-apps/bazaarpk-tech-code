@@ -255,6 +255,7 @@ function AppContent() {
   const [adminError, setAdminError] = useState(null);
   const [showForceExit, setShowForceExit] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [cartAnimationTrigger, setCartAnimationTrigger] = useState(0);
 
   // Ref to track component mount status
   const isMountedRef = useRef(true);
@@ -837,9 +838,10 @@ return (
           />
         </div>
       )}
-      
-      <Header />
-        
+<Header 
+        onCartClick={() => setIsCartDrawerOpen(true)}
+        cartAnimationTrigger={cartAnimationTrigger}
+      />
       <main>
         <Routes>
             <Route path="/" element={<Home />} />
@@ -1035,9 +1037,10 @@ return (
           </Routes>
         </main>
 
-        <CartDrawer 
+<CartDrawer 
           isOpen={isCartDrawerOpen} 
-          onClose={() => setIsCartDrawerOpen(false)} 
+          onClose={() => setIsCartDrawerOpen(false)}
+          onCartUpdate={() => setCartAnimationTrigger(prev => prev + 1)}
         />
 <ToastContainer
           position="top-right"

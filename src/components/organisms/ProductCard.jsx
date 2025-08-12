@@ -61,7 +61,7 @@ const handleAddToCart = (e) => {
     <Card hover className={cn("product-card group cursor-pointer", className)} {...props}>
       <Link to={`/product/${product.Id}`} className="block">
         {/* Product Image */}
-        <div className="relative aspect-square overflow-hidden rounded-t-xl bg-gray-100">
+<div className="relative aspect-square overflow-hidden rounded-t-xl bg-gray-100 group/image">
           {!imageLoaded && (
             <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse" />
           )}
@@ -70,11 +70,19 @@ const handleAddToCart = (e) => {
             src={product.images?.[0] || "/api/placeholder/300/300"}
             alt={product.title}
             className={cn(
-              "w-full h-full object-cover transition-all duration-300 group-hover:scale-105",
+              "w-full h-full object-cover transition-all duration-500 group-hover:scale-110 group/image:hover:scale-125 cursor-zoom-in",
               imageLoaded ? "opacity-100" : "opacity-0"
             )}
             onLoad={() => setImageLoaded(true)}
           />
+          
+          {/* Zoom overlay */}
+          <div className="absolute inset-0 bg-black bg-opacity-0 group/image:hover:bg-opacity-10 transition-all duration-300 flex items-center justify-center">
+            <ApperIcon 
+              name="ZoomIn" 
+              className="w-8 h-8 text-white opacity-0 group/image:hover:opacity-100 transition-opacity duration-300" 
+            />
+          </div>
 
           {/* Badges */}
           {product.badges && product.badges.length > 0 && (
@@ -114,29 +122,24 @@ const handleAddToCart = (e) => {
           </h3>
 
 {/* Variants */}
-          {product.variants && product.variants.length > 0 && (
+{product.variants && product.variants.length > 0 && (
             <div className="mb-3">
-              <div className="flex flex-wrap gap-2">
-                {product.variants.slice(0, 3).map((variant, index) => (
-                  <button
-                    key={index}
-                    onClick={(e) => handleVariantSelect(variant, e)}
-                    className={cn(
-                      "px-2 py-1 text-xs rounded-md border transition-colors duration-200",
-                      selectedVariant?.name === variant.name
-                        ? "border-primary-500 bg-primary-50 text-primary-700"
-                        : "border-gray-200 bg-white text-gray-600 hover:border-primary-300"
-                    )}
->
-                    <span className="word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>{variant.name}</span>
-                  </button>
+              <select
+                value={selectedVariant?.name || ''}
+                onChange={(e) => {
+                  const variant = product.variants.find(v => v.name === e.target.value);
+                  if (variant) handleVariantSelect(variant, e);
+                }}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white hover:border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all duration-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <option value="">Select Size</option>
+                {product.variants.map((variant, index) => (
+                  <option key={index} value={variant.name}>
+                    {variant.name} - {variant.price ? `Rs ${variant.price}` : 'Same Price'}
+                  </option>
                 ))}
-                {product.variants.length > 3 && (
-<span className="px-2 py-1 text-xs text-gray-500 word-spacing-relaxed" style={{ wordSpacing: '0.06em', letterSpacing: '0.01em' }}>
-                    +{product.variants.length - 3} more
-                  </span>
-                )}
-              </div>
+              </select>
             </div>
           )}
 {/* Price */}
