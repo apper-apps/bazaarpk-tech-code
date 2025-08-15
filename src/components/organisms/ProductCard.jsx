@@ -12,8 +12,10 @@ import { cn } from "@/utils/cn";
 
 const ProductCard = ({ product, mode = 'default', className, ...props }) => {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const { addToCart } = useCart();
+const [imageLoaded, setImageLoaded] = useState(false);
+const [imageError, setImageError] = useState(false);
+const [retryCount, setRetryCount] = useState(0);
+const { addToCart } = useCart();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -62,27 +64,64 @@ const handleAddToCart = (e) => {
       <Link to={`/product/${product.Id}`} className="block">
         {/* Product Image */}
 <div className="relative aspect-square overflow-hidden rounded-t-xl bg-gray-100 group/image">
-          {!imageLoaded && (
+          {!imageLoaded && !imageError && (
             <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse" />
           )}
           
-          <img
-            src={product.images?.[0] || "/api/placeholder/300/300"}
-            alt={product.title}
-            className={cn(
-              "w-full h-full object-cover transition-all duration-500 group-hover:scale-110 group/image:hover:scale-125 cursor-zoom-in",
-              imageLoaded ? "opacity-100" : "opacity-0"
-            )}
-            onLoad={() => setImageLoaded(true)}
-          />
+          {imageError ? (
+            <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+              <div className="text-center p-4">
+                <ApperIcon name="ImageOff" className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-xs text-gray-500 mb-2">Image unavailable</p>
+                {retryCount < 2 && (
+                  <button
+                    onClick={() => {
+                      setImageError(false);
+                      setImageLoaded(false);
+                      setRetryCount(prev => prev + 1);
+                    }}
+                    className="text-xs text-primary-600 hover:text-primary-700 underline"
+                    aria-label="Retry loading image"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <img
+              src={product.images?.[0] || `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNTAgMTAwQzE2MS4wNDYgMTAwIDE3MCAzNi4wNDU3IDE3MCA0NUMxNzAgNTMuOTU0MyAxNjEuMDQ2IDUyLjUgMTUwIDUyLjVDMTM4Ljk1NCA1Mi41IDEzMCA1My45NTQzIDEzMCA0NUMxMzAgMzYuMDQ1NyAxMzguOTU0IDEwMCAxNTAgMTAwWiIgZmlsbD0iI0Q0RDRENSIvPgo8cGF0aCBkPSJNMjEwIDIwMEgzMFYxODBMMTIwIDkwQzEyNSA4NSAxMzUgODUgMTQwIDkwTDE2MCA5OUMyMTAgMTk5IDIxMCAxOTkgMjEwIDIwMFoiIGZpbGw9IiNENEQ0RDUiLz4KPC9zdmc+`}
+              alt={product.title || 'Product image'}
+              className={cn(
+                "w-full h-full object-cover transition-all duration-500 group-hover:scale-110 group/image:hover:scale-125 cursor-zoom-in",
+                imageLoaded ? "opacity-100" : "opacity-0"
+              )}
+              onLoad={() => {
+                setImageLoaded(true);
+                setImageError(false);
+              }}
+              onError={() => {
+                setImageError(true);
+                setImageLoaded(false);
+                console.warn(`Failed to load image for product: ${product.title}`, {
+                  productId: product.id,
+                  imageUrl: product.images?.[0],
+                  retryCount
+                });
+              }}
+              loading="lazy"
+            />
+          )}
           
           {/* Zoom overlay */}
-          <div className="absolute inset-0 bg-black bg-opacity-0 group/image:hover:bg-opacity-10 transition-all duration-300 flex items-center justify-center">
-            <ApperIcon 
-              name="ZoomIn" 
-              className="w-8 h-8 text-white opacity-0 group/image:hover:opacity-100 transition-opacity duration-300" 
-            />
-          </div>
+          {imageLoaded && !imageError && (
+            <div className="absolute inset-0 bg-black bg-opacity-0 group/image:hover:bg-opacity-10 transition-all duration-300 flex items-center justify-center">
+              <ApperIcon 
+                name="ZoomIn" 
+                className="w-8 h-8 text-white opacity-0 group/image:hover:opacity-100 transition-opacity duration-300" 
+              />
+            </div>
+          )}
 
           {/* Badges */}
           {product.badges && product.badges.length > 0 && (
