@@ -1,15 +1,7 @@
-import React from "react";
-import { Error } from "@/components/ui/Error";
-// Removed Error import - using native JavaScript Error class instead
 /**
  * Security utilities for input sanitization and CSRF protection
  * Implements WCAG compliance and security best practices
- */
-/**
- * Security utilities for input sanitization and CSRF protection
- * Implements WCAG compliance and security best practices
- */
-
+*/
 // Generate CSRF token for form protection
 export const generateCSRFToken = () => {
   const array = new Uint8Array(32);
@@ -240,11 +232,12 @@ const autoSpaceWords = (text) => {
   result = result.replace(/([&@#%])([a-zA-Z])/g, '$1 $2');
 // Clean up excessive spaces but preserve intentional spacing
   result = result.replace(/\s{3,}/g, '  '); // Max 2 consecutive spaces
-  result = result.replace(/\s{2,}/g, ' ').trim();
   
-  return result;
+  // Handle punctuation spacing
   result = result.replace(/([a-zA-Z])([.!?])/g, '$1$2');
   result = result.replace(/([.!?])([a-zA-Z])/g, '$1 $2');
+  
+  result = result.replace(/\s{2,}/g, ' ').trim();
   
   return result;
 };
@@ -941,9 +934,6 @@ export const initializeSecurity = () => {
       console.warn('CSP Violation:', e.violatedDirective, e.blockedURI);
     });
   }
-// Initialize security systems
-  initializeInputFields();
-  
   // Enhanced spacebar support for natural text input
   if (typeof window !== 'undefined') {
     // Ensure spacebar events are never blocked in form inputs
@@ -964,8 +954,8 @@ export const initializeSecurity = () => {
     }, true); // Capture phase to intercept early
   }
   
-  // Initialize input field spacing enhancements
-const ensureSpacebarWorksInInputs = () => {
+// Initialize input field spacing enhancements
+  const ensureSpacebarWorksInInputs = () => {
     const inputElements = document.querySelectorAll('input, textarea, [contenteditable="true"]');
     
     inputElements.forEach(element => {
@@ -973,35 +963,33 @@ const ensureSpacebarWorksInInputs = () => {
       element.setAttribute('data-spacebar-fixed', 'true');
       element.setAttribute('data-typography-enhanced', 'true');
       
-      // ENHANCED INPUT PROPERTIES for optimal typography
-// Enhanced text styling for optimal readability
-        element.style.whiteSpace = 'normal'; // Allow natural text flow
-        element.style.wordSpacing = '0.1em';
-        element.style.letterSpacing = '0.025em';
-        element.style.lineHeight = '1.65';
-        element.style.textTransform = 'none';
-        
-        // Enhanced font rendering
-        element.style.fontKerning = 'normal';
-        element.style.textRendering = 'optimizeLegibility';
-        element.style.fontFeatureSettings = '"kern" 1';
-        
-        // User interaction properties - enable natural text input
-        element.style.userSelect = 'text';
-        element.style.WebkitUserSelect = 'text';
-        element.style.MozUserSelect = 'text';
-        element.style.pointerEvents = 'auto';
-        element.style.touchAction = 'manipulation';
-element.style.touchAction = 'manipulation';
-        
-        // Advanced typography properties for natural text flow
-        element.style.wordBreak = 'normal';
-        element.style.overflowWrap = 'break-word';
-        element.style.hyphens = 'auto';
-        
-        // Focus enhancement
-        element.style.cursor = 'text';
-      }
+// ENHANCED INPUT PROPERTIES for optimal typography
+      // Enhanced text styling for optimal readability
+      element.style.whiteSpace = 'normal'; // Allow natural text flow
+      element.style.wordSpacing = '0.1em';
+      element.style.letterSpacing = '0.025em';
+      element.style.lineHeight = '1.65';
+      element.style.textTransform = 'none';
+      
+      // Enhanced font rendering
+      element.style.fontKerning = 'normal';
+      element.style.textRendering = 'optimizeLegibility';
+      element.style.fontFeatureSettings = '"kern" 1';
+      
+      // User interaction properties - enable natural text input
+      element.style.userSelect = 'text';
+      element.style.WebkitUserSelect = 'text';
+      element.style.MozUserSelect = 'text';
+      element.style.pointerEvents = 'auto';
+      element.style.touchAction = 'manipulation';
+      
+      // Advanced typography properties for natural text flow
+      element.style.wordBreak = 'normal';
+      element.style.overflowWrap = 'break-word';
+      element.style.hyphens = 'auto';
+      
+      // Focus enhancement
+      element.style.cursor = 'text';
       
       // Special handling for contenteditable elements
       if (element.hasAttribute('contenteditable')) {
@@ -1058,7 +1046,7 @@ element.style.touchAction = 'manipulation';
   if (import.meta.env?.MODE === 'development' || import.meta.env?.DEV) {
     let spaceKeyBlocked = false;
     // Global spacebar monitoring
-    document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function(e) {
       if (e.key === ' ' || e.code === 'Space') {
         const target = e.target;
         const isInputField = target && (
@@ -1087,9 +1075,8 @@ element.style.touchAction = 'manipulation';
           }
         }
       }
-}
-      }, true); // Capture phase to intercept early
-    });
+    }, true); // Capture phase to intercept early
+  }
     
     // Natural space input monitoring - removed preventDefault override
     // to allow normal spacebar functionality in all input fields
@@ -1162,7 +1149,7 @@ element.style.touchAction = 'manipulation';
   // Run compatibility check after a short delay
   setTimeout(checkSpacebarCompatibility, 1000);
 
-  // Announce spacebar protection is active
+// Announce spacebar protection is active
   if (typeof announceToScreenReader === 'function') {
     announceToScreenReader('Spacebar input protection initialized');
   }
