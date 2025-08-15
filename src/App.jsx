@@ -156,196 +156,6 @@ const SafeAdminComponent = ({ children, componentName, fallback }) => {
   );
 };
 
-function AppContent() {
-  const navigate = useNavigate();
-  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
-  const [performanceMetrics, setPerformanceMetrics] = useState({});
-  const [isAdminLoading, setIsAdminLoading] = useState(false);
-  const [adminLoadProgress, setAdminLoadProgress] = useState(0);
-  const [adminError, setAdminError] = useState(null);
-  const [showForceExit, setShowForceExit] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const [cartAnimationTrigger, setCartAnimationTrigger] = useState(0);
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [initError, setInitError] = useState(null);
-  const [spacebarSystemStatus, setSpacebarSystemStatus] = useState('initializing');
-
-  // Ref to track component mount status
-  const isMountedRef = useRef(true);
-
-  // COMPREHENSIVE SPACEBAR FIX SYSTEM
-  const initializeSpacebarSystem = useCallback(() => {
-    console.log('🔧 Initializing comprehensive spacebar fix system...');
-    
-    try {
-      // Clear any existing handlers that might interfere
-      const existingHandlers = document.querySelectorAll('[data-spacebar-handler]');
-      existingHandlers.forEach(el => {
-        el.removeAttribute('data-spacebar-handler');
-      });
-
-      // Enhanced input field initialization
-      const initializeInputFields = () => {
-        const inputSelectors = [
-          'input[type="text"]',
-          'input[type="email"]', 
-          'input[type="password"]',
-          'input[type="search"]',
-          'textarea',
-          '[contenteditable="true"]',
-          '[contenteditable]'
-        ];
-
-        document.querySelectorAll(inputSelectors.join(',')).forEach(input => {
-          // Ensure proper attributes
-          input.setAttribute('data-spacebar-enabled', 'true');
-          input.style.pointerEvents = 'auto';
-          input.style.userSelect = 'text';
-          
-          // Remove any conflicting event listeners
-          const newInput = input.cloneNode(true);
-          input.parentNode.replaceChild(newInput, input);
-          
-          // Add enhanced event handling
-          newInput.addEventListener('keydown', (e) => {
-            if (e.key === ' ' || e.code === 'Space') {
-              // Ensure spacebar works normally in text inputs
-              e.stopPropagation();
-              // Allow default behavior (don't preventDefault)
-              return true;
-            }
-          }, { passive: true });
-
-          newInput.addEventListener('input', (e) => {
-            // Enhanced text processing for better spacing
-            if (e.inputType === 'insertText' && e.data === ' ') {
-              console.log('✅ Spacebar input detected and processed');
-            }
-          }, { passive: true });
-        });
-      };
-
-      // Initialize immediately
-      initializeInputFields();
-
-      // Monitor for dynamic content with debounced observer
-      let observerTimeout;
-      const debouncedInitialize = () => {
-        clearTimeout(observerTimeout);
-        observerTimeout = setTimeout(initializeInputFields, 100);
-      };
-
-      const observer = new MutationObserver((mutations) => {
-        let shouldReinitialize = false;
-        mutations.forEach(mutation => {
-          if (mutation.type === 'childList') {
-            mutation.addedNodes.forEach(node => {
-              if (node.nodeType === 1) { // Element node
-                const hasInputs = node.matches('input, textarea, [contenteditable]') || 
-                                node.querySelector('input, textarea, [contenteditable]');
-                if (hasInputs) {
-                  shouldReinitialize = true;
-                }
-              }
-            });
-          }
-        });
-        
-        if (shouldReinitialize) {
-          debouncedInitialize();
-        }
-      });
-
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['contenteditable', 'type']
-      });
-
-      // Store cleanup function
-      window.spacebarCleanup = () => {
-        observer.disconnect();
-        clearTimeout(observerTimeout);
-      };
-
-      setSpacebarSystemStatus('active');
-      console.log('✅ Spacebar fix system initialized successfully');
-
-    } catch (error) {
-      console.error('❌ Spacebar system initialization failed:', error);
-      setSpacebarSystemStatus('error');
-    }
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (window.spacebarCleanup) {
-        window.spacebarCleanup();
-      }
-    };
-  }, []);
-
-  // React-level spacebar event handling
-  useEffect(() => {
-    const reactSpacebarHandler = (e) => {
-      if (e.key === ' ' || e.code === 'Space') {
-        const target = e.target;
-        
-        // Check if target is a text input
-        const isTextInput = target && (
-          target.tagName === 'INPUT' && [
-            'text', 'email', 'password', 'search', 'url', 'tel'
-          ].includes(target.type?.toLowerCase()) ||
-          target.tagName === 'TEXTAREA' ||
-          target.contentEditable === 'true' ||
-          target.isContentEditable
-        );
-
-        if (isTextInput) {
-          // For text inputs, ensure spacebar works naturally
-          console.log('🎯 Spacebar in text input - allowing normal behavior');
-          // Don't prevent default or stop propagation for text inputs
-          return true;
-        }
-      }
-    };
-
-    // Add with capture false to not interfere with React's event system
-    document.addEventListener('keydown', reactSpacebarHandler, false);
-    document.addEventListener('keypress', reactSpacebarHandler, false);
-
-    return () => {
-      document.removeEventListener('keydown', reactSpacebarHandler, false);
-};
-  }, []);
-
-  useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        setIsInitializing(true);
-        console.log('🚀 Starting app initialization...');
-
-        // Initialize security
-        await initializeSecurity();
-        console.log('✅ Security initialized');
-
-        // Browser compatibility check
-        const browserInfo = detectBrowser();
-        console.log('📱 Browser detected:', browserInfo);
-
-        console.log('🎉 App initialization complete');
-        setIsInitializing(false);
-      } catch (error) {
-        console.error('❌ App initialization failed:', error);
-        setInitError(error.message);
-        setIsInitializing(false);
-      }
-    };
-
-    initializeApp();
-  }, []);
 // Browser detection at module level to avoid re-computation
 const detectBrowser = () => {
   try {
@@ -471,9 +281,26 @@ function AppContent() {
   const [retryCount, setRetryCount] = useState(0);
   const [cartAnimationTrigger, setCartAnimationTrigger] = useState(0);
 
-  // Ref to track component mount status
+// Ref to track component mount status
   const isMountedRef = useRef(true);
-const isMountedRef = useRef(true);
+
+  // Initialize spacebar fixes and performance monitoring only once to prevent re-renders
+  useEffect(() => {
+    const reactSpacebarHandler = function(e) {
+      // Handle spacebar events for React components
+      if (e.key === ' ' && e.target && e.target.closest('[data-react-component]')) {
+        e.stopPropagation();
+      }
+    };
+
+    document.addEventListener('keydown', reactSpacebarHandler, false);
+    document.addEventListener('keypress', reactSpacebarHandler, false);
+
+    return () => {
+      document.removeEventListener('keydown', reactSpacebarHandler, false);
+      document.removeEventListener('keypress', reactSpacebarHandler, false);
+    };
+  }, []);
 
   // Initialize performance monitoring only once to prevent re-renders
     console.log('🔍 Browser Compatibility Check:', BROWSER_INFO);
