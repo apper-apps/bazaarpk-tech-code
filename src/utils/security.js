@@ -1,4 +1,5 @@
 import React from "react";
+import { Error } from "@/components/ui/Error";
 // Removed Error import - using native JavaScript Error class instead
 /**
  * Security utilities for input sanitization and CSRF protection
@@ -237,11 +238,11 @@ const autoSpaceWords = (text) => {
   // Pattern 7: Handle special characters with merged words
   result = result.replace(/([a-zA-Z])([&@#%])/g, '$1 $2');
   result = result.replace(/([&@#%])([a-zA-Z])/g, '$1 $2');
-  
-  // Pattern 8: Clean up excessive spacing and normalize
+// Clean up excessive spaces but preserve intentional spacing
+  result = result.replace(/\s{3,}/g, '  '); // Max 2 consecutive spaces
   result = result.replace(/\s{2,}/g, ' ').trim();
   
-  // Pattern 9: Ensure proper spacing around punctuation
+  return result;
   result = result.replace(/([a-zA-Z])([.!?])/g, '$1$2');
   result = result.replace(/([.!?])([a-zA-Z])/g, '$1 $2');
   
@@ -940,37 +941,30 @@ export const initializeSecurity = () => {
       console.warn('CSP Violation:', e.violatedDirective, e.blockedURI);
     });
   }
-
-  // SPACEBAR FUNCTIONALITY PROTECTION
-  // Prevent spacebar blocking in input fields
-  if (typeof Event !== 'undefined' && Event.prototype && Event.prototype.stopPropagation) {
-    const originalStopPropagation = Event.prototype.stopPropagation;
-    
-    Event.prototype.stopPropagation = function() {
-      // Allow spacebar in input fields
-      if (this.key === ' ' && 
-          this.target && 
-          this.target.tagName && 
-          this.target.tagName.match(/INPUT|TEXTAREA/i)) {
-        console.debug('Spacebar protection: Allowing space in input field', this.target);
-        return; // Don't block spacebar in inputs
+// Initialize security systems
+  initializeInputFields();
+  
+  // Enhanced spacebar support for natural text input
+  if (typeof window !== 'undefined') {
+    // Ensure spacebar events are never blocked in form inputs
+    document.addEventListener('keydown', function(e) {
+      if (e.key === ' ' || e.code === 'Space') {
+        const target = e.target;
+        if (target && (
+          target.tagName === 'INPUT' || 
+          target.tagName === 'TEXTAREA' || 
+          target.contentEditable === 'true'
+        )) {
+          // Prevent any interference with natural space insertion
+          e.stopImmediatePropagation = () => {};
+          e.preventDefault = () => {};
+          console.debug('Spacebar protection: Natural space input enabled for', target);
+        }
       }
-      
-      // Allow spacebar in contenteditable elements
-      if (this.key === ' ' && 
-          this.target && 
-          (this.target.contentEditable === 'true' || 
-           this.target.getAttribute('contenteditable') === 'true')) {
-        console.debug('Spacebar protection: Allowing space in contenteditable', this.target);
-        return;
-      }
-      
-      // Call original for other cases
-      originalStopPropagation.call(this);
-    };
+    }, true); // Capture phase to intercept early
   }
-
-  // Enhanced input field protection
+  
+  // Initialize input field spacing enhancements
 const ensureSpacebarWorksInInputs = () => {
     const inputElements = document.querySelectorAll('input, textarea, [contenteditable="true"]');
     
@@ -980,9 +974,8 @@ const ensureSpacebarWorksInInputs = () => {
       element.setAttribute('data-typography-enhanced', 'true');
       
       // ENHANCED INPUT PROPERTIES for optimal typography
-      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-        // Core spacing properties following WCAG 2.1 guidelines
-        element.style.whiteSpace = 'pre-wrap';
+// Enhanced text styling for optimal readability
+        element.style.whiteSpace = 'normal'; // Allow natural text flow
         element.style.wordSpacing = '0.1em';
         element.style.letterSpacing = '0.025em';
         element.style.lineHeight = '1.65';
@@ -993,19 +986,20 @@ const ensureSpacebarWorksInInputs = () => {
         element.style.textRendering = 'optimizeLegibility';
         element.style.fontFeatureSettings = '"kern" 1';
         
-        // User interaction properties
+        // User interaction properties - enable natural text input
         element.style.userSelect = 'text';
         element.style.WebkitUserSelect = 'text';
         element.style.MozUserSelect = 'text';
         element.style.pointerEvents = 'auto';
         element.style.touchAction = 'manipulation';
+element.style.touchAction = 'manipulation';
         
-        // Advanced typography properties
-        element.style.wordBreak = 'keep-all';
+        // Advanced typography properties for natural text flow
+        element.style.wordBreak = 'normal';
         element.style.overflowWrap = 'break-word';
         element.style.hyphens = 'auto';
         
-        // Ensure proper text cursor
+        // Focus enhancement
         element.style.cursor = 'text';
       }
       
@@ -1018,15 +1012,15 @@ const ensureSpacebarWorksInInputs = () => {
         element.style.lineHeight = '1.65';
       }
       
-      // Add keydown protection
+      // Enhanced spacebar support for natural text input
       element.addEventListener('keydown', function(e) {
         if (e.key === ' ' || e.code === 'Space') {
-          // Ensure spacebar works by preventing parent interference
-          e.stopImmediatePropagation = function() {
-            console.debug('Spacebar protection: Prevented stopImmediatePropagation on space key');
-          };
+          // Ensure natural space input is never blocked
+          console.debug('Natural space input enabled for element:', element);
+          // Allow the event to proceed naturally
+          return true;
         }
-      }, { capture: true, passive: false });
+      }, { passive: true }); // Passive listener to avoid blocking
     });
   };
 
@@ -1093,24 +1087,16 @@ const ensureSpacebarWorksInInputs = () => {
           }
         }
       }
-    }, { capture: true });
-
-// Monitor for preventDefault calls on spacebar
-    const originalPreventDefault = Event.prototype.preventDefault;
-    Event.prototype.preventDefault = function() {
-      if ((this.key === ' ' || this.code === 'Space') && 
-          this.target && 
-          this.target.tagName && 
-          this.target.tagName.match(/INPUT|TEXTAREA/i)) {
-        console.warn('🚫 preventDefault called on spacebar in input field:', this.target);
-        spaceKeyBlocked = true;
-        setTimeout(() => { spaceKeyBlocked = false; }, 100);
-      }
-      originalPreventDefault.call(this);
-    };
+}
+      }, true); // Capture phase to intercept early
+    });
+    
+    // Natural space input monitoring - removed preventDefault override
+    // to allow normal spacebar functionality in all input fields
+    
+    console.log('✅ Natural spacebar input enabled for all form fields');
   }
-
-  // Cross-browser compatibility checks
+  // Initialize performance monitoring
   const checkSpacebarCompatibility = () => {
     const testInput = document.createElement('input');
     testInput.style.position = 'absolute';
