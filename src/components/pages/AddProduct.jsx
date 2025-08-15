@@ -3,17 +3,20 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/useToast";
 import { CategoryService } from "@/services/api/CategoryService";
-import { ProductService } from "@/services/api/ProductService";
 import ApperIcon from "@/components/ApperIcon";
-import ErrorComponent from "@/components/ui/Error";
+import ErrorComponent, { Error } from "@/components/ui/Error";
+import Button from "@/components/atoms/Button";
+import Badge from "@/components/atoms/Badge";
+import Card from "@/components/atoms/Card";
+import Input from "@/components/atoms/Input";
 import Home from "@/components/pages/Home";
 import Category from "@/components/pages/Category";
-import Badge from "@/components/atoms/Badge";
-import Input from "@/components/atoms/Input";
-import Button from "@/components/atoms/Button";
-import Card from "@/components/atoms/Card";
-import { cn } from "@/utils/cn";
+import productsData from "@/services/mockData/products.json";
+import categoriesData from "@/services/mockData/categories.json";
+import recipeBundlesData from "@/services/mockData/recipeBundles.json";
+import { ProductService } from "@/services/api/ProductService";
 import { formatPrice } from "@/utils/currency";
+import { cn } from "@/utils/cn";
 import { announceToScreenReader, generateDataChecksum, getCSRFToken, initializeCSRF, sanitizeInput, sanitizeNumericInput, sanitizeURL, validateDataConsistency, validateFormData } from "@/utils/security";
 
 const AddProduct = () => {
@@ -238,9 +241,7 @@ const handleInputChange = (field, value, validationInfo = {}) => {
           sanitizedValue = sanitizeInput(value, { 
             maxLength: 150, 
             allowNumbers: true, 
-            allowSpecialChars: true,
-            preserveSpaces: true, // CRITICAL: Enable auto word spacing
-            autoSpacing: true     // Enable intelligent word detection
+allowSpecialChars: true
           });
           if (!sanitizedValue || sanitizedValue.trim() === '') {
             fieldError = "Product name is required and cannot be empty";
@@ -252,10 +253,9 @@ const handleInputChange = (field, value, validationInfo = {}) => {
           break;
         case 'shortDescription':
           sanitizedValue = sanitizeInput(value, { 
-            maxLength: 250, 
+maxLength: 250, 
             allowNumbers: true, 
-            allowSpecialChars: true,
-            preserveSpaces: true, // CRITICAL: Enable auto word spacing
+            allowSpecialChars: true
             autoSpacing: true     // Enable intelligent word detection
           });
           if (!sanitizedValue || sanitizedValue.trim() === '') {
@@ -267,10 +267,10 @@ const handleInputChange = (field, value, validationInfo = {}) => {
           }
           break;
         case 'detailedDescription':
-          sanitizedValue = sanitizeInput(value, { 
+sanitizedValue = sanitizeInput(value, { 
             maxLength: 2000, 
             allowNumbers: true, 
-            allowSpecialChars: true,
+            allowSpecialChars: true
             preserveSpaces: true, // CRITICAL: Enable auto word spacing
             autoSpacing: true     // Enable intelligent word detection
           });
@@ -927,19 +927,19 @@ const validationResult = validateForm();
 productName: sanitizeInput(formData.productName || '', { 
           maxLength: 150, 
           allowNumbers: true, 
-          allowSpecialChars: true,
+          allowSpecialChars: true
           preserveSpaces: true
         }),
-        shortDescription: sanitizeInput(formData.shortDescription, { 
+shortDescription: sanitizeInput(formData.shortDescription, { 
           maxLength: 250, 
           allowNumbers: true, 
-          allowSpecialChars: true,
+          allowSpecialChars: true
           preserveSpaces: true
         }),
-        detailedDescription: sanitizeInput(formData.detailedDescription, { 
+detailedDescription: sanitizeInput(formData.detailedDescription, { 
           maxLength: 2000, 
           allowNumbers: true, 
-          allowSpecialChars: true,
+          allowSpecialChars: true
           preserveSpaces: true
         }),
         brand: sanitizeInput(formData.brand, { 
@@ -1626,36 +1626,16 @@ const renderBasicInfo = () => (
 <Input
             label=""
             type="text"
-            placeholder="Product name (auto-spacing: BestPunjabBasmatiRice → Best Punjab Basmati Rice)..."
+            placeholder="Enter product name"
             value={formData.productName}
             onChange={(e) => handleInputChange("productName", e.target.value)}
             error={errors.productName}
-            description="Smart word spacing automatically separates merged words as you type. Example: 'extraVirginOliveOil' becomes 'extra Virgin Olive Oil'"
             sanitize={true}
-            sanitizeOptions={{ maxLength: 150, allowNumbers: true, allowSpecialChars: true, preserveSpaces: true, autoSpacing: true }}
-            ariaLabel="Product name with automatic word spacing correction"
+            sanitizeOptions={{ maxLength: 150, allowNumbers: true, allowSpecialChars: true }}
             maxLength={150}
             required
-            className="text-lg font-medium product-name text-preview-enhanced"
             id="product-name"
-            style={{
-              letterSpacing: '0.5px',
-              wordSpacing: '1.2px',
-              lineHeight: '1.65'
-            }}
           />
-          <div className="mt-2 text-xs text-blue-700">
-            <strong>Good examples:</strong> "Fresh Organic Basmati Rice", "Premium Himalayan Pink Salt", "Extra Virgin Olive Oil"
-          </div>
-          {formData.productName && (
-            <div className="mt-2 px-3 py-2 bg-white rounded border">
-              <span className="text-xs text-gray-500">Preview: </span>
-              <span className="font-medium text-gray-900">{formData.productName}</span>
-              <span className="text-xs text-gray-400 ml-2">
-                ({formData.productName.length}/150 characters)
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Short Description Section */}
@@ -1665,39 +1645,18 @@ const renderBasicInfo = () => (
             Short Description *
           </h4>
 <textarea
-            placeholder="Brief description with auto word spacing (e.g., OrganicBasmatiRice → Organic Basmati Rice)..."
+            placeholder="Brief product description"
             value={formData.shortDescription}
             onChange={(e) => handleInputChange("shortDescription", e.target.value)}
             className={cn(
               "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none",
-              "font-body text-base leading-relaxed product-description text-preview-enhanced",
               errors.shortDescription && "border-red-500"
             )}
             rows={3}
             maxLength={250}
-            data-auto-spacing="enabled"
             id="short-description"
-            style={{
-              lineHeight: '1.65',
-              letterSpacing: '0.5px',
-              wordSpacing: '1.2px'
-            }}
           />
           {errors.shortDescription && <p className="text-red-500 text-sm mt-1">{errors.shortDescription}</p>}
-          <div className="mt-2 text-xs text-amber-700">
-            <strong>Purpose:</strong> Appears in search results, product cards, and category listings. Keep concise but descriptive.
-          </div>
-          {formData.shortDescription && (
-            <div className="mt-2 px-3 py-2 bg-white rounded border">
-              <span className="text-xs text-gray-500">Preview: </span>
-              <span className="text-gray-900" style={{ lineHeight: '1.65', wordSpacing: '0.05em' }}>
-                {formData.shortDescription}
-              </span>
-              <span className="text-xs text-gray-400 ml-2">
-                ({formData.shortDescription.length}/250 characters)
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Detailed Description Section */}
@@ -1707,44 +1666,18 @@ const renderBasicInfo = () => (
             Detailed Description
             <span className="text-xs text-purple-600 ml-1">(Optional but recommended)</span>
           </h4>
-          <textarea
-placeholder="Detailed description with intelligent spacing (automatically fixes: bestQualityBasmatiRice → best Quality Basmati Rice)..."
+<textarea
+            placeholder="Detailed product description"
             value={formData.detailedDescription}
             onChange={(e) => handleInputChange("detailedDescription", e.target.value)}
             className={cn(
               "w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none",
-              "font-body text-base leading-relaxed product-description",
               errors.detailedDescription && "border-red-500"
             )}
             rows={6}
             maxLength={2000}
-            data-auto-spacing="enabled"
-            style={{
-              lineHeight: '1.65',
-              letterSpacing: '0.02em',
-              wordSpacing: '0.08em',
-              whiteSpace: 'pre-wrap'
-            }}
           />
           {errors.detailedDescription && <p className="text-red-500 text-sm mt-1">{errors.detailedDescription}</p>}
-          <div className="mt-2 text-xs text-purple-700">
-            <strong>Include:</strong> Key features, benefits, ingredients, usage instructions, specifications, or any relevant details
-          </div>
-          {formData.detailedDescription && (
-            <div className="mt-3 px-3 py-2 bg-white rounded border">
-              <span className="text-xs text-gray-500">Preview: </span>
-              <div className="mt-1 text-gray-900 text-sm" style={{ 
-                lineHeight: '1.65', 
-                wordSpacing: '0.05em',
-                whiteSpace: 'pre-wrap'
-              }}>
-                {formData.detailedDescription}
-              </div>
-              <span className="text-xs text-gray-400 mt-2 block">
-                ({formData.detailedDescription.length}/2000 characters)
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Brand Section */}
@@ -3623,11 +3556,7 @@ const renderPreviewModal = () => {
               )}
               
               <div>
-<h3 className="text-lg font-semibold product-title text-preview-enhanced" style={{ 
-                  letterSpacing: '0.5px', 
-                  wordSpacing: '1.2px',
-                  lineHeight: '1.65'
-                }}>
+<h3 className="text-lg font-semibold">
                 {formData.productName || 'Product Preview'}
               </h3>
               {formData.brand && (
@@ -3668,11 +3597,7 @@ const renderPreviewModal = () => {
                   Product Information
                 </h4>
                 {formData.shortDescription ? (
-<p className="text-gray-700 text-sm mb-3 product-description text-preview-enhanced" style={{ 
-                    lineHeight: '1.65', 
-                    letterSpacing: '0.5px',
-                    wordSpacing: '1.2px'
-                  }}>
+<p className="text-gray-700 text-sm mb-3">
                     {formData.shortDescription}
                   </p>
                 ) : (
@@ -3684,10 +3609,7 @@ const renderPreviewModal = () => {
                 {formData.detailedDescription && (
                   <div className="mt-3 pt-3 border-t border-gray-200">
                     <h5 className="text-sm font-medium text-gray-900 mb-2">Detailed Description</h5>
-<div className="text-gray-700 text-sm product-description text-preview-enhanced" style={{ 
-                      lineHeight: '1.65', 
-                      letterSpacing: '0.5px',
-                      wordSpacing: '1.2px',
+<div className="text-gray-700 text-sm" style={{ 
                       whiteSpace: 'pre-wrap'
                     }}>
                       {formData.detailedDescription.length > 200
