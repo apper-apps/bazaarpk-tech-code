@@ -69,23 +69,23 @@ export const sanitizeInput = (input, options = {}) => {
   const original = input;
   
 if (preserveSpaces) {
-    // ENHANCED WORD SPACING ENFORCEMENT - Core Functionality
-    // Step 1: Auto-detect and fix merged words
+    // NATURAL WORD SPACING PRESERVATION - Enhanced for user input
+    // Step 1: Auto-detect and fix merged words while preserving natural spaces
     sanitized = autoSpaceWords(sanitized);
     
-    // Step 2: International best practice: preserve natural word spacing
-    // Only collapse multiple consecutive spaces (2+) to single spaces
-    sanitized = sanitized.replace(/[ \t]{2,}/g, ' ');
+    // Step 2: Only collapse excessive consecutive spaces (3+) to maintain natural flow
+    // Preserve single and double spaces as they may be intentional
+    sanitized = sanitized.replace(/[ \t]{3,}/g, ' ');
     
-    // Step 3: Preserve line breaks but normalize multiple line breaks
-    sanitized = sanitized.replace(/\n\s*\n/g, '\n');
+    // Step 3: Preserve line breaks but normalize excessive line breaks
+    sanitized = sanitized.replace(/\n\s*\n\s*\n/g, '\n\n');
     
-    // Step 4: Only trim excessive leading/trailing whitespace, preserve intentional spacing
-    sanitized = sanitized.replace(/^[\s\n]+|[\s\n]+$/g, '');
+    // Step 4: Only trim truly excessive leading/trailing whitespace
+    sanitized = sanitized.replace(/^[\s\n]{2,}|[\s\n]{2,}$/g, '');
   } else {
-    // Standard mode: still apply word spacing but with standard space normalization
+    // Standard mode: apply word spacing with minimal normalization
     sanitized = autoSpaceWords(sanitized);
-    sanitized = sanitized.replace(/[ \t]+/g, ' ').trim();
+    sanitized = sanitized.replace(/[ \t]{3,}/g, ' ').trim();
   }
   
   // Enhanced XSS protection
@@ -239,20 +239,17 @@ const autoSpaceWords = (text) => {
   result = result.replace(/([a-zA-Z])([0-9])/g, '$1 $2'); // letter-number boundaries
   result = result.replace(/([0-9])([a-zA-Z])/g, '$1 $2'); // number-letter boundaries
   
-  // Clean up multiple spaces but preserve intentional spacing
-  result = result.replace(/\s{3,}/g, '  '); // Max 2 consecutive spaces
-  result = result.replace(/^\s+|\s+$/g, ''); // Trim edges
-  // Pattern 7: Handle special characters with merged words
+// Pattern 7: Handle special characters with merged words
   result = result.replace(/([a-zA-Z])([&@#%])/g, '$1 $2');
   result = result.replace(/([&@#%])([a-zA-Z])/g, '$1 $2');
-// Clean up excessive spaces but preserve intentional spacing
-  result = result.replace(/\s{3,}/g, '  '); // Max 2 consecutive spaces
   
   // Handle punctuation spacing
   result = result.replace(/([a-zA-Z])([.!?])/g, '$1$2');
   result = result.replace(/([.!?])([a-zA-Z])/g, '$1 $2');
   
-  result = result.replace(/\s{2,}/g, ' ').trim();
+  // Final cleanup: only remove truly excessive spaces (3+), preserve natural spacing
+  result = result.replace(/\s{3,}/g, ' ');
+  result = result.replace(/^\s+|\s+$/g, ''); // Trim edges only
   
   return result;
 };

@@ -146,15 +146,8 @@ const handleChange = useCallback((e) => {
       onValueChange(newValue, { isValid: !validationError, error: validationError });
     }
 
-    // Restore cursor position after processing (if needed)
-    setTimeout(() => {
-      if (e.target && e.target.setSelectionRange && typeof cursorPosition === 'number') {
-        // Adjust cursor position based on text changes
-        const lengthDifference = newValue.length - e.target.value.length;
-        const adjustedPosition = Math.max(0, cursorPosition + lengthDifference);
-        e.target.setSelectionRange(adjustedPosition, adjustedPosition);
-      }
-    }, 0);
+// Allow natural text input flow without cursor interference
+    // Browser handles cursor positioning correctly for normal input
 
     // Announce validation feedback to screen readers
     if (validationError) {
@@ -187,11 +180,10 @@ const handleChange = useCallback((e) => {
 
 // Handle keyboard navigation and accessibility
   const handleKeyDown = useCallback((e) => {
-    // Enhanced spacebar handling with better event control
-    // Allow natural spacebar behavior - removed complex manual handling
-    // The browser handles spacebar input correctly by default
-    // CSS fixes in index.css ensure proper space preservation
-    // Escape key clears input
+    // Allow completely natural spacebar and text input behavior
+    // No interference with normal typing - let browser handle all input naturally
+    
+    // Only handle special functionality keys, not text input keys
     if (e.key === 'Escape' && props.clearable !== false) {
       setInternalValue('');
       if (onValueChange) onValueChange('');
@@ -201,7 +193,7 @@ const handleChange = useCallback((e) => {
       }
     }
 
-    // Call original keyDown handler
+    // Call original keyDown handler without any text input interference
     if (props.onKeyDown) {
       props.onKeyDown(e);
     }
