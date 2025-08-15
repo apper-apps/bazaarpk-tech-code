@@ -1,5 +1,5 @@
 import React from "react";
-import { Error } from "@/components/ui/Error";
+// Removed Error import - using native JavaScript Error class instead
 /**
  * Security utilities for input sanitization and CSRF protection
  * Implements WCAG compliance and security best practices

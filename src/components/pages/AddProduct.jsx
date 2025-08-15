@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/useToast";
 import { CategoryService } from "@/services/api/CategoryService";
 import ApperIcon from "@/components/ApperIcon";
-import ErrorComponent, { Error } from "@/components/ui/Error";
+import ErrorComponent from "@/components/ui/Error";
 import Button from "@/components/atoms/Button";
 import Badge from "@/components/atoms/Badge";
 import Card from "@/components/atoms/Card";
