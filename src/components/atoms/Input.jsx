@@ -261,9 +261,8 @@ className={cn(
             showValidationIcon && internalValue && !error && "pr-10",
             tooltip && "cursor-help",
             className
-          )}
-          style={props.style
-          }}
+)}
+          style={props.style}
           ref={ref}
           {...ariaAttributes}
         />

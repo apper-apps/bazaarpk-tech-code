@@ -252,11 +252,11 @@ allowSpecialChars: true
           }
           break;
         case 'shortDescription':
-          sanitizedValue = sanitizeInput(value, { 
-maxLength: 250, 
+sanitizedValue = sanitizeInput(value, { 
+            maxLength: 250, 
             allowNumbers: true, 
-            allowSpecialChars: true
-            autoSpacing: true     // Enable intelligent word detection
+            allowSpecialChars: true,
+            preserveSpaces: true     // Enable word spacing preservation
           });
           if (!sanitizedValue || sanitizedValue.trim() === '') {
             fieldError = "Short description is required for search and product cards";
@@ -270,9 +270,8 @@ maxLength: 250,
 sanitizedValue = sanitizeInput(value, { 
             maxLength: 2000, 
             allowNumbers: true, 
-            allowSpecialChars: true
-            preserveSpaces: true, // CRITICAL: Enable auto word spacing
-            autoSpacing: true     // Enable intelligent word detection
+            allowSpecialChars: true,
+            preserveSpaces: true     // CRITICAL: Enable auto word spacing
           });
           if (sanitizedValue && sanitizedValue.length < 20) {
             fieldError = "Detailed description should be at least 20 characters if provided";
@@ -923,26 +922,27 @@ const validationResult = validateForm();
       // Comprehensive data sanitization and validation
       const sanitizedData = {
 ...formData,
+...formData,
         // Enhanced field sanitization with validation
 productName: sanitizeInput(formData.productName || '', { 
           maxLength: 150, 
           allowNumbers: true, 
-          allowSpecialChars: true
+          allowSpecialChars: true,
           preserveSpaces: true
         }),
 shortDescription: sanitizeInput(formData.shortDescription, { 
           maxLength: 250, 
           allowNumbers: true, 
-          allowSpecialChars: true
+          allowSpecialChars: true,
           preserveSpaces: true
         }),
 detailedDescription: sanitizeInput(formData.detailedDescription, { 
           maxLength: 2000, 
           allowNumbers: true, 
-          allowSpecialChars: true
+          allowSpecialChars: true,
           preserveSpaces: true
         }),
-        brand: sanitizeInput(formData.brand, { 
+        brand: sanitizeInput(formData.brand, {
           maxLength: 100, 
           allowNumbers: true, 
           allowSpecialChars: false,
@@ -958,15 +958,17 @@ detailedDescription: sanitizeInput(formData.detailedDescription, {
           allowNumbers: true, 
           allowSpecialChars: false 
         }),
-        metaTitle: sanitizeInput(formData.metaTitle, { 
+metaTitle: sanitizeInput(formData.metaTitle, { 
           maxLength: 60, 
           allowNumbers: true, 
-          allowSpecialChars: true 
+          allowSpecialChars: true,
+          preserveSpaces: true
         }),
         metaDescription: sanitizeInput(formData.metaDescription, { 
           maxLength: 160, 
           allowNumbers: true, 
-          allowSpecialChars: true 
+          allowSpecialChars: true,
+          preserveSpaces: true
         }),
         urlSlug: formData.urlSlug.toLowerCase()
           .replace(/[^a-z0-9\s-]/g, '')
@@ -974,13 +976,13 @@ detailedDescription: sanitizeInput(formData.detailedDescription, {
           .replace(/-+/g, '-')
           .replace(/^-|-$/g, '')
           .substring(0, 100),
-        mainImageAltText: sanitizeInput(formData.mainImageAltText, { 
+mainImageAltText: sanitizeInput(formData.mainImageAltText, { 
           maxLength: 125, 
           allowNumbers: true, 
-          allowSpecialChars: true 
+          allowSpecialChars: true,
+          preserveSpaces: true
         }),
         videoUrl: sanitizeURL(formData.videoUrl),
-        
         // Enhanced numeric field sanitization
         sellingPrice: sanitizeNumericInput(formData.sellingPrice, { 
           min: 0, 
