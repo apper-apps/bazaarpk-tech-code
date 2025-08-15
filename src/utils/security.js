@@ -1080,9 +1080,7 @@ document.addEventListener('keydown', function(e) {
     
     // Natural space input monitoring - removed preventDefault override
     // to allow normal spacebar functionality in all input fields
-    
-    console.log('✅ Natural spacebar input enabled for all form fields');
-}
+console.log('✅ Natural spacebar input enabled for all form fields');
   
   // Initialize performance monitoring
   const checkSpacebarCompatibility = () => {
@@ -1152,7 +1150,7 @@ document.addEventListener('keydown', function(e) {
   setTimeout(checkSpacebarCompatibility, 1000);
 
   // Announce spacebar protection is active
-if (typeof announceToScreenReader === 'function') {
+  if (typeof announceToScreenReader === 'function') {
     announceToScreenReader('Spacebar input protection initialized');
   }
 };
