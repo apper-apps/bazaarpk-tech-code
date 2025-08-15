@@ -36,6 +36,9 @@ const handleChange = useCallback((e) => {
     let newValue = e.target.value;
     let validationError = null;
 
+    // Store cursor position for restoration after processing
+    const cursorPosition = e.target.selectionStart;
+
     // Real-time validation if enabled
     if (realTimeValidation && validationRules) {
       const validation = validateInput(newValue, validationRules, type);
@@ -44,7 +47,7 @@ const handleChange = useCallback((e) => {
       }
     }
 
-    // Apply sanitization based on input type with enhanced security
+    // Apply sanitization based on input type with enhanced text processing
     if (sanitize && newValue) {
       switch (type) {
         case 'email':
@@ -62,9 +65,9 @@ const handleChange = useCallback((e) => {
             const numValue = parseFloat(newValue);
             if (isNaN(numValue)) {
               validationError = 'Please enter a valid number';
-            } else if (sanitizeOptions.min !== undefined && numValue < sanitizeOptions.min) {
+            } else if (sanitizeOptions?.min !== undefined && numValue < sanitizeOptions.min) {
               validationError = `Value must be at least ${sanitizeOptions.min}`;
-            } else if (sanitizeOptions.max !== undefined && numValue > sanitizeOptions.max) {
+            } else if (sanitizeOptions?.max !== undefined && numValue > sanitizeOptions.max) {
               validationError = `Value must not exceed ${sanitizeOptions.max}`;
             }
           }
@@ -73,7 +76,8 @@ const handleChange = useCallback((e) => {
           newValue = sanitizeInput(newValue, {
             ...sanitizeOptions,
             maxLength: maxLength || 100,
-            allowSpecialChars: false
+            allowSpecialChars: false,
+            preserveSpaces: true
           });
           break;
         case 'url':
@@ -93,12 +97,18 @@ const handleChange = useCallback((e) => {
         case 'password':
           // Password-specific sanitization (minimal to preserve special chars)
           newValue = newValue.replace(/[<>]/g, '');
-          if (realTimeValidation && validationRules.minLength && newValue.length < validationRules.minLength) {
+          if (realTimeValidation && validationRules?.minLength && newValue.length < validationRules.minLength) {
             validationError = `Password must be at least ${validationRules.minLength} characters`;
           }
           break;
+        case 'text':
         default:
-          newValue = sanitizeInput(newValue, sanitizeOptions);
+          // Enhanced text processing with natural word spacing
+          newValue = sanitizeInput(newValue, {
+            ...sanitizeOptions,
+            preserveSpaces: true,
+            naturalSpacing: true
+          });
       }
     }
 
@@ -109,7 +119,7 @@ const handleChange = useCallback((e) => {
 
     // Pattern validation
     if (realTimeValidation && pattern && newValue && !new RegExp(pattern).test(newValue)) {
-      validationError = validationRules.patternError || 'Invalid format';
+      validationError = validationRules?.patternError || 'Invalid format';
     }
 
     // Update internal state
@@ -135,6 +145,16 @@ const handleChange = useCallback((e) => {
     if (onValueChange) {
       onValueChange(newValue, { isValid: !validationError, error: validationError });
     }
+
+    // Restore cursor position after processing (if needed)
+    setTimeout(() => {
+      if (e.target && e.target.setSelectionRange && typeof cursorPosition === 'number') {
+        // Adjust cursor position based on text changes
+        const lengthDifference = newValue.length - e.target.value.length;
+        const adjustedPosition = Math.max(0, cursorPosition + lengthDifference);
+        e.target.setSelectionRange(adjustedPosition, adjustedPosition);
+      }
+    }, 0);
 
     // Announce validation feedback to screen readers
     if (validationError) {
@@ -242,9 +262,8 @@ const handleChange = useCallback((e) => {
           type={type}
           value={internalValue}
 onChange={(e) => {
-            let newValue = e.target.value;
-            
-            handleChange({ ...e, target: { ...e.target, value: newValue } });
+            // Preserve original event and value for proper processing
+            handleChange(e);
           }}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}

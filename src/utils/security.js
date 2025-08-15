@@ -1,3 +1,5 @@
+import React from "react";
+import { Error } from "@/components/ui/Error";
 /**
  * Security utilities for input sanitization and CSRF protection
  * Implements WCAG compliance and security best practices
@@ -189,44 +191,57 @@ const autoSpaceWords = (text) => {
   result = result.replace(/([a-z])([A-Z][a-z])/g, '$1 $2');
   
   // Pattern 6: Enhanced product naming patterns with more coverage
+// Enhanced word spacing patterns with case-insensitive matching
   const commonMergedPatterns = [
-    // Food products
-    { pattern: /BasmatiRice/gi, replacement: 'Basmati Rice' },
-    { pattern: /BrownRice/gi, replacement: 'Brown Rice' },
-    { pattern: /WhiteRice/gi, replacement: 'White Rice' },
-    { pattern: /OliveOil/gi, replacement: 'Olive Oil' },
-    { pattern: /CoconutOil/gi, replacement: 'Coconut Oil' },
-    { pattern: /SunflowerOil/gi, replacement: 'Sunflower Oil' },
-    { pattern: /GreenTea/gi, replacement: 'Green Tea' },
-    { pattern: /BlackTea/gi, replacement: 'Black Tea' },
-    { pattern: /BlackPepper/gi, replacement: 'Black Pepper' },
-    { pattern: /RedChili/gi, replacement: 'Red Chili' },
-    { pattern: /GreenChili/gi, replacement: 'Green Chili' },
-    { pattern: /extraVirgin/gi, replacement: 'Extra Virgin' },
-    { pattern: /organicFood/gi, replacement: 'Organic Food' },
-    { pattern: /wholeWheat/gi, replacement: 'Whole Wheat' },
-    { pattern: /seaSalt/gi, replacement: 'Sea Salt' },
-    { pattern: /rockSalt/gi, replacement: 'Rock Salt' },
+    // Food products - case insensitive
+    { pattern: /basmatirice/gi, replacement: 'Basmati Rice' },
+    { pattern: /brownrice/gi, replacement: 'Brown Rice' },
+    { pattern: /whiterice/gi, replacement: 'White Rice' },
+    { pattern: /oliveoil/gi, replacement: 'Olive Oil' },
+    { pattern: /coconutoil/gi, replacement: 'Coconut Oil' },
+    { pattern: /sunfloweroil/gi, replacement: 'Sunflower Oil' },
+    { pattern: /greentea/gi, replacement: 'Green Tea' },
+    { pattern: /blacktea/gi, replacement: 'Black Tea' },
+    { pattern: /blackpepper/gi, replacement: 'Black Pepper' },
+    { pattern: /redchili/gi, replacement: 'Red Chili' },
+    { pattern: /greenchili/gi, replacement: 'Green Chili' },
+    { pattern: /extravirgin/gi, replacement: 'Extra Virgin' },
+    { pattern: /organicfood/gi, replacement: 'Organic Food' },
+    { pattern: /wholewheat/gi, replacement: 'Whole Wheat' },
+    { pattern: /seasalt/gi, replacement: 'Sea Salt' },
+    { pattern: /rocksalt/gi, replacement: 'Rock Salt' },
     
-    // Common product attributes
-    { pattern: /glutenFree/gi, replacement: 'Gluten Free' },
-    { pattern: /dairyFree/gi, replacement: 'Dairy Free' },
-    { pattern: /sugarFree/gi, replacement: 'Sugar Free' },
-    { pattern: /lowFat/gi, replacement: 'Low Fat' },
-    { pattern: /highProtein/gi, replacement: 'High Protein' },
-    { pattern: /vitaminC/gi, replacement: 'Vitamin C' },
-    { pattern: /vitaminD/gi, replacement: 'Vitamin D' },
+    // Common product attributes - case insensitive
+    { pattern: /glutenfree/gi, replacement: 'Gluten Free' },
+    { pattern: /dairyfree/gi, replacement: 'Dairy Free' },
+    { pattern: /sugarfree/gi, replacement: 'Sugar Free' },
+    { pattern: /lowfat/gi, replacement: 'Low Fat' },
+    { pattern: /highprotein/gi, replacement: 'High Protein' },
+    { pattern: /vitaminc/gi, replacement: 'Vitamin C' },
+    { pattern: /vitamind/gi, replacement: 'Vitamin D' },
     
-    // Brand and location patterns
-    { pattern: /bestPunjab/gi, replacement: 'Best Punjab' },
-    { pattern: /freshFarm/gi, replacement: 'Fresh Farm' },
-    { pattern: /pureNature/gi, replacement: 'Pure Nature' },
+    // Brand and location patterns - case insensitive
+    { pattern: /bestpunjab/gi, replacement: 'Best Punjab' },
+    { pattern: /freshfarm/gi, replacement: 'Fresh Farm' },
+    { pattern: /purenature/gi, replacement: 'Pure Nature' },
+    { pattern: /multanibasmati/gi, replacement: 'Multani Basmati' },
+    { pattern: /multanirice/gi, replacement: 'Multani Rice' },
   ];
   
+  // Apply common merged patterns
   commonMergedPatterns.forEach(({ pattern, replacement }) => {
     result = result.replace(pattern, replacement);
   });
+
+  // Enhanced word boundary detection for natural spacing
+  // Handle camelCase and compound words more intelligently
+  result = result.replace(/([a-z])([A-Z])/g, '$1 $2'); // camelCase to spaced
+  result = result.replace(/([a-zA-Z])([0-9])/g, '$1 $2'); // letter-number boundaries
+  result = result.replace(/([0-9])([a-zA-Z])/g, '$1 $2'); // number-letter boundaries
   
+  // Clean up multiple spaces but preserve intentional spacing
+  result = result.replace(/\s{3,}/g, '  '); // Max 2 consecutive spaces
+  result = result.replace(/^\s+|\s+$/g, ''); // Trim edges
   // Pattern 7: Handle special characters with merged words
   result = result.replace(/([a-zA-Z])([&@#%])/g, '$1 $2');
   result = result.replace(/([&@#%])([a-zA-Z])/g, '$1 $2');
@@ -946,8 +961,9 @@ export const initializeSecurity = () => {
           target.contentEditable === 'true'
         )) {
           // Prevent any interference with natural space insertion
-          e.stopImmediatePropagation = () => {};
-          e.preventDefault = () => {};
+// Don't prevent spacebar - ensure it works properly
+          // e.stopImmediatePropagation = () => {};
+          // e.preventDefault = () => {};
           console.debug('Spacebar protection: Natural space input enabled for', target);
         }
       }
@@ -1042,44 +1058,81 @@ export const initializeSecurity = () => {
       subtree: true
     });
   }
-// Development mode spacebar issue detection
-  if (import.meta.env?.MODE === 'development' || import.meta.env?.DEV) {
-    let spaceKeyBlocked = false;
-    // Global spacebar monitoring
-document.addEventListener('keydown', function(e) {
-      if (e.key === ' ' || e.code === 'Space') {
-        const target = e.target;
-        const isInputField = target && (
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.contentEditable === 'true' ||
-          target.getAttribute('contenteditable') === 'true'
-        );
-        
-        if (isInputField && (e.defaultPrevented || spaceKeyBlocked)) {
-          console.warn('⚠️ SPACEBAR BLOCKED in input field:', {
+// Enhanced spacebar functionality monitoring
+if (import.meta.env?.MODE === 'development' || import.meta.env?.DEV) {
+  // Global spacebar monitoring with proper restoration
+  document.addEventListener('keydown', function(e) {
+    if (e.key === ' ' || e.code === 'Space') {
+      const target = e.target;
+      const isInputField = target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true' ||
+        target.getAttribute('contenteditable') === 'true'
+      );
+      
+      // Only monitor, don't block spacebar
+      if (isInputField) {
+        // Ensure spacebar works properly
+        if (e.defaultPrevented) {
+          console.warn('⚠️ SPACEBAR WAS BLOCKED, attempting restoration:', {
             element: target,
             tagName: target.tagName,
             type: target.type,
             id: target.id,
-            className: target.className,
-            defaultPrevented: e.defaultPrevented,
-            stackTrace: new Error().stack
+            className: target.className
           });
           
-          // Attempt to restore spacebar functionality
-          if (target.value !== undefined) {
-            const cursorPos = target.selectionStart;
-            target.value = target.value.slice(0, cursorPos) + ' ' + target.value.slice(cursorPos);
-            target.setSelectionRange(cursorPos + 1, cursorPos + 1);
-          }
+          // Force spacebar functionality
+          e.stopPropagation();
+          
+          // Manually insert space and advance cursor
+          setTimeout(() => {
+            if (target.value !== undefined && target.selectionStart !== undefined) {
+              const cursorPos = target.selectionStart;
+              const beforeCursor = target.value.slice(0, cursorPos);
+              const afterCursor = target.value.slice(cursorPos);
+              target.value = beforeCursor + ' ' + afterCursor;
+              target.setSelectionRange(cursorPos + 1, cursorPos + 1);
+              
+              // Trigger input event to maintain reactivity
+              const inputEvent = new Event('input', { bubbles: true });
+              target.dispatchEvent(inputEvent);
+            }
+          }, 0);
         }
       }
-    }, true); // Capture phase to intercept early
-  }
+    }
+  }, true); // Use capture phase to catch early
+  
+  // Additional spacebar protection for text inputs
+  document.addEventListener('keypress', function(e) {
+    if ((e.key === ' ' || e.code === 'Space') && e.target && 
+        (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+      
+      // Ensure spacebar is never blocked in text inputs
+      if (e.defaultPrevented) {
+        console.warn('Spacebar was prevented, forcing space input');
+        e.stopImmediatePropagation();
+        
+        // Force the space character
+        const target = e.target;
+        const start = target.selectionStart;
+        const end = target.selectionEnd;
+        const value = target.value;
+        target.value = value.substring(0, start) + ' ' + value.substring(end);
+        target.setSelectionRange(start + 1, start + 1);
+        
+        // Trigger change event
+        const changeEvent = new Event('input', { bubbles: true });
+        target.dispatchEvent(changeEvent);
+      }
+}
+  }, true);
+}
     
-    // Natural space input monitoring - removed preventDefault override
-    // to allow normal spacebar functionality in all input fields
+// Natural space input monitoring - removed preventDefault override
+// to allow normal spacebar functionality in all input fields
 console.log('✅ Natural spacebar input enabled for all form fields');
   
   // Initialize performance monitoring

@@ -237,13 +237,14 @@ const handleInputChange = (field, value, validationInfo = {}) => {
     
 if (typeof value === 'string') {
       switch (field) {
-        case 'productName':
+case 'productName':
           sanitizedValue = sanitizeInput(value, { 
             maxLength: 150, 
             allowNumbers: true, 
             allowSpecialChars: true,
             allowSpaces: true,
-            naturalSpacing: true
+            naturalSpacing: true,
+            preserveSpaces: true
           });
           if (!sanitizedValue || sanitizedValue.trim() === '') {
             fieldError = "Product name is required and cannot be empty";
@@ -253,12 +254,13 @@ if (typeof value === 'string') {
             fieldError = "Product name cannot exceed 150 characters";
           }
           break;
-        case 'shortDescription':
-sanitizedValue = sanitizeInput(value, { 
+case 'shortDescription':
+          sanitizedValue = sanitizeInput(value, { 
             maxLength: 250, 
             allowNumbers: true, 
             allowSpecialChars: true,
-            preserveSpaces: true     // Enable word spacing preservation
+            preserveSpaces: true,     // Enable word spacing preservation
+            naturalSpacing: true      // Auto-detect word boundaries
           });
           if (!sanitizedValue || sanitizedValue.trim() === '') {
             fieldError = "Short description is required for search and product cards";
@@ -268,12 +270,13 @@ sanitizedValue = sanitizeInput(value, {
             fieldError = "Short description should not exceed 250 characters for optimal display";
           }
           break;
-        case 'detailedDescription':
-sanitizedValue = sanitizeInput(value, { 
+case 'detailedDescription':
+          sanitizedValue = sanitizeInput(value, { 
             maxLength: 2000, 
             allowNumbers: true, 
             allowSpecialChars: true,
-            preserveSpaces: true     // CRITICAL: Enable auto word spacing
+            preserveSpaces: true,     // CRITICAL: Enable auto word spacing
+            naturalSpacing: true      // Enhanced word boundary detection
           });
           if (sanitizedValue && sanitizedValue.length < 20) {
             fieldError = "Detailed description should be at least 20 characters if provided";
@@ -1643,7 +1646,13 @@ const renderBasicInfo = () => (
             onChange={(e) => handleInputChange("productName", e.target.value)}
             error={errors.productName}
             sanitize={true}
-            sanitizeOptions={{ maxLength: 150, allowNumbers: true, allowSpecialChars: true }}
+            sanitizeOptions={{ 
+              maxLength: 150, 
+              allowNumbers: true, 
+              allowSpecialChars: true,
+              preserveSpaces: true,
+              naturalSpacing: true 
+            }}
             maxLength={150}
             required
             id="product-name"
