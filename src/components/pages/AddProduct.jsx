@@ -846,19 +846,27 @@ const handleSave = async (publish = false, silent = false, schedule = null) => {
 
     // Pre-save validation with comprehensive checks
 const validationResult = validateForm();
-    if (!validationResult && !silent) {
-      showToast("Please fix the validation errors before saving", "error");
-      announceToScreenReader("Form contains validation errors. Please review all highlighted fields.", "assertive");
-      
-      // Scroll to first error
-      const firstErrorElement = document.querySelector('.border-red-500, [aria-invalid="true"]');
-      if (firstErrorElement) {
-        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        firstErrorElement.focus();
+// Handle validation results with proper silent save support
+    if (!validationResult) {
+      if (silent) {
+        // For silent saves (auto-save), don't throw errors or show messages
+        // Just return quietly to allow user to continue working
+        console.log('Auto-save skipped due to validation errors - user can continue working');
+        return;
+      } else {
+        // For user-initiated saves, show validation errors
+        showToast("Please fix the validation errors before saving", "error");
+        announceToScreenReader("Form contains validation errors. Please review all highlighted fields.", "assertive");
+        
+        // Scroll to first error
+        const firstErrorElement = document.querySelector('.border-red-500, [aria-invalid="true"]');
+        if (firstErrorElement) {
+          firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstErrorElement.focus();
+        }
+        return;
       }
-      return;
     }
-
     // Schedule validation when scheduling is requested
     if (schedule || formData.scheduledPublish) {
       const scheduleDate = schedule || formData.scheduledPublish;
