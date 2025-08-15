@@ -711,3 +711,140 @@ textarea[data-auto-spacing="enabled"]::placeholder {
     transform: translateY(0);
   }
 }
+
+/* COMPREHENSIVE SPACEBAR AND INPUT BEHAVIOR CSS FIXES */
+
+/* Enhanced input field behavior for spacebar functionality */
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+input[type="search"],
+input[type="url"],
+input[type="tel"],
+textarea,
+[contenteditable="true"],
+[contenteditable] {
+  /* Ensure proper text input behavior */
+  pointer-events: auto !important;
+  user-select: text !important;
+  cursor: text !important;
+  
+  /* Enhanced spacing and typography */
+  letter-spacing: 0.025em !important;
+  word-spacing: 0.1em !important;
+  line-height: 1.6 !important;
+  
+  /* Prevent any interference with text input */
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  
+  /* Ensure proper focus behavior */
+  outline-offset: 2px;
+  transition: all 0.2s ease;
+}
+
+/* Focus states for enhanced spacebar functionality */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input[type="url"]:focus,
+input[type="tel"]:focus,
+textarea:focus,
+[contenteditable="true"]:focus,
+[contenteditable]:focus {
+  outline: 2px solid #4CAF50 !important;
+  outline-offset: 2px !important;
+  border-color: #4CAF50 !important;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1) !important;
+  
+  /* Enhanced spacing on focus */
+  letter-spacing: 0.03em !important;
+  word-spacing: 0.12em !important;
+}
+
+/* Placeholder text enhancements */
+input::placeholder,
+textarea::placeholder {
+  color: #9CA3AF !important;
+  font-style: italic !important;
+  letter-spacing: 0.02em !important;
+  word-spacing: 0.08em !important;
+  opacity: 0.7 !important;
+}
+
+/* ContentEditable specific enhancements */
+[contenteditable="true"],
+[contenteditable] {
+  min-height: 2.5rem !important;
+  padding: 0.75rem !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  background: white !important;
+  
+  /* Enhanced text rendering */
+  text-rendering: optimizeLegibility !important;
+  font-feature-settings: "kern" 1 !important;
+  -webkit-font-smoothing: antialiased !important;
+}
+
+[contenteditable="true"]:empty::before,
+[contenteditable]:empty::before {
+  content: attr(placeholder) !important;
+  color: #9CA3AF !important;
+  font-style: italic !important;
+  pointer-events: none !important;
+  letter-spacing: 0.02em !important;
+  word-spacing: 0.08em !important;
+}
+
+/* Prevent any global event interference */
+.spacebar-enabled input,
+.spacebar-enabled textarea,
+.spacebar-enabled [contenteditable] {
+  pointer-events: auto !important;
+}
+
+/* Mobile optimization for spacebar functionality */
+@media (hover: none) and (pointer: coarse) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  textarea {
+    font-size: 16px !important; /* Prevent iOS zoom */
+    min-height: 44px !important; /* Touch target size */
+    padding: 1rem !important;
+    letter-spacing: 0.025em !important;
+    word-spacing: 0.1em !important;
+  }
+}
+
+/* Debug mode styling for spacebar functionality */
+[data-spacebar-debug="true"] {
+  border: 2px dashed #4CAF50 !important;
+  background: rgba(76, 175, 80, 0.05) !important;
+}
+
+[data-spacebar-enabled="true"] {
+  position: relative;
+}
+
+[data-spacebar-enabled="true"]::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+[data-spacebar-enabled="true"]:focus::after {
+  opacity: 1;
+}

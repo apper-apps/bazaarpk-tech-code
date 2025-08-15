@@ -3,21 +3,24 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Link, Route, Routes, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import ApperIcon from "@/components/ApperIcon";
-import ManageProducts from "@/components/pages/ManageProducts";
-import ReportsAnalytics from "@/components/pages/ReportsAnalytics";
-import AddProduct from "@/components/pages/AddProduct";
-import UserManagement from "@/components/pages/UserManagement";
-import Home from "@/components/pages/Home";
-import OrderManagement from "@/components/pages/OrderManagement";
-import Cart from "@/components/pages/Cart";
-import Category from "@/components/pages/Category";
-import AddRecipeBundle from "@/components/pages/AddRecipeBundle";
-import RecipeBundlesPage from "@/components/pages/RecipeBundlesPage";
-import ProductDetail from "@/components/pages/ProductDetail";
-import CartDrawer from "@/components/organisms/CartDrawer";
 import Header from "@/components/organisms/Header";
-import ErrorComponent, { Error } from "@/components/ui/Error";
+import CartDrawer from "@/components/organisms/CartDrawer";
 import Loading from "@/components/ui/Loading";
+import ErrorComponent, { Error } from "@/components/ui/Error";
+import Home from "@/components/pages/Home";
+import Cart from "@/components/pages/Cart";
+import UserManagement from "@/components/pages/UserManagement";
+import ManageProducts from "@/components/pages/ManageProducts";
+import AddProduct from "@/components/pages/AddProduct";
+import AddRecipeBundle from "@/components/pages/AddRecipeBundle";
+import ReportsAnalytics from "@/components/pages/ReportsAnalytics";
+import ProductDetail from "@/components/pages/ProductDetail";
+import RecipeBundlesPage from "@/components/pages/RecipeBundlesPage";
+import OrderManagement from "@/components/pages/OrderManagement";
+import Category from "@/components/pages/Category";
+import productsData from "@/services/mockData/products.json";
+import categoriesData from "@/services/mockData/categories.json";
+import recipeBundlesData from "@/services/mockData/recipeBundles.json";
 import { initializeSecurity } from "@/utils/security";
 
 // Admin Error Boundary Component
@@ -63,49 +66,28 @@ class AdminErrorBoundary extends React.Component {
               <ApperIcon name="AlertTriangle" className="w-16 h-16 text-red-500 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 Admin Component Error
-              </h2>
+</h2>
               <p className="text-gray-600 mb-4">
-                {this.props.componentName || 'This admin component'} encountered an error and couldn't load properly.
+                Something went wrong in the admin panel. This might be due to:
               </p>
-            </div>
-            
-            <div className="space-y-3">
+              <ul className="text-left text-sm text-gray-600 mb-6 space-y-1">
+                <li>• Network connectivity issues</li>
+                <li>• Browser compatibility problems</li>
+                <li>• Temporary server errors</li>
+              </ul>
               <button
                 onClick={this.handleRetry}
-                className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors mb-3"
               >
-                <ApperIcon name="RefreshCw" className="w-4 h-4" />
-                Try Again {this.state.retryCount > 0 && `(${this.state.retryCount})`}
+                Try Again ({this.state.retryCount}/3)
               </button>
-              
-              <Link
-                to="/admin"
-                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors inline-flex items-center justify-center gap-2"
-              >
-                <ApperIcon name="ArrowLeft" className="w-4 h-4" />
-                Back to Admin Panel
-              </Link>
-              
               <Link
                 to="/"
-                className="w-full px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors inline-flex items-center justify-center gap-2"
+                className="block w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-center"
               >
-                <ApperIcon name="Home" className="w-4 h-4" />
-                Go to Homepage
+                Return to Home
               </Link>
-</div>
-            
-            {import.meta.env.DEV && this.state.error && (
-              <details className="mt-4 text-left">
-                <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
-                  View Error Details
-                </summary>
-                <pre className="mt-2 p-3 bg-gray-100 rounded text-xs overflow-auto max-h-32">
-                  {this.state.error.toString()}
-                  {this.state.errorInfo?.componentStack}
-                </pre>
-              </details>
-            )}
+            </div>
           </div>
         </div>
       );
@@ -115,23 +97,255 @@ class AdminErrorBoundary extends React.Component {
   }
 }
 
-// Safe Component Wrapper
+// Safe Admin Component Wrapper
 const SafeAdminComponent = ({ children, componentName, fallback }) => {
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [initError, setInitError] = useState(null);
+  const [spacebarSystemStatus, setSpacebarSystemStatus] = useState('initializing');
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        setIsInitializing(true);
+        console.log('🚀 Starting app initialization...');
+
+        // Initialize security
+        await initializeSecurity();
+        console.log('✅ Security initialized');
+
+        // Browser compatibility check
+        const browserInfo = detectBrowser();
+        console.log('📱 Browser detected:', browserInfo);
+
+        // Initialize performance monitoring
+        initPerformanceMonitoring();
+        console.log('📊 Performance monitoring active');
+
+        console.log('🎉 App initialization complete');
+        setIsInitializing(false);
+      } catch (error) {
+        console.error('❌ App initialization failed:', error);
+        setInitError(error.message);
+        setIsInitializing(false);
+      }
+    };
+
+    initializeApp();
+  }, []);
+
+  const initPerformanceMonitoring = () => {
+    if ('performance' in window) {
+      console.log('📊 Performance monitoring initialized');
+    }
+  };
+
+  if (isInitializing) {
+    return fallback || <Loading message={`Loading ${componentName}...`} />;
+  }
+
+  if (initError) {
+    return <Error message={initError} onRetry={() => window.location.reload()} />;
+  }
+
   return (
-    <AdminErrorBoundary componentName={componentName}>
-      <React.Suspense fallback={fallback || (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading {componentName}...</p>
-          </div>
-        </div>
-      )}>
+    <AdminErrorBoundary>
+      <React.Suspense fallback={fallback || <Loading message={`Loading ${componentName}...`} />}>
         {children}
       </React.Suspense>
     </AdminErrorBoundary>
   );
 };
+
+function AppContent() {
+  const navigate = useNavigate();
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+  const [performanceMetrics, setPerformanceMetrics] = useState({});
+  const [isAdminLoading, setIsAdminLoading] = useState(false);
+  const [adminLoadProgress, setAdminLoadProgress] = useState(0);
+  const [adminError, setAdminError] = useState(null);
+  const [showForceExit, setShowForceExit] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [cartAnimationTrigger, setCartAnimationTrigger] = useState(0);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [initError, setInitError] = useState(null);
+  const [spacebarSystemStatus, setSpacebarSystemStatus] = useState('initializing');
+
+  // Ref to track component mount status
+  const isMountedRef = useRef(true);
+
+  // COMPREHENSIVE SPACEBAR FIX SYSTEM
+  const initializeSpacebarSystem = useCallback(() => {
+    console.log('🔧 Initializing comprehensive spacebar fix system...');
+    
+    try {
+      // Clear any existing handlers that might interfere
+      const existingHandlers = document.querySelectorAll('[data-spacebar-handler]');
+      existingHandlers.forEach(el => {
+        el.removeAttribute('data-spacebar-handler');
+      });
+
+      // Enhanced input field initialization
+      const initializeInputFields = () => {
+        const inputSelectors = [
+          'input[type="text"]',
+          'input[type="email"]', 
+          'input[type="password"]',
+          'input[type="search"]',
+          'textarea',
+          '[contenteditable="true"]',
+          '[contenteditable]'
+        ];
+
+        document.querySelectorAll(inputSelectors.join(',')).forEach(input => {
+          // Ensure proper attributes
+          input.setAttribute('data-spacebar-enabled', 'true');
+          input.style.pointerEvents = 'auto';
+          input.style.userSelect = 'text';
+          
+          // Remove any conflicting event listeners
+          const newInput = input.cloneNode(true);
+          input.parentNode.replaceChild(newInput, input);
+          
+          // Add enhanced event handling
+          newInput.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.code === 'Space') {
+              // Ensure spacebar works normally in text inputs
+              e.stopPropagation();
+              // Allow default behavior (don't preventDefault)
+              return true;
+            }
+          }, { passive: true });
+
+          newInput.addEventListener('input', (e) => {
+            // Enhanced text processing for better spacing
+            if (e.inputType === 'insertText' && e.data === ' ') {
+              console.log('✅ Spacebar input detected and processed');
+            }
+          }, { passive: true });
+        });
+      };
+
+      // Initialize immediately
+      initializeInputFields();
+
+      // Monitor for dynamic content with debounced observer
+      let observerTimeout;
+      const debouncedInitialize = () => {
+        clearTimeout(observerTimeout);
+        observerTimeout = setTimeout(initializeInputFields, 100);
+      };
+
+      const observer = new MutationObserver((mutations) => {
+        let shouldReinitialize = false;
+        mutations.forEach(mutation => {
+          if (mutation.type === 'childList') {
+            mutation.addedNodes.forEach(node => {
+              if (node.nodeType === 1) { // Element node
+                const hasInputs = node.matches('input, textarea, [contenteditable]') || 
+                                node.querySelector('input, textarea, [contenteditable]');
+                if (hasInputs) {
+                  shouldReinitialize = true;
+                }
+              }
+            });
+          }
+        });
+        
+        if (shouldReinitialize) {
+          debouncedInitialize();
+        }
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['contenteditable', 'type']
+      });
+
+      // Store cleanup function
+      window.spacebarCleanup = () => {
+        observer.disconnect();
+        clearTimeout(observerTimeout);
+      };
+
+      setSpacebarSystemStatus('active');
+      console.log('✅ Spacebar fix system initialized successfully');
+
+    } catch (error) {
+      console.error('❌ Spacebar system initialization failed:', error);
+      setSpacebarSystemStatus('error');
+    }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (window.spacebarCleanup) {
+        window.spacebarCleanup();
+      }
+    };
+  }, []);
+
+  // React-level spacebar event handling
+  useEffect(() => {
+    const reactSpacebarHandler = (e) => {
+      if (e.key === ' ' || e.code === 'Space') {
+        const target = e.target;
+        
+        // Check if target is a text input
+        const isTextInput = target && (
+          target.tagName === 'INPUT' && [
+            'text', 'email', 'password', 'search', 'url', 'tel'
+          ].includes(target.type?.toLowerCase()) ||
+          target.tagName === 'TEXTAREA' ||
+          target.contentEditable === 'true' ||
+          target.isContentEditable
+        );
+
+        if (isTextInput) {
+          // For text inputs, ensure spacebar works naturally
+          console.log('🎯 Spacebar in text input - allowing normal behavior');
+          // Don't prevent default or stop propagation for text inputs
+          return true;
+        }
+      }
+    };
+
+    // Add with capture false to not interfere with React's event system
+    document.addEventListener('keydown', reactSpacebarHandler, false);
+    document.addEventListener('keypress', reactSpacebarHandler, false);
+
+    return () => {
+      document.removeEventListener('keydown', reactSpacebarHandler, false);
+};
+  }, []);
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        setIsInitializing(true);
+        console.log('🚀 Starting app initialization...');
+
+        // Initialize security
+        await initializeSecurity();
+        console.log('✅ Security initialized');
+
+        // Browser compatibility check
+        const browserInfo = detectBrowser();
+        console.log('📱 Browser detected:', browserInfo);
+
+        console.log('🎉 App initialization complete');
+        setIsInitializing(false);
+      } catch (error) {
+        console.error('❌ App initialization failed:', error);
+        setInitError(error.message);
+        setIsInitializing(false);
+      }
+    };
+
+    initializeApp();
+  }, []);
 // Browser detection at module level to avoid re-computation
 const detectBrowser = () => {
   try {
@@ -259,9 +473,9 @@ function AppContent() {
 
   // Ref to track component mount status
   const isMountedRef = useRef(true);
-  // Initialize performance monitoring only once
-// Initialize performance monitoring only once to prevent re-renders
-useEffect(() => {
+const isMountedRef = useRef(true);
+
+  // Initialize performance monitoring only once to prevent re-renders
     console.log('🔍 Browser Compatibility Check:', BROWSER_INFO);
     
     // Track compatibility issues
@@ -764,11 +978,11 @@ const handleAdminAccess = useCallback(async () => {
       clearInterval(progressInterval);
       clearTimeout(timeoutId);
       
-      setTimeout(() => {
+setTimeout(() => {
         if (!cleanupRef.current && isMountedRef.current) {
           setIsAdminLoading(false);
           setAdminLoadProgress(0);
-}
+        }
         document.body.classList.remove('admin-accessing');
         document.body.classList.remove('content-layer');
         document.body.classList.remove('admin-route');
@@ -825,9 +1039,17 @@ document.body.classList.remove('admin-accessing', 'content-layer', 'admin-route'
     
     // Navigate to safe route
     navigate('/');
-  }, [navigate, adminError]); // Removed browserInfo from dependencies
+}, [navigate, adminError]); // Removed browserInfo from dependencies
 
-return (
+  if (isInitializing) {
+    return <Loading message="Initializing application..." />;
+  }
+
+  if (initError) {
+    return <Error message={initError} onRetry={() => window.location.reload()} />;
+  }
+
+  return (
     <div className="min-h-screen bg-background">
       {/* Admin Loading Progress Bar */}
       {isAdminLoading && (

@@ -3,8 +3,8 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-  ],
-theme: {
+],
+  theme: {
     extend: {
       spacing: {
         '0.5': '0.125rem',   // 2px
@@ -57,12 +57,12 @@ theme: {
       },
       fontFamily: {
         display: ['Poppins', 'sans-serif'],
-        body: ['Inter', 'sans-serif'],
+body: ['Inter', 'sans-serif'],
       },
-fontSize: {
+      fontSize: {
         // ENHANCED FONT SIZES with integrated typography following Material Design & WCAG 2.1
         'xs': ['0.75rem', { 
-          lineHeight: '1.5', 
+          lineHeight: '1.5',
           letterSpacing: '0.025em', 
           wordSpacing: '0.08em',
           fontFeatureSettings: '"kern" 1'
@@ -129,18 +129,18 @@ fontSize: {
         'normal': '1.6',
         'snug': '1.4',
         'tight': '1.3',
-        'tighter': '1.2',
+'tighter': '1.2',
       },
-letterSpacing: {
+      letterSpacing: {
         'tightest': '-0.075em',
         'tighter': '-0.05em',
         'tight': '-0.025em',
         'normal': '0.01em',
         'wide': '0.025em',
         'wider': '0.05em',
-        'widest': '0.1em',
+'widest': '0.1em',
       },
-wordSpacing: {
+      wordSpacing: {
         // ENHANCED WORD SPACING utilities following typography best practices
         'tight': '0.03em',
         'normal': '0.05em', 
@@ -156,8 +156,25 @@ wordSpacing: {
         'soft': '0 2px 4px 0 rgba(0, 0, 0, 0.05)',
         'medium': '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
         'large': '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-        'extra-large': '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+'extra-large': '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
       },
+      // Input behavior utilities for spacebar functionality
+      userSelect: {
+        'text': 'text',
+        'all': 'all', 
+        'auto': 'auto',
+        'none': 'none'
+      },
+      pointerEvents: {
+        'none': 'none',
+        'auto': 'auto',
+        'text': 'text'
+      },
+      cursor: {
+        'text': 'text',
+        'pointer': 'pointer',
+        'default': 'default'
+      }
     },
   },
   plugins: [],
