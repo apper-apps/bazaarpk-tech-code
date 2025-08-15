@@ -1082,7 +1082,8 @@ document.addEventListener('keydown', function(e) {
     // to allow normal spacebar functionality in all input fields
     
     console.log('✅ Natural spacebar input enabled for all form fields');
-  }
+}
+  
   // Initialize performance monitoring
   const checkSpacebarCompatibility = () => {
     const testInput = document.createElement('input');
@@ -1102,7 +1103,8 @@ document.addEventListener('keydown', function(e) {
       bubbles: true,
       cancelable: true
     });
-// Create input event with fallback for older browsers
+
+    // Create input event with fallback for older browsers
     let inputEvent;
     try {
       // Check if InputEvent constructor is available in global scope
@@ -1149,8 +1151,8 @@ document.addEventListener('keydown', function(e) {
   // Run compatibility check after a short delay
   setTimeout(checkSpacebarCompatibility, 1000);
 
-// Announce spacebar protection is active
-  if (typeof announceToScreenReader === 'function') {
+  // Announce spacebar protection is active
+if (typeof announceToScreenReader === 'function') {
     announceToScreenReader('Spacebar input protection initialized');
   }
 };
