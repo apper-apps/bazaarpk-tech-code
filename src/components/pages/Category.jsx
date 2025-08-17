@@ -57,102 +57,155 @@ const loadData = async () => {
 useEffect(() => {
     let filtered = [...products];
 
-    // Filter by search query
+    // Filter by search query with comprehensive null checks
     if (searchQuery) {
-      filtered = filtered.filter(product =>
-        product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        product.badges?.some(badge => badge.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
+      filtered = filtered.filter(product => {
+        try {
+          const safeTitle = (product?.title || '').toLowerCase();
+          const safeDescription = (product?.description || '').toLowerCase();
+          const safeCategory = (product?.category || '').toLowerCase();
+          const searchLower = searchQuery.toLowerCase();
+          
+          return safeTitle.includes(searchLower) ||
+            safeDescription.includes(searchLower) ||
+            safeCategory.includes(searchLower) ||
+            product.tags?.some(tag => (tag || '').toLowerCase().includes(searchLower)) ||
+            product.badges?.some(badge => (badge || '').toLowerCase().includes(searchLower));
+        } catch (error) {
+          console.warn('Error filtering product:', product?.Id || 'unknown', error);
+          return false;
+        }
+      });
     }
 
-    // Filter by category
+    // Filter by category with null safety
     if (selectedCategory) {
-      filtered = filtered.filter(product =>
-        product.category.toLowerCase() === selectedCategory.toLowerCase()
-      );
+      filtered = filtered.filter(product => {
+        try {
+          const safeCategory = (product?.category || '').toLowerCase();
+          return safeCategory === selectedCategory.toLowerCase();
+        } catch (error) {
+          console.warn('Error filtering by category:', product?.Id || 'unknown', error);
+          return false;
+        }
+      });
     }
 
-    // Filter by tag/badge
+    // Filter by tag/badge with enhanced null checking
     if (selectedTag && selectedTag !== "all") {
-      filtered = filtered.filter(product =>
-        product.badges?.includes(selectedTag) || 
-        product.tags?.includes(selectedTag)
-      );
+      filtered = filtered.filter(product => {
+        try {
+          return product.badges?.includes(selectedTag) || 
+            product.tags?.includes(selectedTag);
+        } catch (error) {
+          console.warn('Error filtering by tag:', product?.Id || 'unknown', error);
+          return false;
+        }
+      });
     }
 
-    // Filter by featured status
+    // Filter by featured status with null safety
     if (featuredStatus && featuredStatus !== "all") {
       if (featuredStatus === "featured") {
-        filtered = filtered.filter(product => 
-          product.featured || 
-          product.badges?.includes("BESTSELLER") ||
-          product.badges?.includes("PREMIUM")
-        );
+        filtered = filtered.filter(product => {
+          try {
+            return product.featured || 
+              product.badges?.includes("BESTSELLER") ||
+              product.badges?.includes("PREMIUM");
+          } catch (error) {
+            console.warn('Error filtering featured products:', product?.Id || 'unknown', error);
+            return false;
+          }
+        });
       } else if (featuredStatus === "regular") {
-        filtered = filtered.filter(product => 
-          !product.featured && 
-          !product.badges?.includes("BESTSELLER") &&
-          !product.badges?.includes("PREMIUM")
-        );
+        filtered = filtered.filter(product => {
+          try {
+            return !product.featured && 
+              !product.badges?.includes("BESTSELLER") &&
+              !product.badges?.includes("PREMIUM");
+          } catch (error) {
+            console.warn('Error filtering regular products:', product?.Id || 'unknown', error);
+            return false;
+          }
+        });
       }
     }
 
-    // Filter by price range
+    // Filter by price range with validation
     if (priceRange.min) {
-      filtered = filtered.filter(product => product.price >= parseInt(priceRange.min));
+      filtered = filtered.filter(product => {
+        try {
+          const price = parseFloat(product?.price) || 0;
+          const minPrice = parseInt(priceRange.min) || 0;
+          return price >= minPrice;
+        } catch (error) {
+          console.warn('Error filtering by min price:', product?.Id || 'unknown', error);
+          return false;
+        }
+      });
     }
     if (priceRange.max) {
-      filtered = filtered.filter(product => product.price <= parseInt(priceRange.max));
+      filtered = filtered.filter(product => {
+        try {
+          const price = parseFloat(product?.price) || 0;
+          const maxPrice = parseInt(priceRange.max) || 0;
+          return price <= maxPrice;
+        } catch (error) {
+          console.warn('Error filtering by max price:', product?.Id || 'unknown', error);
+          return false;
+        }
+      });
     }
 
-    // Sort products with enhanced featured logic
-    switch (sortBy) {
-      case "price-low":
-        filtered.sort((a, b) => a.price - b.price);
-        break;
-      case "price-high":
-        filtered.sort((a, b) => b.price - a.price);
-        break;
-      case "name":
-        filtered.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case "newest":
-        filtered.sort((a, b) => b.Id - a.Id);
-        break;
-      case "rating":
-        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        break;
-      case "popularity":
-        filtered.sort((a, b) => {
-          const aPopularity = (a.badges?.length || 0) + (a.featured ? 5 : 0);
-          const bPopularity = (b.badges?.length || 0) + (b.featured ? 5 : 0);
-          return bPopularity - aPopularity;
-        });
-        break;
-      case "discount":
-        filtered.sort((a, b) => {
-          const aDiscount = a.oldPrice ? ((a.oldPrice - a.price) / a.oldPrice) * 100 : 0;
-          const bDiscount = b.oldPrice ? ((b.oldPrice - b.price) / b.oldPrice) * 100 : 0;
-          return bDiscount - aDiscount;
-        });
-        break;
-      default: // featured
-        filtered.sort((a, b) => {
-          const aScore = (a.featured ? 10 : 0) + 
-                        (a.badges?.includes("BESTSELLER") ? 8 : 0) +
-                        (a.badges?.includes("PREMIUM") ? 6 : 0) +
-                        (a.badges?.includes("FRESH") ? 4 : 0) +
-                        (a.badges?.includes("ORGANIC") ? 3 : 0);
-          const bScore = (b.featured ? 10 : 0) + 
-                        (b.badges?.includes("BESTSELLER") ? 8 : 0) +
-                        (b.badges?.includes("PREMIUM") ? 6 : 0) +
-                        (b.badges?.includes("FRESH") ? 4 : 0) +
-                        (b.badges?.includes("ORGANIC") ? 3 : 0);
-          return bScore - aScore;
-        });
+    // Sort products with enhanced featured logic and null safety
+    try {
+      switch (sortBy) {
+        case "price-low":
+          filtered.sort((a, b) => (parseFloat(a?.price) || 0) - (parseFloat(b?.price) || 0));
+          break;
+        case "price-high":
+          filtered.sort((a, b) => (parseFloat(b?.price) || 0) - (parseFloat(a?.price) || 0));
+          break;
+        case "name":
+          filtered.sort((a, b) => (a?.title || '').localeCompare(b?.title || ''));
+          break;
+        case "newest":
+          filtered.sort((a, b) => (parseInt(b?.Id) || 0) - (parseInt(a?.Id) || 0));
+          break;
+        case "rating":
+          filtered.sort((a, b) => (parseFloat(b?.rating) || 0) - (parseFloat(a?.rating) || 0));
+          break;
+        case "popularity":
+          filtered.sort((a, b) => {
+            const aPopularity = (a?.badges?.length || 0) + (a?.featured ? 5 : 0);
+            const bPopularity = (b?.badges?.length || 0) + (b?.featured ? 5 : 0);
+            return bPopularity - aPopularity;
+          });
+          break;
+        case "discount":
+          filtered.sort((a, b) => {
+            const aDiscount = (a?.oldPrice && a?.price) ? ((a.oldPrice - a.price) / a.oldPrice) * 100 : 0;
+            const bDiscount = (b?.oldPrice && b?.price) ? ((b.oldPrice - b.price) / b.oldPrice) * 100 : 0;
+            return bDiscount - aDiscount;
+          });
+          break;
+        default: // featured
+          filtered.sort((a, b) => {
+            const aScore = (a?.featured ? 10 : 0) + 
+                          (a?.badges?.includes("BESTSELLER") ? 8 : 0) +
+                          (a?.badges?.includes("PREMIUM") ? 6 : 0) +
+                          (a?.badges?.includes("FRESH") ? 4 : 0) +
+                          (a?.badges?.includes("ORGANIC") ? 3 : 0);
+            const bScore = (b?.featured ? 10 : 0) + 
+                          (b?.badges?.includes("BESTSELLER") ? 8 : 0) +
+                          (b?.badges?.includes("PREMIUM") ? 6 : 0) +
+                          (b?.badges?.includes("FRESH") ? 4 : 0) +
+                          (b?.badges?.includes("ORGANIC") ? 3 : 0);
+            return bScore - aScore;
+          });
+      }
+    } catch (error) {
+      console.warn('Error sorting products:', error);
     }
 
     setFilteredProducts(filtered);
