@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/useToast';
 import ProductService from '@/services/api/ProductService';
 import { CategoryService } from '@/services/api/CategoryService';
