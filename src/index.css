@@ -145,15 +145,7 @@ input::placeholder, textarea::placeholder {
   background: linear-gradient(135deg, #2196F3, #42A5F5);
 }
 
-.cart-shake {
-  animation: shake 0.6s ease-in-out;
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
-}
+/* Removed cart-shake animation to prevent unwanted shaking effects */
 
 .hero-gradient {
   background: linear-gradient(135deg, #2E7D32 0%, #4CAF50 50%, #66BB6A 100%);
@@ -191,7 +183,7 @@ input::placeholder, textarea::placeholder {
   display: none;
 }
 
-/* Admin route styles */
+/* Admin route styles - Fixed to prevent blinking/shaking */
 body.admin-accessing .overlay-mask,
 body.admin-accessing .modal-backdrop,
 body.admin-accessing .loading-overlay {
@@ -212,6 +204,7 @@ body.admin-route .backdrop {
   z-index: -1000 !important;
 }
 
+/* Stable admin panel styling without jarring animations */
 .admin-panel, 
 .admin-dashboard,
 [data-admin-content] {
@@ -225,6 +218,25 @@ body.admin-route .backdrop {
   line-height: 1.6;
   letter-spacing: 0.01em;
   word-spacing: 0.05em;
+  transform: none !important; /* Prevent unwanted transforms */
+  animation: none !important; /* Disable all animations */
+}
+
+/* Prevent unwanted animations on admin forms */
+.admin-panel form,
+.admin-panel input,
+.admin-panel textarea,
+.admin-panel select,
+.admin-panel button {
+  animation: none !important;
+  transform: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+/* Stable form elements */
+.admin-panel .product-text-field {
+  transform: none !important;
+  animation: none !important;
 }
 
 .badge-organic {
@@ -256,31 +268,27 @@ body.admin-route .backdrop {
   z-index: 1000 !important;
   position: relative !important;
   background: white !important;
+  animation: none !important; /* Disable fade-in animation */
+  transform: none !important;
 }
 
+/* Removed fade-in-admin animation to prevent blinking */
 .fade-in-admin {
-  animation: fadeInAdmin 0.6s ease forwards;
+  /* Animation removed to prevent blinking/shaking */
+  opacity: 1;
+  transform: translateY(0);
 }
 
-@keyframes fadeInAdmin {
-  from { 
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
+/* Stable admin links without jarring transforms */
 .admin-access-link {
   display: inline-block;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .admin-access-link:hover {
-  transform: translateY(-1px);
+  /* Remove transform to prevent shaking */
+  color: #4CAF50;
 }
 
 .admin-content {
@@ -291,6 +299,8 @@ body.admin-route .backdrop {
   line-height: 1.6;
   letter-spacing: 0.01em;
   word-spacing: 0.05em;
+  transform: none !important;
+  animation: none !important;
 }
 
 .admin-content p {
@@ -311,4 +321,13 @@ body.admin-route .backdrop {
   margin-bottom: 0.375rem;
   line-height: 1.6;
   word-spacing: 0.05em;
+}
+
+/* Fix for AddProduct page specifically */
+[data-page="add-product"] *,
+[data-page="add-product"] *:before,
+[data-page="add-product"] *:after {
+  animation: none !important;
+  transform: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, background-color 0.15s ease !important;
 }
