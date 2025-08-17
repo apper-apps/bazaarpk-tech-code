@@ -224,8 +224,14 @@ const autoSpaceWords = (text) => {
     { pattern: /bestpunjab/gi, replacement: 'Best Punjab' },
     { pattern: /freshfarm/gi, replacement: 'Fresh Farm' },
     { pattern: /purenature/gi, replacement: 'Pure Nature' },
-    { pattern: /multanibasmati/gi, replacement: 'Multani Basmati' },
+{ pattern: /multanibasmati/gi, replacement: 'Multani Basmati' },
     { pattern: /multanirice/gi, replacement: 'Multani Rice' },
+    
+    // Honey-related products
+    { pattern: /purehoney/gi, replacement: 'Pure Honey' },
+    { pattern: /rawhoney/gi, replacement: 'Raw Honey' },
+    { pattern: /organichoney/gi, replacement: 'Organic Honey' },
+    { pattern: /naturalhoney/gi, replacement: 'Natural Honey' },
   ];
   
   // Apply common merged patterns
