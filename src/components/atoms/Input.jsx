@@ -105,9 +105,9 @@ const handleChange = useCallback((e) => {
             validationError = `Password must be at least ${validationRules.minLength} characters`;
           }
           break;
-        case 'text':
-default:
-          // ENHANCED text processing with comprehensive natural word spacing
+case 'text':
+        default:
+          // Enhanced text processing - preserve natural spaces between words
           newValue = sanitizeInput(newValue, {
             ...sanitizeOptions,
             preserveSpaces: true,
@@ -117,27 +117,14 @@ default:
           });
       }
       
-      // Apply enhanced typography classes and attributes for optimal spacing
+      // Apply enhanced typography for optimal readability
       if (inputRef.current) {
-        // Add auto-spacing attributes for CSS enhancement
-        inputRef.current.setAttribute('data-auto-spacing', 'enabled');
-        inputRef.current.setAttribute('data-enhanced-typography', 'true');
-        
-        // Apply comprehensive typography classes
-        inputRef.current.classList.add('product-text-field', 'text-preview-enhanced');
-        
-        // Ensure proper text input behavior
-        inputRef.current.style.whiteSpace = 'normal';
-        inputRef.current.style.wordSpacing = '1.2px';
-        inputRef.current.style.letterSpacing = '0.5px';
-        inputRef.current.style.lineHeight = '1.65';
+        inputRef.current.classList.add('product-text-field');
+        inputRef.current.style.wordSpacing = '0.08em';
+        inputRef.current.style.letterSpacing = '0.02em';
+        inputRef.current.style.lineHeight = '1.6';
         inputRef.current.style.textRendering = 'optimizeLegibility';
         inputRef.current.style.fontFeatureSettings = '"kern" 1';
-        
-        // Enhanced user interaction properties
-        inputRef.current.style.userSelect = 'text';
-        inputRef.current.style.pointerEvents = 'auto';
-        inputRef.current.style.cursor = 'text';
       }
     }
 
@@ -175,9 +162,7 @@ default:
       onValueChange(newValue, { isValid: !validationError, error: validationError });
     }
 
-// Allow natural text input flow without cursor interference
-    // Browser handles cursor positioning correctly for normal input
-
+// Allow natural text input flow - browser handles cursor positioning
     // Announce validation feedback to screen readers
     if (validationError) {
       announceToScreenReader(`Input validation: ${validationError}`, 'assertive');
@@ -209,10 +194,9 @@ default:
 
 // Handle keyboard navigation and accessibility
   const handleKeyDown = useCallback((e) => {
-    // Allow completely natural spacebar and text input behavior
-    // No interference with normal typing - let browser handle all input naturally
+    // Allow natural spacebar and text input - no interference with normal typing
     
-    // Only handle special functionality keys, not text input keys
+    // Only handle special keys, never interfere with text input like spacebar
     if (e.key === 'Escape' && props.clearable !== false) {
       setInternalValue('');
       if (onValueChange) onValueChange('');
@@ -222,7 +206,7 @@ default:
       }
     }
 
-    // Call original keyDown handler without any text input interference
+    // Call original keyDown handler
     if (props.onKeyDown) {
       props.onKeyDown(e);
     }

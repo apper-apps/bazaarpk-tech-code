@@ -253,8 +253,8 @@ const autoSpaceWords = (text) => {
   result = result.replace(/([a-zA-Z])([.!?])/g, '$1$2');
   result = result.replace(/([.!?])([a-zA-Z])/g, '$1 $2');
   
-  // Final cleanup: only remove truly excessive spaces (3+), preserve natural spacing
-  result = result.replace(/\s{3,}/g, ' ');
+// Final cleanup: preserve natural single spaces, only remove excessive spaces (3+)
+  result = result.replace(/\s{3,}/g, ' '); // Remove 3+ consecutive spaces
   result = result.replace(/^\s+|\s+$/g, ''); // Trim edges only
   
   return result;
