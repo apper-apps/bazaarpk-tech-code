@@ -3382,63 +3382,78 @@ const renderPreviewModal = () => {
     if (!showPreview) return null;
     
     return (
-      <div
-    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div
-        className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Product Preview</h2>
-                <Button variant="outline" size="sm" onClick={() => setShowPreview(false)}>
-                    <ApperIcon name="X" className="w-4 h-4" />
-                </Button>
+              <h2 className="text-xl font-bold">Product Preview</h2>
+              <Button variant="outline" size="sm" onClick={() => setShowPreview(false)}>
+                <ApperIcon name="X" className="w-4 h-4" />
+              </Button>
             </div>
             <div className="space-y-4">
-                {imagePreview && <img
-                    src={imagePreview}
-                    alt="Product"
-                    className="w-full h-64 object-contain rounded-lg border" />}
-                <div>
-                    <h3 className="text-lg font-semibold">
-                        {formData.brand ? `${formData.brand} Product` : "Product Preview"}
-                    </h3>
-                    {formData.category && <p className="text-gray-600 word-spacing-relaxed">Category: {formData.category}
-                    </p>}
-                </div>
-                {formData.sellingPrice && <div className="flex items-center space-x-2">
-                    <span className="text-xl font-bold text-primary-600">
-                        {formatPrice(parseFloat(formData.sellingPrice))}
+              {imagePreview && (
+                <img
+                  src={imagePreview}
+                  alt="Product"
+                  className="w-full h-64 object-contain rounded-lg border"
+                />
+              )}
+              <div>
+                <h3 className="text-lg font-semibold">
+                  {formData.brand ? `${formData.brand} Product` : "Product Preview"}
+                </h3>
+                {formData.category && (
+                  <p className="text-gray-600 word-spacing-relaxed">
+                    Category: {formData.category}
+                  </p>
+                )}
+              </div>
+              {formData.sellingPrice && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-xl font-bold text-primary-600">
+                    {formatPrice(parseFloat(formData.sellingPrice))}
+                  </span>
+                  {formData.discountedPrice && parseFloat(formData.discountedPrice) > 0 && (
+                    <span className="text-gray-500 line-through">
+                      {formatPrice(parseFloat(formData.discountedPrice))}
                     </span>
-                    {formData.discountedPrice && parseFloat(formData.discountedPrice) > 0 && <span className="text-gray-500 line-through">
-                        {formatPrice(parseFloat(formData.discountedPrice))}
-                    </span>}
-                </div>}
-                {formData.tags.length > 0 && <div className="flex flex-wrap gap-1">
-                    {formData.tags.map((tag, index) => <span
-                        key={index}
-                        className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">
-                        {tag}
-                    </span>)}
-                </div>}
-                <div>
-                    <h4
-                        className="font-medium mb-2"
-                        style={{
-                            letterSpacing: "-0.01em",
-                            wordSpacing: "0.03em"
-                        }}>Product Information
-                                        </h4>
-                    {formData.sku && <p className="text-gray-700 text-sm mb-3">SKU: {formData.sku}
-                    </p>}
+                  )}
                 </div>
+              )}
+              {formData.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {formData.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div>
+                <h4
+                  className="font-medium mb-2"
+                  style={{
+                    letterSpacing: "-0.01em",
+                    wordSpacing: "0.03em"
+                  }}
+                >
+                  Product Information
+                </h4>
+                {formData.sku && (
+                  <p className="text-gray-700 text-sm mb-3">
+                    SKU: {formData.sku}
+                  </p>
+                )}
+              </div>
             </div>
-        </div>
-</div>
-            )}
           </div>
         </div>
-      );
-    }
+      </div>
+    );
   };
 
   return (
