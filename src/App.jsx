@@ -865,8 +865,12 @@ document.body.classList.remove('admin-accessing', 'content-layer', 'admin-route'
     }, 1000);
     
     // Navigate to safe route
-    navigate('/');
+navigate('/');
 }, [navigate, adminError]); // Removed browserInfo from dependencies
+
+  // Application initialization state
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [initError, setInitError] = useState(null);
 
   if (isInitializing) {
     return <Loading message="Initializing application..." />;
