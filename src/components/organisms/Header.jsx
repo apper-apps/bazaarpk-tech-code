@@ -43,21 +43,23 @@ const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  return (
+return (
 <>
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-soft" role="banner">
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-soft enhanced-typography" role="banner">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link 
               to="/" 
-              className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-lg"
+              className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-lg enhanced-spacing"
               aria-label="BazaarPK Home"
+              style={{ wordSpacing: '0.05em', letterSpacing: '0.01em' }}
             >
               <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-500 rounded-lg flex items-center justify-center" aria-hidden="true">
                 <ApperIcon name="ShoppingBag" className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-display font-bold text-primary-800">
+              <span className="text-xl font-display font-bold text-primary-800 enhanced-spacing" 
+                    style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>
                 BazaarPK
               </span>
             </Link>
@@ -74,22 +76,23 @@ const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center space-x-4" role="navigation" aria-label="Main navigation">
+<nav className="hidden md:flex items-center space-x-4 enhanced-typography" role="navigation" aria-label="Main navigation">
               <Link
                 to="/category"
-                className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 enhanced-spacing"
                 aria-label="Browse product categories"
+                style={{ wordSpacing: '0.06em', letterSpacing: '0.015em' }}
               >
                 Categories
               </Link>
               <Link
                 to="/deals"
-                className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 enhanced-spacing"
                 aria-label="View current deals and offers"
+                style={{ wordSpacing: '0.06em', letterSpacing: '0.015em' }}
               >
                 Deals
               </Link>
-              
               {/* Cart Button */}
 <Button
                 variant="ghost"
@@ -241,24 +244,26 @@ const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
             role="navigation" 
             aria-label="Mobile navigation"
           >
-            <Link
+<Link
               to="/category"
               onClick={toggleMobileMenu}
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary-50 focus:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200"
+              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary-50 focus:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200 enhanced-spacing"
               aria-label="Browse product categories"
+              style={{ wordSpacing: '0.06em', letterSpacing: '0.015em' }}
             >
               <ApperIcon name="Grid3X3" className="w-5 h-5 text-primary-600" aria-hidden="true" />
-              <span className="text-gray-700 font-medium">Categories</span>
+              <span className="text-gray-700 font-medium enhanced-spacing" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Categories</span>
             </Link>
             
             <Link
               to="/deals"
               onClick={toggleMobileMenu}
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary-50 focus:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200"
+              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary-50 focus:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200 enhanced-spacing"
               aria-label="View current deals and offers"
+              style={{ wordSpacing: '0.06em', letterSpacing: '0.015em' }}
             >
               <ApperIcon name="Percent" className="w-5 h-5 text-accent-600" aria-hidden="true" />
-              <span className="text-gray-700 font-medium">Deals</span>
+              <span className="text-gray-700 font-medium enhanced-spacing" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Deals</span>
             </Link>
 
             <button 

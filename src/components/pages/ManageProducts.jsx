@@ -1,22 +1,22 @@
-import React, { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
-import ProductService from '@/services/api/ProductService'
-import { CategoryService } from '@/services/api/CategoryService'
-import { useToast } from '@/hooks/useToast'
+import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { CategoryService } from "@/services/api/CategoryService";
+import { useToast } from "@/hooks/useToast";
+import useWebSocket from "@/hooks/useWebSocket";
 import ApperIcon from "@/components/ApperIcon";
 import Category from "@/components/pages/Category";
-import ProductManagementCard from "@/components/organisms/ProductManagementCard";
-import Empty from "@/components/ui/Empty";
 import ErrorComponent, { Error } from "@/components/ui/Error";
+import Empty from "@/components/ui/Empty";
 import Loading from "@/components/ui/Loading";
+import ProductManagementCard from "@/components/organisms/ProductManagementCard";
 import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
 import Badge from "@/components/atoms/Badge";
-import { cn } from "@/utils/cn";
+import ProductService from "@/services/api/ProductService";
 import { formatPrice } from "@/utils/currency";
 import cacheManager from "@/utils/cacheManager";
-import useWebSocket from "@/hooks/useWebSocket";
+import { cn } from "@/utils/cn";
 
 function ManageProducts() {
   const navigate = useNavigate()
@@ -487,22 +487,26 @@ function clearAllFilters() {
       </div>
       
       {/* User Communication Banner - New Spacing System */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+{/* User Communication Banner - Enhanced Spacing System */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6" data-spacing-banner>
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4 enhanced-typography spacing-enhanced">
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0">
               <ApperIcon name="Sparkles" className="w-6 h-6 text-green-600" />
             </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-green-900 mb-2">
-                ✨ New Spacing System Active!
+            <div className="flex-1 spacing-enhanced">
+              <h3 className="text-sm font-semibold text-green-900 mb-2 enhanced-typography" 
+                  style={{ wordSpacing: '0.1em', letterSpacing: '0.025em' }}>
+                ✨ Enhanced Spacing System Now Active!
               </h3>
-              <p className="text-sm text-green-800 leading-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>
-                Your entries like <span className="font-mono bg-white px-2 py-1 rounded border">BasmatiRice</span> will now display as 
-                <span className="font-medium text-green-900 ml-1">Basmati Rice</span> with enhanced readability and professional spacing.
+              <p className="text-sm text-green-800 leading-relaxed enhanced-typography" 
+                 style={{ wordSpacing: '0.12em', letterSpacing: '0.02em', lineHeight: '1.65' }}>
+                Your text entries like <span className="font-mono bg-white px-2 py-1 rounded border enhanced-spacing">BasmatiRice</span> will automatically display as 
+                <span className="font-medium text-green-900 ml-1 enhanced-spacing">Basmati Rice</span> with professional spacing and enhanced readability.
               </p>
-              <div className="mt-2 text-xs text-green-700">
-                <span className="font-medium">Benefits:</span> Better SEO, improved customer experience, automatic word separation
+              <div className="mt-2 text-xs text-green-700 enhanced-typography" 
+                   style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>
+                <span className="font-medium">Benefits:</span> Better SEO, improved customer experience, automatic word separation, enhanced typography
               </div>
             </div>
             <button 
@@ -510,13 +514,14 @@ function clearAllFilters() {
                 const banner = document.querySelector('[data-spacing-banner]');
                 if (banner) banner.style.display = 'none';
               }}
-              className="flex-shrink-0 text-green-600 hover:text-green-800 transition-colors"
-              aria-label="Dismiss banner"
+              className="flex-shrink-0 text-green-600 hover:text-green-800 transition-colors enhanced-spacing"
+              aria-label="Dismiss spacing notification banner"
+              style={{ wordSpacing: '0.05em' }}
             >
               <ApperIcon name="X" className="w-5 h-5" />
             </button>
           </div>
-        </div>
+</div>
       </div>
 
       {/* Validation Errors Display */}
@@ -525,8 +530,8 @@ function clearAllFilters() {
           <div className="flex">
             <ApperIcon name="AlertTriangle" className="w-5 h-5 text-red-400 mr-3" />
             <div>
-              <h3 className="text-sm font-medium text-red-800">Validation Errors</h3>
-<ul className="text-sm text-red-600 bg-red-50 p-3 rounded">
+<h3 className="text-sm font-medium text-red-800">Validation Errors</h3>
+              <ul className="text-sm text-red-600 bg-red-50 p-3 rounded">
                 {Object.entries(validationErrors).map(([field, error]) => (
                   <li key={field}>{error}</li>
                 ))}
@@ -540,15 +545,18 @@ function clearAllFilters() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           {/* Search Input */}
-          <div className="mb-4">
+<div className="mb-4">
             <Input
               type="text"
               placeholder="Search products by name, description, or category..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
+              className="w-full enhanced-spacing product-text-field"
+              data-enhanced-typography="true"
+              data-auto-spacing="enabled"
               icon="Search"
-            />
+              style={{ wordSpacing: '0.1em', letterSpacing: '0.02em' }}
+/>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
@@ -558,13 +566,17 @@ function clearAllFilters() {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-<option value="">All Categories</option>
+className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 enhanced-spacing"
+                data-enhanced-typography="true"
+                style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}
+>
+                <option value="" className="enhanced-spacing">All Categories</option>
                 {categories.map((category, index) => (
                   <option 
                     key={category.id || category.name || `category-${index}`} 
                     value={category.name}
+                    className="enhanced-spacing"
+                    style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}
                   >
                     {category.name}
                   </option>

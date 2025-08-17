@@ -31,93 +31,119 @@ body {
 
 /* ENHANCED GLOBAL TEXT SPACING STANDARDS */
 
+/* CRITICAL: Force comprehensive spacing on ALL text elements */
+*, *::before, *::after {
+  word-spacing: 0.08em !important;
+  letter-spacing: 0.015em !important;
+  font-feature-settings: "kern" 1 !important;
+  text-rendering: optimizeLegibility !important;
+}
+
 /* Core text elements with enhanced word spacing */
-p, .text-content, span, div {
-  margin-bottom: 1rem;
-  word-spacing: 0.08em;
-  letter-spacing: 0.015em;
-  line-height: 1.65;
+p, .text-content, span, div, button, a, label, input, textarea {
+  margin-bottom: 1rem !important;
+  word-spacing: 0.1em !important;
+  letter-spacing: 0.02em !important;
+  line-height: 1.65 !important;
+  font-kerning: normal !important;
 }
 
 /* Product-specific text spacing */
 .product-title, .product-name, [class*="title"], [class*="name"] {
-  word-spacing: 0.1em;
-  letter-spacing: 0.02em;
-  line-height: 1.4;
+  word-spacing: 0.12em !important;
+  letter-spacing: 0.025em !important;
+  line-height: 1.4 !important;
+  font-weight: 500 !important;
 }
 
 .product-description, [class*="description"], .text-description {
-  word-spacing: 0.08em;
-  letter-spacing: 0.015em;
-  line-height: 1.65;
-  margin-bottom: 0.75rem;
+  word-spacing: 0.1em !important;
+  letter-spacing: 0.02em !important;
+  line-height: 1.65 !important;
+  margin-bottom: 0.75rem !important;
 }
 
 /* Headings with proper spacing */
 h1, h2, h3, h4, h5, h6 {
-  letter-spacing: -0.01em;
-  word-spacing: 0.05em;
-  line-height: 1.3;
-  margin-bottom: 0.75rem;
+  letter-spacing: 0.01em !important;
+  word-spacing: 0.08em !important;
+  line-height: 1.3 !important;
+  margin-bottom: 0.75rem !important;
+  font-kerning: normal !important;
 }
 
 /* Card content spacing */
 .card-content, .card-body, [class*="card"] {
-  word-spacing: 0.08em;
-  letter-spacing: 0.015em;
+  word-spacing: 0.1em !important;
+  letter-spacing: 0.02em !important;
 }
 
-/* Ensure all text nodes have proper spacing */
-* {
-  word-spacing: 0.05em;
-  letter-spacing: 0.01em;
+/* Navigation and interactive elements */
+nav, nav a, nav button, .navigation {
+  word-spacing: 0.08em !important;
+  letter-spacing: 0.015em !important;
 }
 
 /* Enhanced spacing for lists */
 ul, ol {
-  margin-bottom: 1rem;
+  margin-bottom: 1rem !important;
 }
 
 li {
-  margin-bottom: 0.25rem;
-  word-spacing: 0.05em;
+  margin-bottom: 0.25rem !important;
+  word-spacing: 0.08em !important;
+  letter-spacing: 0.015em !important;
 }
 
-/* Form element spacing */
+/* CRITICAL: Form element spacing with maximum priority */
 label {
-  display: block;
-  margin-bottom: 0.375rem;
-  letter-spacing: 0.01em;
-  word-spacing: 0.05em;
+  display: block !important;
+  margin-bottom: 0.375rem !important;
+  letter-spacing: 0.02em !important;
+  word-spacing: 0.08em !important;
+  font-kerning: normal !important;
 }
 
 /* Enhanced form elements spacing */
 input, textarea, select {
-  margin-bottom: 1rem;
-  letter-spacing: 0.02em;
-  word-spacing: 0.08em;
-  line-height: 1.6;
+  margin-bottom: 1rem !important;
+  letter-spacing: 0.025em !important;
+  word-spacing: 0.1em !important;
+  line-height: 1.6 !important;
+  font-family: inherit !important;
+  font-kerning: normal !important;
 }
 
 /* Specific input types with enhanced spacing */
 input[type="text"], input[type="email"], input[type="password"], 
-input[type="search"], textarea {
-  word-spacing: 0.1em;
-  letter-spacing: 0.025em;
-  padding: 0.75rem;
+input[type="search"], input[type="url"], input[type="tel"], textarea {
+  word-spacing: 0.12em !important;
+  letter-spacing: 0.03em !important;
+  padding: 0.75rem !important;
+  text-rendering: optimizeLegibility !important;
 }
 
-/* Button spacing */
-button {
-  letter-spacing: 0.025em;
-  word-spacing: 0.08em;
-  line-height: 1.5;
+/* Button spacing with high priority */
+button, .btn, [role="button"] {
+  letter-spacing: 0.025em !important;
+  word-spacing: 0.1em !important;
+  line-height: 1.5 !important;
+  font-kerning: normal !important;
 }
 
 /* Interactive text elements */
 a, [role="button"], [tabindex] {
-  word-spacing: 0.06em;
-  letter-spacing: 0.015em;
+  word-spacing: 0.08em !important;
+  letter-spacing: 0.02em !important;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+/* Select dropdown options */
+option {
+  word-spacing: 0.08em !important;
+  letter-spacing: 0.015em !important;
+  padding: 0.5rem !important;
 }
 .Toastify__toast-container {
   z-index: 9999;
@@ -573,57 +599,86 @@ padding: 0.25rem 0.75rem;
 
 /* Real-time preview styling with enhanced letter and word spacing */
 /* COMPREHENSIVE AUTO-SPACING CSS SYSTEM FOR ENHANCED TYPOGRAPHY */
+/* ULTIMATE TYPOGRAPHY ENFORCEMENT SYSTEM */
 
-/* Real-time preview styling with optimal letter and word spacing */
+/* CRITICAL: Maximum priority spacing for ALL text content */
+html * {
+  word-spacing: 0.1em !important;
+  letter-spacing: 0.02em !important;
+  font-feature-settings: "kern" 1 !important;
+  text-rendering: optimizeLegibility !important;
+  font-kerning: normal !important;
+}
+
+/* Real-time preview styling with enhanced spacing */
 #text-preview, .text-preview-enhanced, 
 #product-name, #short-description, #detailed-description,
-[data-preview="true"], .product-preview {
-  letter-spacing: 0.5px !important;
-  word-spacing: 1.2px !important;
+[data-preview="true"], .product-preview,
+.spacing-enhanced, .typography-enhanced {
+  letter-spacing: 0.6px !important;
+  word-spacing: 1.4px !important;
   line-height: 1.65 !important;
-  font-feature-settings: 'kern' 1 !important;
+  font-feature-settings: "kern" 1 !important;
   text-rendering: optimizeLegibility !important;
   font-kerning: normal !important;
   word-break: keep-all !important;
   white-space: pre-wrap !important;
   overflow-wrap: break-word !important;
   -webkit-hyphens: auto !important;
-          hyphens: auto !important;
+  hyphens: auto !important;
+  font-smoothing: antialiased !important;
+  -webkit-font-smoothing: antialiased !important;
 }
 
-/* Enhanced typography for product content areas */
+/* Product content and form fields */
 .product-content-enhanced,
 .text-content-preview,
 .enhanced-spacing,
-.product-text-field {
-  letter-spacing: 0.5px !important;
-  word-spacing: 1.2px !important;
+.product-text-field,
+input.enhanced-spacing,
+textarea.enhanced-spacing {
+  letter-spacing: 0.6px !important;
+  word-spacing: 1.4px !important;
   line-height: 1.65 !important;
   word-break: keep-all !important;
   font-kerning: normal !important;
   text-rendering: optimizeLegibility !important;
-font-feature-settings: "kern" 1 !important;
+  font-feature-settings: "kern" 1 !important;
   overflow-wrap: break-word !important;
   hyphens: auto !important;
   white-space: pre-wrap !important;
 }
-/* CRITICAL: Enhanced auto-spacing for form inputs */
+
+/* MAXIMUM PRIORITY: All form inputs and interactive elements */
+input, textarea, select, button, a, label, span, div, p, h1, h2, h3, h4, h5, h6 {
+  letter-spacing: 0.025em !important;
+  word-spacing: 0.1em !important;
+  line-height: 1.6 !important;
+  font-feature-settings: "kern" 1 !important;
+  text-rendering: optimizeLegibility !important;
+  font-kerning: normal !important;
+  font-family: inherit !important;
+}
+
+/* Enhanced auto-spacing for form inputs */
 input[data-auto-spacing="enabled"],
 textarea[data-auto-spacing="enabled"],
 [data-enhanced-typography="true"],
 input.product-text-field,
-textarea.product-text-field {
-  letter-spacing: 0.5px !important;
-  word-spacing: 1.2px !important;
+textarea.product-text-field,
+.form-control,
+.input-enhanced {
+  letter-spacing: 0.6px !important;
+  word-spacing: 1.4px !important;
   line-height: 1.65 !important;
-font-feature-settings: "kern" 1 !important;
+  font-feature-settings: "kern" 1 !important;
   text-rendering: optimizeLegibility !important;
   font-kerning: normal !important;
   word-break: keep-all !important;
   white-space: normal !important;
   overflow-wrap: break-word !important;
   -webkit-hyphens: auto !important;
-          hyphens: auto !important;
+  hyphens: auto !important;
   
   /* Enhanced user interaction */
   user-select: text !important;
@@ -632,19 +687,20 @@ font-feature-settings: "kern" 1 !important;
   pointer-events: auto !important;
   cursor: text !important;
   
-  /* Smooth transitions for enhanced UX */
+  /* Smooth transitions */
   transition: letter-spacing 0.2s ease, word-spacing 0.2s ease, 
               box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
 
-/* Enhanced focus states with improved spacing */
+/* Enhanced focus states */
+input:focus, textarea:focus, select:focus,
 input[data-auto-spacing="enabled"]:focus,
 textarea[data-auto-spacing="enabled"]:focus,
 [data-enhanced-typography="true"]:focus,
 input.product-text-field:focus,
 textarea.product-text-field:focus {
-  letter-spacing: 0.6px !important;
-  word-spacing: 1.3px !important;
+  letter-spacing: 0.7px !important;
+  word-spacing: 1.5px !important;
   line-height: 1.65 !important;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1), 
               0 0 0 2px rgba(76, 175, 80, 0.3) !important;
@@ -654,71 +710,80 @@ textarea.product-text-field:focus {
   
   /* Enhanced typography on focus */
   text-rendering: optimizeLegibility !important;
-font-feature-settings: "kern" 1 !important;
+  font-feature-settings: "kern" 1 !important;
   font-kerning: normal !important;
 }
 
-/* Placeholder text with optimal spacing */
+/* Placeholder text optimization */
+input::placeholder, textarea::placeholder,
 input[data-auto-spacing="enabled"]::placeholder,
 textarea[data-auto-spacing="enabled"]::placeholder,
 input.product-text-field::placeholder,
 textarea.product-text-field::placeholder {
-  letter-spacing: 0.4px !important;
-  word-spacing: 1.0px !important;
+  letter-spacing: 0.5px !important;
+  word-spacing: 1.2px !important;
   opacity: 0.7 !important;
   font-style: italic !important;
   color: #9CA3AF !important;
 }
 
-/* ContentEditable enhanced auto-spacing */
+/* ContentEditable enhanced spacing */
+[contenteditable="true"],
+[contenteditable],
 [contenteditable="true"][data-auto-spacing="enabled"],
 [contenteditable][data-enhanced-typography="true"] {
   min-height: 2.5rem !important;
-  letter-spacing: 0.5px !important;
-  word-spacing: 1.2px !important;
+  letter-spacing: 0.6px !important;
+  word-spacing: 1.4px !important;
   line-height: 1.65 !important;
   padding: 0.75rem !important;
   border: 1px solid #e5e7eb !important;
   border-radius: 6px !important;
   background: white !important;
   text-rendering: optimizeLegibility !important;
-font-feature-settings: "kern" 1 !important;
+  font-feature-settings: "kern" 1 !important;
   -webkit-font-smoothing: antialiased !important;
 }
 
+/* ContentEditable empty state */
+[contenteditable="true"]:empty::before,
+[contenteditable]:empty::before,
 [contenteditable="true"][data-auto-spacing="enabled"]:empty::before,
 [contenteditable][data-enhanced-typography="true"]:empty::before {
   content: attr(placeholder) !important;
   color: #9CA3AF !important;
   font-style: italic !important;
   pointer-events: none !important;
-  letter-spacing: 0.4px !important;
-  word-spacing: 1.0px !important;
-}
-
-/* Enhanced readability for dynamic content with comprehensive spacing */
-[data-enhanced-typography="true"] {
   letter-spacing: 0.5px !important;
   word-spacing: 1.2px !important;
+}
+
+/* Dynamic content spacing */
+[data-enhanced-typography="true"],
+.enhanced-typography {
+  letter-spacing: 0.6px !important;
+  word-spacing: 1.4px !important;
   line-height: 1.65 !important;
   text-align: left !important;
   text-justify: inter-word !important;
   font-kerning: normal !important;
   text-rendering: optimizeLegibility !important;
-font-feature-settings: "kern" 1 !important;
+  font-feature-settings: "kern" 1 !important;
 }
 
-/* User guidance hints with enhanced animations */
+/* User guidance and notifications */
 .spacing-hint,
-[data-spacing-hint="true"] {
+[data-spacing-hint="true"],
+.notification-banner,
+.user-guidance {
   animation: slideInFromTop 0.3s ease-out !important;
   border-left: 4px solid #4CAF50 !important;
   background: rgba(76, 175, 80, 0.05) !important;
   padding: 0.75rem !important;
   margin: 0.5rem 0 !important;
   border-radius: 4px !important;
-  letter-spacing: 0.5px !important;
-  word-spacing: 1.1px !important;
+  letter-spacing: 0.6px !important;
+  word-spacing: 1.3px !important;
 }
 
 @keyframes slideInFromTop {
@@ -732,7 +797,7 @@ font-feature-settings: "kern" 1 !important;
   }
 }
 
-/* Animation for text transformation feedback */
+/* Text transformation feedback */
 .text-transform-applied,
 [data-text-transformed="true"] {
   animation: highlightTransform 0.5s ease-in-out !important;
@@ -744,180 +809,53 @@ font-feature-settings: "kern" 1 !important;
   100% { background-color: transparent !important; }
 }
 
-/* Print-friendly enhanced typography */
-@media print {
+/* Responsive typography */
+@media (max-width: 640px) {
+  html * {
+    letter-spacing: 0.02em !important;
+    word-spacing: 0.08em !important;
+    line-height: 1.6 !important;
+  }
+  
   .text-preview-enhanced,
-  .product-content-enhanced,
+  #text-preview,
   [data-auto-spacing="enabled"] {
-    letter-spacing: 0.3px !important;
-    word-spacing: 1.0px !important;
+    letter-spacing: 0.5px !important;
+    word-spacing: 1.2px !important;
     line-height: 1.6 !important;
   }
 }
 
-/* High contrast mode support */
+/* Print-friendly typography */
+@media print {
+  * {
+    letter-spacing: 0.02em !important;
+    word-spacing: 0.08em !important;
+    line-height: 1.6 !important;
+  }
+}
+
+/* High contrast mode */
 @media (prefers-contrast: high) {
-  .text-preview-enhanced,
-  #text-preview,
-  [data-auto-spacing="enabled"] {
-    letter-spacing: 0.6px !important;
-    word-spacing: 1.4px !important;
+  * {
+    letter-spacing: 0.03em !important;
+    word-spacing: 0.1em !important;
     font-weight: 500 !important;
   }
 }
 
-/* Responsive typography adjustments */
-@media (max-width: 640px) {
-  .text-preview-enhanced,
-  #text-preview,
-  [data-auto-spacing="enabled"] {
-    letter-spacing: 0.4px !important;
-    word-spacing: 1.0px !important;
-    line-height: 1.6 !important;
-  }
-}
-
-/* Enhanced spacing for specific content types */
-.enhanced-product-title {
-  letter-spacing: 0.5px;
-  word-spacing: 1.3px;
-  line-height: 1.4;
-  font-weight: 600;
-}
-
-.enhanced-product-description {
-  letter-spacing: 0.5px;
-  word-spacing: 1.2px;
-  line-height: 1.65;
-  text-align: left;
-}
-
-/* Admin notification banner styling */
-[data-spacing-banner] {
-  animation: slideInBanner 0.5s ease-out;
-}
-
-@keyframes slideInBanner {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* COMPREHENSIVE SPACEBAR AND INPUT BEHAVIOR CSS FIXES */
-
-/* Enhanced input field behavior for spacebar functionality */
-input[type="text"], 
-input[type="email"], 
-input[type="password"], 
-input[type="search"],
-input[type="url"],
-input[type="tel"],
-textarea,
-[contenteditable="true"],
-[contenteditable] {
-  /* Ensure proper text input behavior */
-  pointer-events: auto !important;
-  user-select: text !important;
-  cursor: text !important;
-  
-  /* Enhanced spacing and typography */
-  letter-spacing: 0.025em !important;
-  word-spacing: 0.1em !important;
-  line-height: 1.6 !important;
-  
-  /* Prevent any interference with text input */
-  -webkit-user-select: text !important;
-  -moz-user-select: text !important;
-  -ms-user-select: text !important;
-  
-  /* Ensure proper focus behavior */
-  outline-offset: 2px;
-  transition: all 0.2s ease;
-}
-
-/* Focus states for enhanced spacebar functionality */
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus,
-input[type="search"]:focus,
-input[type="url"]:focus,
-input[type="tel"]:focus,
-textarea:focus,
-[contenteditable="true"]:focus,
-[contenteditable]:focus {
-  outline: 2px solid #4CAF50 !important;
-  outline-offset: 2px !important;
-  border-color: #4CAF50 !important;
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1) !important;
-  
-  /* Enhanced spacing on focus */
-  letter-spacing: 0.03em !important;
-  word-spacing: 0.12em !important;
-}
-
-/* Placeholder text enhancements */
-input::-moz-placeholder,
-textarea::-moz-placeholder {
-  color: #9CA3AF !important;
-  font-style: italic !important;
-  letter-spacing: 0.02em !important;
-  word-spacing: 0.08em !important;
-  opacity: 0.7 !important;
-}
-
-/* ContentEditable specific enhancements */
-[contenteditable="true"],
-[contenteditable] {
-  min-height: 2.5rem !important;
-  padding: 0.75rem !important;
-  border: 1px solid #e5e7eb !important;
-  border-radius: 6px !important;
-  background: white !important;
-  
-  /* Enhanced text rendering */
-  text-rendering: optimizeLegibility !important;
-  font-feature-settings: "kern" 1 !important;
-  -webkit-font-smoothing: antialiased !important;
-}
-
-[contenteditable="true"]:empty::before,
-[contenteditable]:empty::before {
-  content: attr(placeholder) !important;
-  color: #9CA3AF !important;
-  font-style: italic !important;
-  pointer-events: none !important;
-  letter-spacing: 0.02em !important;
-  word-spacing: 0.08em !important;
-}
-
-/* Prevent any global event interference */
-.spacebar-enabled input,
-.spacebar-enabled textarea,
-.spacebar-enabled [contenteditable] {
-  pointer-events: auto !important;
-}
-
-/* Mobile optimization for spacebar functionality */
+/* Mobile input optimization */
 @media (hover: none) and (pointer: coarse) {
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="search"],
-  textarea {
-    font-size: 16px !important; /* Prevent iOS zoom */
-    min-height: 44px !important; /* Touch target size */
+  input, textarea {
+    font-size: 16px !important;
+    min-height: 44px !important;
     padding: 1rem !important;
     letter-spacing: 0.025em !important;
     word-spacing: 0.1em !important;
   }
 }
 
-/* Debug mode styling for spacebar functionality */
+/* Accessibility and debug modes */
 [data-spacebar-debug="true"] {
   border: 2px dashed #4CAF50 !important;
   background: rgba(76, 175, 80, 0.05) !important;
