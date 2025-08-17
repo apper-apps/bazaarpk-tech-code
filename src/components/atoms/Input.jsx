@@ -1,8 +1,8 @@
-import React, { forwardRef, useCallback, useState } from "react";
-import { cn } from "@/utils/cn";
+import React, { forwardRef, useCallback, useState, useRef, useImperativeHandle } from "react";
 import { announceToScreenReader, sanitizeEmail, sanitizeInput, sanitizeNumericInput } from "@/utils/security";
+import { cn } from "@/utils/cn";
 
-const Input = React.forwardRef(({ 
+const Input = React.forwardRef(({
   className, 
   type = "text",
   error,
@@ -22,12 +22,16 @@ const Input = React.forwardRef(({
   showValidationIcon = true,
   validationRules = {},
   realTimeValidation = true,
-  ...props
 }, ref) => {
   const [internalValue, setInternalValue] = useState(props.value || props.defaultValue || '');
+  const inputRef = useRef(null);
+
+  // Expose the input element through the forwarded ref
+  useImperativeHandle(ref, () => inputRef.current);
 
   // Generate unique IDs for accessibility
   const inputId = props.id || `input-${Math.random().toString(36).substr(2, 9)}`;
+  const errorId = `${inputId}-error`;
   const errorId = `${inputId}-error`;
   const descriptionId = `${inputId}-description`;
 
@@ -102,13 +106,38 @@ const handleChange = useCallback((e) => {
           }
           break;
         case 'text':
-        default:
-          // Enhanced text processing with natural word spacing
+default:
+          // ENHANCED text processing with comprehensive natural word spacing
           newValue = sanitizeInput(newValue, {
             ...sanitizeOptions,
             preserveSpaces: true,
-            naturalSpacing: true
+            naturalSpacing: true,
+            allowSpaces: true,
+            maxLength: sanitizeOptions.maxLength || 1000
           });
+      }
+      
+      // Apply enhanced typography classes and attributes for optimal spacing
+      if (inputRef.current) {
+        // Add auto-spacing attributes for CSS enhancement
+        inputRef.current.setAttribute('data-auto-spacing', 'enabled');
+        inputRef.current.setAttribute('data-enhanced-typography', 'true');
+        
+        // Apply comprehensive typography classes
+        inputRef.current.classList.add('product-text-field', 'text-preview-enhanced');
+        
+        // Ensure proper text input behavior
+        inputRef.current.style.whiteSpace = 'normal';
+        inputRef.current.style.wordSpacing = '1.2px';
+        inputRef.current.style.letterSpacing = '0.5px';
+        inputRef.current.style.lineHeight = '1.65';
+        inputRef.current.style.textRendering = 'optimizeLegibility';
+        inputRef.current.style.fontFeatureSettings = '"kern" 1';
+        
+        // Enhanced user interaction properties
+        inputRef.current.style.userSelect = 'text';
+        inputRef.current.style.pointerEvents = 'auto';
+        inputRef.current.style.cursor = 'text';
       }
     }
 
@@ -274,10 +303,9 @@ className={cn(
             className
 )}
           style={props.style}
-          ref={ref}
+          ref={inputRef}
           {...ariaAttributes}
         />
-
         {/* Validation Success Icon */}
         {showValidationIcon && internalValue && !error && realTimeValidation && (
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">

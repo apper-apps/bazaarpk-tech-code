@@ -231,7 +231,7 @@ const tabs = [
     { id: "approval", label: "Approval Settings", icon: "Shield" }
   ];
 const handleInputChange = (field, value, validationInfo = {}) => {
-    // Input sanitization based on field type with ENHANCED WORD SPACING
+    // COMPREHENSIVE input sanitization with ENHANCED NATURAL WORD SPACING
     let sanitizedValue = value;
     let fieldError = null;
     
@@ -244,7 +244,9 @@ case 'productName':
             allowSpecialChars: true,
             allowSpaces: true,
             naturalSpacing: true,
-            preserveSpaces: true
+            preserveSpaces: true,
+            strictMode: false,
+            autoSpaceWords: true
           });
           if (!sanitizedValue || sanitizedValue.trim() === '') {
             fieldError = "Product name is required and cannot be empty";
@@ -259,8 +261,11 @@ case 'shortDescription':
             maxLength: 250, 
             allowNumbers: true, 
             allowSpecialChars: true,
-            preserveSpaces: true,     // Enable word spacing preservation
-            naturalSpacing: true      // Auto-detect word boundaries
+            preserveSpaces: true,        // CRITICAL: Enable word spacing preservation
+            naturalSpacing: true,        // Auto-detect and fix word boundaries
+            allowSpaces: true,
+            autoSpaceWords: true,
+            strictMode: false
           });
           if (!sanitizedValue || sanitizedValue.trim() === '') {
             fieldError = "Short description is required for search and product cards";
@@ -275,8 +280,11 @@ case 'detailedDescription':
             maxLength: 2000, 
             allowNumbers: true, 
             allowSpecialChars: true,
-            preserveSpaces: true,     // CRITICAL: Enable auto word spacing
-            naturalSpacing: true      // Enhanced word boundary detection
+            preserveSpaces: true,        // ESSENTIAL: Enable comprehensive word spacing
+            naturalSpacing: true,        // Enhanced word boundary detection and auto-spacing
+            allowSpaces: true,
+            autoSpaceWords: true,
+            strictMode: false
           });
           if (sanitizedValue && sanitizedValue.length < 20) {
             fieldError = "Detailed description should be at least 20 characters if provided";
@@ -936,24 +944,33 @@ const validationResult = validateForm();
       const sanitizedData = {
 ...formData,
 ...formData,
-        // Enhanced field sanitization with validation
+// COMPREHENSIVE field sanitization with enhanced natural spacing preservation
 productName: sanitizeInput(formData.productName || '', { 
           maxLength: 150, 
           allowNumbers: true, 
           allowSpecialChars: true,
-          preserveSpaces: true
+          preserveSpaces: true,
+          naturalSpacing: true,
+          allowSpaces: true,
+          autoSpaceWords: true
         }),
 shortDescription: sanitizeInput(formData.shortDescription, { 
           maxLength: 250, 
           allowNumbers: true, 
           allowSpecialChars: true,
-          preserveSpaces: true
+          preserveSpaces: true,
+          naturalSpacing: true,
+          allowSpaces: true,
+          autoSpaceWords: true
         }),
 detailedDescription: sanitizeInput(formData.detailedDescription, { 
           maxLength: 2000, 
           allowNumbers: true, 
           allowSpecialChars: true,
-          preserveSpaces: true
+          preserveSpaces: true,
+          naturalSpacing: true,
+          allowSpaces: true,
+          autoSpaceWords: true
         }),
         brand: sanitizeInput(formData.brand, {
           maxLength: 100, 
