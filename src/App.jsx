@@ -301,8 +301,9 @@ function AppContent() {
       document.removeEventListener('keypress', reactSpacebarHandler, false);
     };
   }, []);
-
-  // Initialize performance monitoring only once to prevent re-renders
+// Initialize comprehensive spacebar fixes and performance monitoring
+  useEffect(() => {
+    // Initialize performance monitoring only once to prevent re-renders
     console.log('🔍 Browser Compatibility Check:', BROWSER_INFO);
     
     // Track compatibility issues
@@ -337,7 +338,7 @@ function AppContent() {
     });
 
     // Add CSS override for extension conflicts
-const extensionOverrideStyle = document.createElement('style');
+    const extensionOverrideStyle = document.createElement('style');
     extensionOverrideStyle.id = 'extension-conflict-override';
     extensionOverrideStyle.textContent = `
       /* Extension Conflict Overrides */
@@ -408,7 +409,7 @@ const extensionOverrideStyle = document.createElement('style');
       console.log('✅ Extension conflict CSS overrides applied');
     }
 
-// Nuclear Option - Fallback Spacebar Handler with Enhanced Text Spacing
+    // Nuclear Option - Fallback Spacebar Handler with Enhanced Text Spacing
     const nuclearSpacebarHandler = function(e) {
       if (e.key === ' ' && !e.ctrlKey && !e.altKey && !e.metaKey) {
         // Allow natural keyboard input without interference
@@ -423,7 +424,7 @@ const extensionOverrideStyle = document.createElement('style');
     };
 
     // Simple keyboard event listener for accessibility
-document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', (e) => {
       // Let browser handle all input naturally with enhanced spacing
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
         // Apply enhanced spacing after input
@@ -437,7 +438,7 @@ document.addEventListener('keydown', (e) => {
     });
     
     // Enhanced input field initialization with comprehensive spacing
-const initializeInputFields = () => {
+    const initializeInputFields = () => {
       const inputs = document.querySelectorAll('input, textarea, [contenteditable]');
       inputs.forEach(input => {
         // Add enhanced typography attributes
@@ -489,7 +490,6 @@ const initializeInputFields = () => {
     initializeInputFields();
     
     // Observer for dynamically added inputs
-// Observer for dynamically added inputs
     const inputObserver = new MutationObserver((mutations) => {
       let hasNewInputs = false;
       mutations.forEach((mutation) => {
@@ -512,7 +512,7 @@ const initializeInputFields = () => {
       }
     });
 
-inputObserver.observe(document.body, {
+    inputObserver.observe(document.body, {
       childList: true,
       subtree: true
     });
@@ -610,8 +610,8 @@ inputObserver.observe(document.body, {
       console.log('🧹 Spacebar fixes cleanup completed');
     };
   }, []); // Empty dependency array to run only once
-const cleanupRef = useRef(false);
-  
+
+  const cleanupRef = useRef(false);
 const handleAdminAccess = useCallback(async () => {
     // Prevent multiple simultaneous calls
     if (isAdminLoading || cleanupRef.current || !isMountedRef.current) return;
