@@ -11,6 +11,7 @@ import Home from "@/components/pages/Home";
 import Cart from "@/components/pages/Cart";
 import UserManagement from "@/components/pages/UserManagement";
 import ManageProducts from "@/components/pages/ManageProducts";
+import AddProduct from "@/components/pages/AddProduct";
 import AddRecipeBundle from "@/components/pages/AddRecipeBundle";
 import ReportsAnalytics from "@/components/pages/ReportsAnalytics";
 import ProductDetail from "@/components/pages/ProductDetail";
@@ -926,11 +927,16 @@ navigate('/');
                   <Route path="products" element={
                     <SafeAdminComponent componentName="ManageProducts">
                       <ManageProducts />
-                    </SafeAdminComponent>
+</SafeAdminComponent>
                   } />
                   <Route path="products/manage" element={
                     <SafeAdminComponent componentName="ManageProducts">
                       <ManageProducts />
+                    </SafeAdminComponent>
+                  } />
+                  <Route path="products/add" element={
+                    <SafeAdminComponent componentName="AddProduct">
+                      <AddProduct />
                     </SafeAdminComponent>
                   } />
                   <Route path="categories" element={<div className="p-6">

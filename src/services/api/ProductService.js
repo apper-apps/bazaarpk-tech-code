@@ -1568,8 +1568,7 @@ window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
 .map(product => ({ ...product }));
     }
   },
-
-// Enhanced create method with comprehensive validation
+// Enhanced create method with comprehensive multilingual validation
   async create(productData) {
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -1599,8 +1598,7 @@ window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
         }
       });
       
-      // Enhanced validation with multiple field name checks
-// Enhanced validation with comprehensive field checking and null safety
+      // Enhanced multilingual validation with comprehensive field checking and null safety
       const validationErrors = [];
       
 // Multilingual Product Name validation
@@ -1653,19 +1651,32 @@ window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
         throw error;
       }
       
-      // Create the new product
+      // Create the new product with comprehensive multilingual support
 const newProduct = {
         ...mappedData,
         Id: newId,
-        // Ensure multilingual fields are properly structured
+        // Ensure multilingual fields are properly structured with fallbacks
         productName: mappedData.productName || { english: '', urdu: '' },
         description: mappedData.description || { english: '', urdu: '' },
         title: mappedData.productName?.english || mappedData.title || '', // Legacy compatibility
         price: parseFloat(mappedData.price || productData.sellingPrice || productData.price || 0),
         sellingPrice: parseFloat(mappedData.sellingPrice || mappedData.price || productData.sellingPrice || 0),
         stock: parseInt(mappedData.stock || mappedData.stockQuantity || 0),
-        status: 'pending',
-        visibility: 'draft',
+        stockQuantity: parseInt(mappedData.stock || mappedData.stockQuantity || 0),
+        status: mappedData.status || 'draft',
+        visibility: mappedData.visibility || 'draft',
+        badges: mappedData.badges || [],
+        tags: mappedData.tags || [],
+        images: mappedData.images?.length > 0 ? mappedData.images : ['https://via.placeholder.com/300x300?text=Product+Image'],
+        minOrderQuantity: parseInt(mappedData.minOrderQuantity || 1),
+        maxOrderQuantity: mappedData.maxOrderQuantity ? parseInt(mappedData.maxOrderQuantity) : null,
+        weight: mappedData.weight ? parseFloat(mappedData.weight) : null,
+        dimensions: mappedData.dimensions || null,
+        brand: mappedData.brand || null,
+        barcode: mappedData.barcode || null,
+        metaTitle: mappedData.metaTitle || mappedData.productName?.english || '',
+        metaDescription: mappedData.metaDescription || mappedData.description?.english || '',
+        featured: Boolean(mappedData.featured),
         createdAt: new Date().toISOString(),
         lastModified: new Date().toISOString(),
         version: 1,
@@ -1673,7 +1684,7 @@ const newProduct = {
           action: 'created',
           timestamp: new Date().toISOString(),
           user: 'admin',
-          details: 'Product created via form submission'
+          details: 'Product created via multilingual form submission'
         }]
       };
       

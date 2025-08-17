@@ -463,8 +463,14 @@ function clearAllFilters() {
                 </Badge>
               )}
             </div>
-            
-            <div className="flex items-center space-x-3">
+<div className="flex items-center space-x-3">
+              <Button
+                onClick={() => navigate('/admin/products/add')}
+                className="bg-primary-600 hover:bg-primary-700 text-white"
+              >
+                <ApperIcon name="Plus" className="w-4 h-4 mr-2" />
+                Add Product
+              </Button>
               
               <Button
                 variant="outline"

@@ -1,7 +1,6 @@
 import React, { forwardRef, useCallback, useState, useRef, useImperativeHandle } from "react";
 import { announceToScreenReader, sanitizeEmail, sanitizeInput, sanitizeNumericInput } from "@/utils/security";
 import { cn } from "@/utils/cn";
-
 const Input = React.forwardRef(({
   className, 
   type = "text",
@@ -107,17 +106,19 @@ const handleChange = useCallback((e) => {
           break;
 case 'text':
         default:
-          // Enhanced text processing - preserve natural spaces between words
+          // Enhanced text processing - preserve natural spaces between words with multilingual support
           newValue = sanitizeInput(newValue, {
             ...sanitizeOptions,
             preserveSpaces: true,
             naturalSpacing: true,
             allowSpaces: true,
-            maxLength: sanitizeOptions.maxLength || 1000
+            maxLength: sanitizeOptions.maxLength || 1000,
+            supportUrdu: true,
+            supportArabic: true
           });
       }
       
-      // Apply enhanced typography for optimal readability
+      // Apply enhanced typography for optimal multilingual readability
       if (inputRef.current) {
         inputRef.current.classList.add('product-text-field');
         inputRef.current.style.wordSpacing = '0.08em';
@@ -125,6 +126,13 @@ case 'text':
         inputRef.current.style.lineHeight = '1.6';
         inputRef.current.style.textRendering = 'optimizeLegibility';
         inputRef.current.style.fontFeatureSettings = '"kern" 1';
+        
+        // Enhanced support for RTL languages
+        if (props.dir === 'rtl') {
+          inputRef.current.style.unicodeBidi = 'isolate';
+          inputRef.current.style.direction = 'rtl';
+          inputRef.current.style.textAlign = 'right';
+        }
       }
     }
 
@@ -284,6 +292,8 @@ className={cn(
             "aria-[invalid=true]:border-red-500",
             showValidationIcon && internalValue && !error && "pr-10",
             tooltip && "cursor-help",
+            "product-text-field word-spacing-relaxed letter-spacing-wide",
+            props.dir === 'rtl' && "text-right",
             className
 )}
           style={props.style}
