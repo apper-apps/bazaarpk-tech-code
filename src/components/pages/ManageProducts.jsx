@@ -727,13 +727,14 @@ className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none
         
         {/* Products Grid/List */}
 {/* Products Grid/List */}
-        {paginatedProducts.length === 0 ? (
+{paginatedProducts.length === 0 ? (
           <Empty
             title="No products found"
             description={searchTerm || selectedCategory || statusFilter ? 
               "No products match your current filters. Try adjusting your search criteria." :
               "No products have been added yet. Create your first product to get started."
             }
+          />
         ) : (
           <div className={cn(
             "grid gap-6",
