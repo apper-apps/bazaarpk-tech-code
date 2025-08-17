@@ -264,10 +264,10 @@ const handleClearFilters = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">
+<h1 className="text-3xl font-display font-bold text-gray-900 mb-2 word-spacing-relaxed">
               {selectedCategory ? `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Products` : "All Products"}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 word-spacing-relaxed">
               {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found
             </p>
           </div>

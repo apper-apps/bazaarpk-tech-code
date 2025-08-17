@@ -353,54 +353,17 @@ function AppContent() {
         z-index: -9999 !important;
       }
       
-      /* COMPREHENSIVE WORD SPACING ENFORCEMENT */
-      /* Apply enhanced word spacing to ALL text elements */
-      *, *::before, *::after {
-        word-spacing: 0.08em !important;
-        letter-spacing: 0.015em !important;
+/* Simplified word spacing enforcement */
+      body, p, span, div, button, a, label {
+        word-spacing: 0.05em;
+        letter-spacing: 0.01em;
       }
       
-      /* Enhanced spacing for specific text elements */
-      p, span, div, h1, h2, h3, h4, h5, h6, 
-      button, a, label, li, td, th {
-        word-spacing: 0.1em !important;
-        letter-spacing: 0.02em !important;
-        line-height: 1.6 !important;
-      }
-      
-      /* Product-specific enhanced spacing */
-      [class*="product"], [class*="title"], [class*="name"],
-      [class*="description"], [class*="text"] {
-        word-spacing: 0.12em !important;
-        letter-spacing: 0.025em !important;
-        line-height: 1.65 !important;
-      }
-      
-      /* Prevent extension CSS from interfering with inputs */
+      /* Form inputs with enhanced spacing */
       input, textarea, [contenteditable] {
-        -webkit-user-modify: read-write !important;
-        -moz-user-modify: read-write !important;
-        user-modify: read-write !important;
-        white-space: pre-wrap !important;
-        word-spacing: 0.1em !important;
-        letter-spacing: 0.025em !important;
-        line-height: 1.6 !important;
-      }
-      
-      /* Override extension-injected styles */
-      input:not([readonly]):not([disabled]), 
-      textarea:not([readonly]):not([disabled]),
-      [contenteditable="true"] {
-        background: inherit !important;
-        color: inherit !important;
-        font: inherit !important;
-        border: inherit !important;
-        outline: inherit !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
-        word-spacing: 0.1em !important;
-        letter-spacing: 0.025em !important;
+        word-spacing: 0.08em;
+        letter-spacing: 0.02em;
+        line-height: 1.5;
       }
     `;
     

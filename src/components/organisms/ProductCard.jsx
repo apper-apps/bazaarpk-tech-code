@@ -148,7 +148,7 @@ const handleAddToCart = (e) => {
               className="transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
             >
 <ApperIcon name="Eye" className="w-4 h-4 mr-2" />
-              <span className="word-spacing-loose" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Quick View</span>
+<span className="word-spacing-relaxed">Quick View</span>
             </Button>
           </div>
         </div>
@@ -156,7 +156,7 @@ const handleAddToCart = (e) => {
         {/* Product Info */}
         <div className="p-4">
           {/* Product Title */}
-<h3 className="font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors duration-200 product-text-field enhanced-product-title" style={{ wordSpacing: '0.1em', letterSpacing: '0.025em', lineHeight: '1.4' }}>
+<h3 className="font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors duration-200 product-title word-spacing-loose">
             {product.title}
           </h3>
 
@@ -223,12 +223,12 @@ const handleAddToCart = (e) => {
               {product.stock <= 0 ? (
                 <>
                   <ApperIcon name="AlertCircle" className="w-4 h-4 mr-2" />
-                  <span className="word-spacing-relaxed" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Out of Stock</span>
+<span className="word-spacing-relaxed">Out of Stock</span>
                 </>
               ) : (
                 <>
                   <ApperIcon name="ShoppingCart" className="w-4 h-4 mr-2" />
-                  <span className="word-spacing-loose" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Add to Cart</span>
+<span className="word-spacing-relaxed">Add to Cart</span>
                 </>
               )}
             </Button>

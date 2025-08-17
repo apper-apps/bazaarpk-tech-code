@@ -296,7 +296,7 @@ const UserManagement = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
               >
-                <Card className="p-6">
+<Card className="p-6 word-spacing-relaxed">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">

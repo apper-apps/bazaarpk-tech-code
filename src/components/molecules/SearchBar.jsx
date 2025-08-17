@@ -96,11 +96,11 @@ const SearchBar = ({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
-          className={cn(
+className={cn(
             "w-full pl-11 pr-12 py-3",
             "text-sm text-gray-900 placeholder-gray-500",
             "bg-transparent border-0 outline-none",
-            "rounded-lg"
+            "rounded-lg word-spacing-relaxed product-text-field"
           )}
           aria-label="Search products"
         />
@@ -136,7 +136,7 @@ const SearchBar = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-full left-0 right-0 mt-1 text-xs text-gray-500 px-3"
+className="absolute top-full left-0 right-0 mt-1 text-xs text-gray-500 px-3 word-spacing-relaxed"
           >
             Searching for "{query}"...
           </motion.div>

@@ -44,10 +44,10 @@ const FormSection = ({
           )}
           <div>
             {title && (
-              <h3 
+<h3 
                 id={`${sectionId}-title`}
                 className={cn(
-                  "text-sm font-semibold text-gray-900",
+                  "text-sm font-semibold text-gray-900 word-spacing-relaxed",
                   required && "after:content-['*'] after:ml-0.5 after:text-red-500"
                 )}
               >
@@ -55,7 +55,7 @@ const FormSection = ({
               </h3>
             )}
             {description && (
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-gray-600 mt-1 word-spacing-relaxed">
                 {description}
               </p>
             )}

@@ -29,122 +29,95 @@ body {
   word-spacing: 0.05em;
 }
 
-/* ENHANCED GLOBAL TEXT SPACING STANDARDS */
+/* Enhanced Text Spacing System */
 
-/* CRITICAL: Force comprehensive spacing on ALL text elements */
-*, *::before, *::after {
-  word-spacing: 0.08em !important;
-  letter-spacing: 0.015em !important;
-  font-feature-settings: "kern" 1 !important;
-  text-rendering: optimizeLegibility !important;
+/* Core typography with natural spacing */
+body {
+  word-spacing: 0.05em;
+  letter-spacing: 0.01em;
+  font-feature-settings: "kern" 1;
+  text-rendering: optimizeLegibility;
 }
 
-/* Core text elements with enhanced word spacing */
-p, .text-content, span, div, button, a, label, input, textarea {
-  margin-bottom: 1rem !important;
-  word-spacing: 0.1em !important;
-  letter-spacing: 0.02em !important;
-  line-height: 1.65 !important;
-  font-kerning: normal !important;
-}
-
-/* Product-specific text spacing */
-.product-title, .product-name, [class*="title"], [class*="name"] {
-  word-spacing: 0.12em !important;
-  letter-spacing: 0.025em !important;
-  line-height: 1.4 !important;
-  font-weight: 500 !important;
-}
-
-.product-description, [class*="description"], .text-description {
-  word-spacing: 0.1em !important;
-  letter-spacing: 0.02em !important;
-  line-height: 1.65 !important;
-  margin-bottom: 0.75rem !important;
+/* Text elements with consistent spacing */
+p, span, div, label, li {
+  word-spacing: 0.05em;
+  letter-spacing: 0.01em;
+  line-height: 1.6;
 }
 
 /* Headings with proper spacing */
 h1, h2, h3, h4, h5, h6 {
-  letter-spacing: 0.01em !important;
-  word-spacing: 0.08em !important;
-  line-height: 1.3 !important;
-  margin-bottom: 0.75rem !important;
-  font-kerning: normal !important;
+  word-spacing: 0.03em;
+  letter-spacing: 0.005em;
+  line-height: 1.3;
 }
 
-/* Card content spacing */
-.card-content, .card-body, [class*="card"] {
-  word-spacing: 0.1em !important;
-  letter-spacing: 0.02em !important;
+/* Interactive elements */
+button, a {
+  word-spacing: 0.05em;
+  letter-spacing: 0.015em;
+  line-height: 1.5;
 }
 
-/* Navigation and interactive elements */
-nav, nav a, nav button, .navigation {
-  word-spacing: 0.08em !important;
-  letter-spacing: 0.015em !important;
-}
-
-/* Enhanced spacing for lists */
-ul, ol {
-  margin-bottom: 1rem !important;
-}
-
-li {
-  margin-bottom: 0.25rem !important;
-  word-spacing: 0.08em !important;
-  letter-spacing: 0.015em !important;
-}
-
-/* CRITICAL: Form element spacing with maximum priority */
-label {
-  display: block !important;
-  margin-bottom: 0.375rem !important;
-  letter-spacing: 0.02em !important;
-  word-spacing: 0.08em !important;
-  font-kerning: normal !important;
-}
-
-/* Enhanced form elements spacing */
+/* Form inputs with enhanced readability */
 input, textarea, select {
-  margin-bottom: 1rem !important;
-  letter-spacing: 0.025em !important;
-  word-spacing: 0.1em !important;
-  line-height: 1.6 !important;
-  font-family: inherit !important;
-  font-kerning: normal !important;
+  word-spacing: 0.08em;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  padding: 0.75rem;
+  font-family: inherit;
 }
 
-/* Specific input types with enhanced spacing */
-input[type="text"], input[type="email"], input[type="password"], 
-input[type="search"], input[type="url"], input[type="tel"], textarea {
-  word-spacing: 0.12em !important;
-  letter-spacing: 0.03em !important;
-  padding: 0.75rem !important;
-  text-rendering: optimizeLegibility !important;
+/* Product-specific enhanced spacing */
+.product-title, .product-name {
+  word-spacing: 0.08em;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
-/* Button spacing with high priority */
-button, .btn, [role="button"] {
-  letter-spacing: 0.025em !important;
-  word-spacing: 0.1em !important;
-  line-height: 1.5 !important;
-  font-kerning: normal !important;
+.product-description {
+  word-spacing: 0.06em;
+  letter-spacing: 0.015em;
+  line-height: 1.6;
 }
 
-/* Interactive text elements */
-a, [role="button"], [tabindex] {
-  word-spacing: 0.08em !important;
-  letter-spacing: 0.02em !important;
-  text-decoration: none;
-  transition: all 0.2s ease;
+/* Typography utility classes */
+.word-spacing-relaxed { 
+  word-spacing: 0.08em;
 }
 
-/* Select dropdown options */
-option {
-  word-spacing: 0.08em !important;
-  letter-spacing: 0.015em !important;
-  padding: 0.5rem !important;
+.word-spacing-loose { 
+  word-spacing: 0.1em;
 }
+
+.letter-spacing-wide { 
+  letter-spacing: 0.025em;
+}
+
+/* Enhanced input styling */
+.product-text-field {
+  word-spacing: 0.08em;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+}
+
+input:focus, textarea:focus {
+  word-spacing: 0.1em;
+  letter-spacing: 0.025em;
+  outline: 2px solid #4CAF50;
+  outline-offset: 2px;
+}
+
+/* Placeholder text */
+input::placeholder, textarea::placeholder {
+  word-spacing: 0.06em;
+  letter-spacing: 0.015em;
+  color: #9CA3AF;
+}
+
 .Toastify__toast-container {
   z-index: 9999;
 }
@@ -218,7 +191,7 @@ option {
   display: none;
 }
 
-/* Prevent overlay conflicts for admin routes */
+/* Admin route styles */
 body.admin-accessing .overlay-mask,
 body.admin-accessing .modal-backdrop,
 body.admin-accessing .loading-overlay {
@@ -229,16 +202,9 @@ body.admin-accessing .loading-overlay {
   transition: none !important;
 }
 
-/* Permanent CSS Fix - Disable all masks and overlays on admin routes */
 body.admin-route .overlay,
 body.admin-route .mask,
-body.admin-route .backdrop,
-body.admin-accessing .overlay,
-body.admin-accessing .mask,
-body.admin-accessing .backdrop,
-body.admin-emergency-cleanup .overlay,
-body.admin-emergency-cleanup .mask,
-body.admin-emergency-cleanup .backdrop {
+body.admin-route .backdrop {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
@@ -246,7 +212,6 @@ body.admin-emergency-cleanup .backdrop {
   z-index: -1000 !important;
 }
 
-/* Ensure admin content is visible */
 .admin-panel, 
 .admin-dashboard,
 [data-admin-content] {
@@ -260,87 +225,6 @@ body.admin-emergency-cleanup .backdrop {
   line-height: 1.6;
   letter-spacing: 0.01em;
   word-spacing: 0.05em;
-}
-
-/* Force hide any persistent overlays on admin routes */
-body[class*="admin"] .overlay,
-body[class*="admin"] .mask,
-body[class*="admin"] .backdrop,
-body[class*="admin"] [class*="overlay"],
-body[class*="admin"] [class*="mask"],
-body[class*="admin"] [class*="backdrop"] {
-  display: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  z-index: -1000 !important;
-}
-
-/* Emergency cleanup for any remaining overlays */
-body.admin-emergency-cleanup *[class*="overlay"],
-body.admin-emergency-cleanup *[class*="mask"],
-body.admin-emergency-cleanup *[style*="position: fixed"] {
-  display: none !important;
-}
-
-/* Admin loading indicator styles */
-.admin-loading-indicator {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(255, 255, 255, 0.95);
-  padding: 20px 30px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 10001;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.admin-loading-indicator .spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid #e5e7eb;
-  border-top: 2px solid #4CAF50;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Ensure proper stacking for admin navigation */
-.admin-nav,
-.admin-sidebar {
-  z-index: 1000;
-}
-
-/* Override any global overlay styles that might interfere */
-body.admin-route {
-  overflow: auto !important;
-}
-
-body.admin-route * {
-  pointer-events: auto !important;
-}
-
-/* Additional safeguards for modal libraries */
-.ReactModal__Overlay.admin-safe,
-.ReactModal__Overlay[class*="admin"] {
-  display: none !important;
-}
-
-/* Force hide any fixed position overlays */
-div[class*="overlay"][style*="position: fixed"],
-div[class*="mask"][style*="position: fixed"],
-*[style*="position: fixed"][class*="overlay"],
-*[style*="position: fixed"][class*="mask"] {
-  display: none !important;
 }
 
 .badge-organic {
@@ -363,7 +247,6 @@ div[class*="mask"][style*="position: fixed"],
   background: linear-gradient(135deg, #F44336, #EF5350);
 }
 
-/* Z-Index Layering System */
 .content-layer {
   z-index: 10;
   position: relative;
@@ -375,11 +258,6 @@ div[class*="mask"][style*="position: fixed"],
   background: white !important;
 }
 
-.overlay-mask {
-  z-index: 5;
-}
-
-/* Admin Content Fade-in Animation */
 .fade-in-admin {
   animation: fadeInAdmin 0.6s ease forwards;
 }
@@ -395,7 +273,6 @@ div[class*="mask"][style*="position: fixed"],
   }
 }
 
-/* Enhanced admin access link */
 .admin-access-link {
   display: inline-block;
   text-decoration: none;
@@ -406,30 +283,19 @@ div[class*="mask"][style*="position: fixed"],
   transform: translateY(-1px);
 }
 
-/* Force higher priority for admin dashboard elements */
-.admin-dashboard * {
-  z-index: inherit;
-}
-
-.admin-nav,
-.admin-sidebar,
-.admin-content {
-  z-index: 1001;
-}
 .admin-content {
   z-index: 1001;
   position: relative;
   padding: 1.5rem;
   margin: 1rem 0;
-  line-height: 1.65;
+  line-height: 1.6;
   letter-spacing: 0.01em;
   word-spacing: 0.05em;
 }
 
-/* Enhanced spacing for admin text content */
 .admin-content p {
   margin-bottom: 1rem;
-  line-height: 1.65;
+  line-height: 1.6;
   word-spacing: 0.05em;
 }
 
@@ -441,444 +307,8 @@ div[class*="mask"][style*="position: fixed"],
   line-height: 1.3;
 }
 
-.admin-content ul, .admin-content ol {
-  margin-left: 1.5rem;
-  margin-bottom: 1rem;
-}
-
 .admin-content li {
   margin-bottom: 0.375rem;
   line-height: 1.6;
   word-spacing: 0.05em;
-}
-
-/* ESSENTIAL INPUT STYLING */
-/* ENHANCED CSS TYPOGRAPHY ENFORCEMENT SYSTEM */
-
-/* Product text field class for comprehensive typography control */
-.product-text-field {
-  word-break: keep-all !important;
-  font-kerning: normal !important;
-  text-rendering: optimizeLegibility !important;
-  font-feature-settings: "kern" 1 !important;
-  word-spacing: 0.1em !important;
-  letter-spacing: 0.025em !important;
-  line-height: 1.65 !important;
-  white-space: pre-wrap !important;
-  overflow-wrap: break-word !important;
-  -webkit-hyphens: auto !important;
-          hyphens: auto !important;
-}
-
-/* Enhanced typography classes for different spacing levels */
-.word-spacing-relaxed { word-spacing: 0.08em !important; }
-.word-spacing-loose { word-spacing: 0.1em !important; }
-.letter-spacing-wide { letter-spacing: 0.025em !important; }
-.text-rendering-optimized { 
-  text-rendering: optimizeLegibility !important; 
-  font-feature-settings: "kern" 1 !important;
-}
-
-/* Prevent text collapse classes */
-.word-break-keep-all { word-break: keep-all !important; }
-.font-kerning-normal { font-kerning: normal !important; }
-
-/* ESSENTIAL INPUT STYLING WITH ENHANCED TYPOGRAPHY */
-/* COMPREHENSIVE INPUT AND TEXT SPACING */
-
-/* Enhanced input normalization with proper spacing */
-input, textarea, [contenteditable] {
-  font-family: inherit;
-  font-size: inherit;
-  line-height: 1.6;
-  letter-spacing: 0.025em;
-  word-spacing: 0.1em;
-  color: inherit;
-  background: inherit;
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.75rem;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-}
-
-/* Ensure proper text cursor and spacing behavior */
-input, textarea, [contenteditable] {
-  cursor: text;
-  word-break: normal;
-  white-space: normal;
-  overflow-wrap: break-word;
-}
-
-input:focus, textarea:focus, [contenteditable]:focus {
-  cursor: text;
-  outline: 2px solid #4CAF50;
-  outline-offset: 2px;
-  border-color: #4CAF50;
-}
-
-/* ContentEditable enhanced styling with proper spacing */
-[contenteditable] {
-  min-height: 2.5rem;
-  word-spacing: 0.1em;
-  letter-spacing: 0.025em;
-  line-height: 1.65;
-}
-
-[contenteditable]:focus {
-  outline: 2px solid #4CAF50;
-  outline-offset: 1px;
-  background-color: #fefefe;
-}
-
-[contenteditable]:empty:before {
-  content: attr(placeholder);
-  color: #9CA3AF;
-  cursor: text;
-  pointer-events: none;
-  font-style: italic;
-  word-spacing: 0.08em;
-  letter-spacing: 0.02em;
-}
-
-/* Placeholder text spacing */
-input::-moz-placeholder, textarea::-moz-placeholder {
-  word-spacing: 0.08em;
-  letter-spacing: 0.02em;
-  color: #9CA3AF;
-}
-input::placeholder, textarea::placeholder {
-  word-spacing: 0.08em;
-  letter-spacing: 0.02em;
-  color: #9CA3AF;
-}
-
-/* Mobile optimizations with enhanced spacing */
-@media (hover: none) and (pointer: coarse) {
-  input, textarea {
-    font-size: 16px; /* Prevent zoom on iOS */
-    word-spacing: 0.1em;
-    letter-spacing: 0.025em;
-    padding: 1rem;
-  }
-}
-
-/* Dynamic content spacing */
-[data-dynamic], .dynamic-content, .rendered-content {
-  word-spacing: 0.08em;
-  letter-spacing: 0.015em;
-  line-height: 1.65;
-}
-
-/* Toast and notification text spacing */
-.toast-content, .notification-text, [class*="toast"] {
-  word-spacing: 0.08em;
-  letter-spacing: 0.015em;
-}
-
-/* Modal and dialog content spacing */
-.modal-content, .dialog-content, [role="dialog"] {
-  word-spacing: 0.08em;
-  letter-spacing: 0.015em;
-}
-
-/* Table content spacing */
-td, th, .table-cell {
-  word-spacing: 0.06em;
-  letter-spacing: 0.01em;
-  padding: 0.75rem;
-}
-
-/* Badge and tag spacing */
-.badge, .tag, [class*="badge"], [class*="tag"] {
-  word-spacing: 0.05em;
-  letter-spacing: 0.02em;
-padding: 0.25rem 0.75rem;
-}
-
-/* ENHANCED CSS TYPOGRAPHY ENFORCEMENT */
-
-/* Real-time preview styling with enhanced letter and word spacing */
-/* COMPREHENSIVE AUTO-SPACING CSS SYSTEM FOR ENHANCED TYPOGRAPHY */
-/* ULTIMATE TYPOGRAPHY ENFORCEMENT SYSTEM */
-
-/* CRITICAL: Maximum priority spacing for ALL text content */
-html * {
-  word-spacing: 0.1em !important;
-  letter-spacing: 0.02em !important;
-  font-feature-settings: "kern" 1 !important;
-  text-rendering: optimizeLegibility !important;
-  font-kerning: normal !important;
-}
-
-/* Real-time preview styling with enhanced spacing */
-#text-preview, .text-preview-enhanced, 
-#product-name, #short-description, #detailed-description,
-[data-preview="true"], .product-preview,
-.spacing-enhanced, .typography-enhanced {
-  letter-spacing: 0.6px !important;
-  word-spacing: 1.4px !important;
-  line-height: 1.65 !important;
-  font-feature-settings: "kern" 1 !important;
-  text-rendering: optimizeLegibility !important;
-  font-kerning: normal !important;
-  word-break: keep-all !important;
-  white-space: pre-wrap !important;
-  overflow-wrap: break-word !important;
-  -webkit-hyphens: auto !important;
-  hyphens: auto !important;
-  font-smoothing: antialiased !important;
-  -webkit-font-smoothing: antialiased !important;
-}
-
-/* Product content and form fields */
-.product-content-enhanced,
-.text-content-preview,
-.enhanced-spacing,
-.product-text-field,
-input.enhanced-spacing,
-textarea.enhanced-spacing {
-  letter-spacing: 0.6px !important;
-  word-spacing: 1.4px !important;
-  line-height: 1.65 !important;
-  word-break: keep-all !important;
-  font-kerning: normal !important;
-  text-rendering: optimizeLegibility !important;
-  font-feature-settings: "kern" 1 !important;
-  overflow-wrap: break-word !important;
-  hyphens: auto !important;
-  white-space: pre-wrap !important;
-}
-
-/* MAXIMUM PRIORITY: All form inputs and interactive elements */
-input, textarea, select, button, a, label, span, div, p, h1, h2, h3, h4, h5, h6 {
-  letter-spacing: 0.025em !important;
-  word-spacing: 0.1em !important;
-  line-height: 1.6 !important;
-  font-feature-settings: "kern" 1 !important;
-  text-rendering: optimizeLegibility !important;
-  font-kerning: normal !important;
-  font-family: inherit !important;
-}
-
-/* Enhanced auto-spacing for form inputs */
-input[data-auto-spacing="enabled"],
-textarea[data-auto-spacing="enabled"],
-[data-enhanced-typography="true"],
-input.product-text-field,
-textarea.product-text-field,
-.form-control,
-.input-enhanced {
-  letter-spacing: 0.6px !important;
-  word-spacing: 1.4px !important;
-  line-height: 1.65 !important;
-  font-feature-settings: "kern" 1 !important;
-  text-rendering: optimizeLegibility !important;
-  font-kerning: normal !important;
-  word-break: keep-all !important;
-  white-space: normal !important;
-  overflow-wrap: break-word !important;
-  -webkit-hyphens: auto !important;
-  hyphens: auto !important;
-  
-  /* Enhanced user interaction */
-  user-select: text !important;
-  -webkit-user-select: text !important;
-  -moz-user-select: text !important;
-  pointer-events: auto !important;
-  cursor: text !important;
-  
-  /* Smooth transitions */
-  transition: letter-spacing 0.2s ease, word-spacing 0.2s ease, 
-              box-shadow 0.2s ease, border-color 0.2s ease !important;
-}
-
-/* Enhanced focus states */
-input:focus, textarea:focus, select:focus,
-input[data-auto-spacing="enabled"]:focus,
-textarea[data-auto-spacing="enabled"]:focus,
-[data-enhanced-typography="true"]:focus,
-input.product-text-field:focus,
-textarea.product-text-field:focus {
-  letter-spacing: 0.7px !important;
-  word-spacing: 1.5px !important;
-  line-height: 1.65 !important;
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1), 
-              0 0 0 2px rgba(76, 175, 80, 0.3) !important;
-  border-color: #4CAF50 !important;
-  outline: 2px solid #4CAF50 !important;
-  outline-offset: 2px !important;
-  
-  /* Enhanced typography on focus */
-  text-rendering: optimizeLegibility !important;
-  font-feature-settings: "kern" 1 !important;
-  font-kerning: normal !important;
-}
-
-/* Placeholder text optimization */
-input::placeholder, textarea::placeholder,
-input[data-auto-spacing="enabled"]::placeholder,
-textarea[data-auto-spacing="enabled"]::placeholder,
-input.product-text-field::placeholder,
-textarea.product-text-field::placeholder {
-  letter-spacing: 0.5px !important;
-  word-spacing: 1.2px !important;
-  opacity: 0.7 !important;
-  font-style: italic !important;
-  color: #9CA3AF !important;
-}
-
-/* ContentEditable enhanced spacing */
-[contenteditable="true"],
-[contenteditable],
-[contenteditable="true"][data-auto-spacing="enabled"],
-[contenteditable][data-enhanced-typography="true"] {
-  min-height: 2.5rem !important;
-  letter-spacing: 0.6px !important;
-  word-spacing: 1.4px !important;
-  line-height: 1.65 !important;
-  padding: 0.75rem !important;
-  border: 1px solid #e5e7eb !important;
-  border-radius: 6px !important;
-  background: white !important;
-  text-rendering: optimizeLegibility !important;
-  font-feature-settings: "kern" 1 !important;
-  -webkit-font-smoothing: antialiased !important;
-}
-
-/* ContentEditable empty state */
-[contenteditable="true"]:empty::before,
-[contenteditable]:empty::before,
-[contenteditable="true"][data-auto-spacing="enabled"]:empty::before,
-[contenteditable][data-enhanced-typography="true"]:empty::before {
-  content: attr(placeholder) !important;
-  color: #9CA3AF !important;
-  font-style: italic !important;
-  pointer-events: none !important;
-  letter-spacing: 0.5px !important;
-  word-spacing: 1.2px !important;
-}
-
-/* Dynamic content spacing */
-[data-enhanced-typography="true"],
-.enhanced-typography {
-  letter-spacing: 0.6px !important;
-  word-spacing: 1.4px !important;
-  line-height: 1.65 !important;
-  text-align: left !important;
-  text-justify: inter-word !important;
-  font-kerning: normal !important;
-  text-rendering: optimizeLegibility !important;
-  font-feature-settings: "kern" 1 !important;
-}
-
-/* User guidance and notifications */
-.spacing-hint,
-[data-spacing-hint="true"],
-.notification-banner,
-.user-guidance {
-  animation: slideInFromTop 0.3s ease-out !important;
-  border-left: 4px solid #4CAF50 !important;
-  background: rgba(76, 175, 80, 0.05) !important;
-  padding: 0.75rem !important;
-  margin: 0.5rem 0 !important;
-  border-radius: 4px !important;
-  letter-spacing: 0.6px !important;
-  word-spacing: 1.3px !important;
-}
-
-@keyframes slideInFromTop {
-  from {
-    opacity: 0 !important;
-    transform: translateY(-10px) !important;
-  }
-  to {
-    opacity: 1 !important;
-    transform: translateY(0) !important;
-  }
-}
-
-/* Text transformation feedback */
-.text-transform-applied,
-[data-text-transformed="true"] {
-  animation: highlightTransform 0.5s ease-in-out !important;
-}
-
-@keyframes highlightTransform {
-  0% { background-color: transparent !important; }
-  50% { background-color: rgba(76, 175, 80, 0.1) !important; }
-  100% { background-color: transparent !important; }
-}
-
-/* Responsive typography */
-@media (max-width: 640px) {
-  html * {
-    letter-spacing: 0.02em !important;
-    word-spacing: 0.08em !important;
-    line-height: 1.6 !important;
-  }
-  
-  .text-preview-enhanced,
-  #text-preview,
-  [data-auto-spacing="enabled"] {
-    letter-spacing: 0.5px !important;
-    word-spacing: 1.2px !important;
-    line-height: 1.6 !important;
-  }
-}
-
-/* Print-friendly typography */
-@media print {
-  * {
-    letter-spacing: 0.02em !important;
-    word-spacing: 0.08em !important;
-    line-height: 1.6 !important;
-  }
-}
-
-/* High contrast mode */
-@media (prefers-contrast: high) {
-  * {
-    letter-spacing: 0.03em !important;
-    word-spacing: 0.1em !important;
-    font-weight: 500 !important;
-  }
-}
-
-/* Mobile input optimization */
-@media (hover: none) and (pointer: coarse) {
-  input, textarea {
-    font-size: 16px !important;
-    min-height: 44px !important;
-    padding: 1rem !important;
-    letter-spacing: 0.025em !important;
-    word-spacing: 0.1em !important;
-  }
-}
-
-/* Accessibility and debug modes */
-[data-spacebar-debug="true"] {
-  border: 2px dashed #4CAF50 !important;
-  background: rgba(76, 175, 80, 0.05) !important;
-}
-
-[data-spacebar-enabled="true"] {
-  position: relative;
-}
-
-[data-spacebar-enabled="true"]::after {
-  content: "";
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  border: 1px solid rgba(76, 175, 80, 0.3);
-  border-radius: 8px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-[data-spacebar-enabled="true"]:focus::after {
-  opacity: 1;
 }

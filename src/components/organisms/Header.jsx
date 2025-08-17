@@ -53,13 +53,12 @@ return (
               to="/" 
               className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-lg enhanced-spacing"
               aria-label="BazaarPK Home"
-              style={{ wordSpacing: '0.05em', letterSpacing: '0.01em' }}
+className="word-spacing-relaxed"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-primary-500 rounded-lg flex items-center justify-center" aria-hidden="true">
-                <ApperIcon name="ShoppingBag" className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-display font-bold text-primary-800 enhanced-spacing" 
-                    style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>
+              <ApperIcon name="Store" className="w-8 h-8 text-white" />
+              <span 
+                className="text-2xl font-bold text-white font-display word-spacing-relaxed"
+                role="img">
                 BazaarPK
               </span>
             </Link>
@@ -249,10 +248,10 @@ return (
               onClick={toggleMobileMenu}
               className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary-50 focus:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200 enhanced-spacing"
               aria-label="Browse product categories"
-              style={{ wordSpacing: '0.06em', letterSpacing: '0.015em' }}
+className="word-spacing-relaxed"
             >
-              <ApperIcon name="Grid3X3" className="w-5 h-5 text-primary-600" aria-hidden="true" />
-              <span className="text-gray-700 font-medium enhanced-spacing" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Categories</span>
+              <ApperIcon name="Grid3x3" className="w-5 h-5" />
+              <span className="text-gray-700 font-medium word-spacing-relaxed">Categories</span>
             </Link>
             
             <Link
@@ -260,10 +259,10 @@ return (
               onClick={toggleMobileMenu}
               className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary-50 focus:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200 enhanced-spacing"
               aria-label="View current deals and offers"
-              style={{ wordSpacing: '0.06em', letterSpacing: '0.015em' }}
+className="word-spacing-relaxed"
             >
-              <ApperIcon name="Percent" className="w-5 h-5 text-accent-600" aria-hidden="true" />
-              <span className="text-gray-700 font-medium enhanced-spacing" style={{ wordSpacing: '0.08em', letterSpacing: '0.015em' }}>Deals</span>
+              <ApperIcon name="Tag" className="w-5 h-5" />
+              <span className="text-gray-700 font-medium word-spacing-relaxed">Deals</span>
             </Link>
 
             <button 

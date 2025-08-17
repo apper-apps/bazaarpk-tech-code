@@ -4,20 +4,20 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/useToast";
 import { CategoryService } from "@/services/api/CategoryService";
 import ApperIcon from "@/components/ApperIcon";
+import Home from "@/components/pages/Home";
+import Category from "@/components/pages/Category";
 import ErrorComponent, { Error } from "@/components/ui/Error";
+import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
 import Badge from "@/components/atoms/Badge";
 import Card from "@/components/atoms/Card";
-import Input from "@/components/atoms/Input";
-import Home from "@/components/pages/Home";
-import Category from "@/components/pages/Category";
-import productsData from "@/services/mockData/products.json";
-import categoriesData from "@/services/mockData/categories.json";
-import recipeBundlesData from "@/services/mockData/recipeBundles.json";
 import { ProductService } from "@/services/api/ProductService";
+import recipeBundlesData from "@/services/mockData/recipeBundles.json";
+import categoriesData from "@/services/mockData/categories.json";
+import productsData from "@/services/mockData/products.json";
 import { formatPrice } from "@/utils/currency";
-import { cn } from "@/utils/cn";
 import { announceToScreenReader, generateDataChecksum, getCSRFToken, initializeCSRF, sanitizeInput, sanitizeNumericInput, sanitizeURL, validateDataConsistency, validateFormData } from "@/utils/security";
+import { cn } from "@/utils/cn";
 
 const AddProduct = () => {
 const navigate = useNavigate();
@@ -243,10 +243,7 @@ case 'productName':
             allowNumbers: true, 
             allowSpecialChars: true,
             allowSpaces: true,
-            naturalSpacing: true,
-            preserveSpaces: true,
-            strictMode: false,
-            autoSpaceWords: true
+preserveSpaces: true
           });
           if (!sanitizedValue || sanitizedValue.trim() === '') {
             fieldError = "Product name is required and cannot be empty";
@@ -257,7 +254,7 @@ case 'productName':
           }
           break;
 case 'shortDescription':
-          sanitizedValue = sanitizeInput(value, { 
+sanitizedValue = sanitizeInput(value, { 
             maxLength: 250, 
             allowNumbers: true, 
             allowSpecialChars: true,
@@ -280,8 +277,7 @@ case 'detailedDescription':
             maxLength: 2000, 
             allowNumbers: true, 
             allowSpecialChars: true,
-            preserveSpaces: true,        // ESSENTIAL: Enable comprehensive word spacing
-            naturalSpacing: true,        // Enhanced word boundary detection and auto-spacing
+            preserveSpaces: true,
             allowSpaces: true,
             autoSpaceWords: true,
             strictMode: false
@@ -949,28 +945,19 @@ productName: sanitizeInput(formData.productName || '', {
           maxLength: 150, 
           allowNumbers: true, 
           allowSpecialChars: true,
-          preserveSpaces: true,
-          naturalSpacing: true,
-          allowSpaces: true,
-          autoSpaceWords: true
+          preserveSpaces: true
         }),
 shortDescription: sanitizeInput(formData.shortDescription, { 
           maxLength: 250, 
           allowNumbers: true, 
           allowSpecialChars: true,
-          preserveSpaces: true,
-          naturalSpacing: true,
-          allowSpaces: true,
-          autoSpaceWords: true
+          preserveSpaces: true
         }),
 detailedDescription: sanitizeInput(formData.detailedDescription, { 
           maxLength: 2000, 
           allowNumbers: true, 
           allowSpecialChars: true,
-          preserveSpaces: true,
-          naturalSpacing: true,
-          allowSpaces: true,
-          autoSpaceWords: true
+          preserveSpaces: true
         }),
         brand: sanitizeInput(formData.brand, {
           maxLength: 100, 
@@ -3598,7 +3585,7 @@ const renderPreviewModal = () => {
                 {formData.productName || 'Product Preview'}
               </h3>
               {formData.brand && (
-                <p className="text-gray-600" style={{ wordSpacing: '0.05em' }}>
+<p className="text-gray-600 word-spacing-relaxed">
                   by {formData.brand}
                 </p>
               )}
@@ -3646,8 +3633,8 @@ const renderPreviewModal = () => {
                 
                 {formData.detailedDescription && (
                   <div className="mt-3 pt-3 border-t border-gray-200">
-                    <h5 className="text-sm font-medium text-gray-900 mb-2">Detailed Description</h5>
-<div className="text-gray-700 text-sm" style={{ 
+<h5 className="text-sm font-medium text-gray-900 mb-2 word-spacing-relaxed">Detailed Description</h5>
+<div className="text-gray-700 text-sm word-spacing-relaxed" style={{ 
                       whiteSpace: 'pre-wrap'
                     }}>
                       {formData.detailedDescription.length > 200
