@@ -22,6 +22,7 @@ const Input = React.forwardRef(({
   showValidationIcon = true,
   validationRules = {},
   realTimeValidation = true,
+  ...props
 }, ref) => {
   const [internalValue, setInternalValue] = useState(props.value || props.defaultValue || '');
   const inputRef = useRef(null);
@@ -31,8 +32,7 @@ const Input = React.forwardRef(({
 
   // Generate unique IDs for accessibility
   const inputId = props.id || `input-${Math.random().toString(36).substr(2, 9)}`;
-  const errorId = `${inputId}-error`;
-  const errorId = `${inputId}-error`;
+const errorId = `${inputId}-error`;
   const descriptionId = `${inputId}-description`;
 
   // Handle value sanitization and validation
