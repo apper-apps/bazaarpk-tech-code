@@ -3382,84 +3382,66 @@ const renderPreviewModal = () => {
     if (!showPreview) return null;
     
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6">
+      <div
+    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div
+        className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Product Preview</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowPreview(false)}
-              >
-                <ApperIcon name="X" className="w-4 h-4" />
-              </Button>
+                <h2 className="text-xl font-bold">Product Preview</h2>
+                <Button variant="outline" size="sm" onClick={() => setShowPreview(false)}>
+                    <ApperIcon name="X" className="w-4 h-4" />
+                </Button>
             </div>
-            
             <div className="space-y-4">
-              {imagePreview && (
-                <img
-                  src={imagePreview}
-                  alt="Product"
-                  className="w-full h-64 object-contain rounded-lg border"
-                />
-              )}
-              
-              <div>
-<h3 className="text-lg font-semibold">
-                {formData.brand ? `${formData.brand} Product` : 'Product Preview'}
-              </h3>
-              {formData.category && (
-<p className="text-gray-600 word-spacing-relaxed">
-                  Category: {formData.category}
-                </p>
-              )}
-              </div>
-              
-              {formData.sellingPrice && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-xl font-bold text-primary-600">
-                    {formatPrice(parseFloat(formData.sellingPrice))}
-                  </span>
-                  {formData.discountedPrice && parseFloat(formData.discountedPrice) > 0 && (
-                    <span className="text-gray-500 line-through">
-                      {formatPrice(parseFloat(formData.discountedPrice))}
-                    </span>
-                  )}
+                {imagePreview && <img
+                    src={imagePreview}
+                    alt="Product"
+                    className="w-full h-64 object-contain rounded-lg border" />}
+                <div>
+                    <h3 className="text-lg font-semibold">
+                        {formData.brand ? `${formData.brand} Product` : "Product Preview"}
+                    </h3>
+                    {formData.category && <p className="text-gray-600 word-spacing-relaxed">Category: {formData.category}
+                    </p>}
                 </div>
-              )}
-              
-              {formData.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {formData.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full"
-                    >
-                      {tag}
+                {formData.sellingPrice && <div className="flex items-center space-x-2">
+                    <span className="text-xl font-bold text-primary-600">
+                        {formatPrice(parseFloat(formData.sellingPrice))}
                     </span>
-                  ))}
+                    {formData.discountedPrice && parseFloat(formData.discountedPrice) > 0 && <span className="text-gray-500 line-through">
+                        {formatPrice(parseFloat(formData.discountedPrice))}
+                    </span>}
+                </div>}
+                {formData.tags.length > 0 && <div className="flex flex-wrap gap-1">
+                    {formData.tags.map((tag, index) => <span
+                        key={index}
+                        className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">
+                        {tag}
+                    </span>)}
+                </div>}
+                <div>
+                    <h4
+                        className="font-medium mb-2"
+                        style={{
+                            letterSpacing: "-0.01em",
+                            wordSpacing: "0.03em"
+                        }}>Product Information
+                                        </h4>
+                    {formData.sku && <p className="text-gray-700 text-sm mb-3">SKU: {formData.sku}
+                    </p>}
                 </div>
-              )}
-              
-              <div>
-                <h4 className="font-medium mb-2" style={{ letterSpacing: '-0.01em', wordSpacing: '0.03em' }}>
-<h4 className="font-medium mb-2" style={{ letterSpacing: '-0.01em', wordSpacing: '0.03em' }}>
-                  Product Information
-                </h4>
-                {formData.sku && (
-                  <p className="text-gray-700 text-sm mb-3">
-                    SKU: {formData.sku}
-                  </p>
-                )}
-              </div>
+            </div>
+        </div>
+</div>
+            )}
           </div>
         </div>
-      </div>
-    );
+      );
+    }
   };
 
-return (
+  return (
     <div className={cn("min-h-screen", isInAdminDashboard ? "bg-white" : "bg-background")}>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -3475,7 +3457,6 @@ return (
                   <span className="text-gray-900 font-medium">Add Product</span>
                 </nav>
               )}
-              
               <h1 className="text-3xl font-display font-bold text-gray-900">
                 Add New Product
               </h1>
@@ -3483,16 +3464,15 @@ return (
                 Create a comprehensive product listing with all details
               </p>
             </div>
-            
             <div className="text-right">
               <div className="text-sm text-gray-600 mb-2">
                 Completion: {getCompletionPercentage()}%
               </div>
               <div className="w-32 bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${getCompletionPercentage()}%` }}
-                ></div>
+                />
               </div>
               {lastSaved && (
                 <div className="text-xs text-gray-500 mt-2">
@@ -3512,14 +3492,14 @@ return (
           {/* Tab Navigation */}
           <div className="border-b border-gray-200">
             <nav className="flex space-x-8 px-6" aria-label="Tabs">
-              {tabs.map((tab) => (
+              {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     "flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200",
-                    activeTab === tab.id
-                      ? "border-primary-500 text-primary-600"
+                    activeTab === tab.id 
+                      ? "border-primary-500 text-primary-600" 
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   )}
                 >
@@ -3542,40 +3522,32 @@ return (
             </motion.div>
           </div>
 
-{/* Action Buttons */}
-<div className="border-t border-gray-200 px-6 py-4">
+          {/* Action Buttons */}
+          <div className="border-t border-gray-200 px-6 py-4">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-4">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(-1)}
-                  disabled={loading}
-                >
+                <Button variant="outline" onClick={() => navigate(-1)} disabled={loading}>
                   <ApperIcon name="ArrowLeft" className="w-4 h-4 mr-2" />
                   Cancel
                 </Button>
-
                 {/* Role Badge */}
-                <Badge variant={currentUser.role === 'admin' ? 'default' : 'secondary'} className="text-xs">
+                <Badge
+                  variant={currentUser.role === "admin" ? "default" : "secondary"}
+                  className="text-xs"
+                >
                   {currentUser.role.toUpperCase()}
                 </Badge>
               </div>
-
               <div className="flex space-x-3">
                 <Button
                   variant="outline"
-onClick={() => setShowPreview(true)}
+                  onClick={() => setShowPreview(true)}
                   disabled={!formData.category && !formData.sku}
                 >
                   <ApperIcon name="Eye" className="w-4 h-4 mr-2" />
                   Preview
                 </Button>
-                
-                <Button
-                  variant="outline"
-                  onClick={() => handleSave(false)}
-                  disabled={loading}
-                >
+                <Button variant="outline" onClick={() => handleSave(false)} disabled={loading}>
                   {loading ? (
                     <>
                       <ApperIcon name="Loader2" className="w-4 h-4 mr-2 animate-spin" />
@@ -3588,60 +3560,54 @@ onClick={() => setShowPreview(true)}
                     </>
                   )}
                 </Button>
-
-{currentUser.permissions.canSchedule && formData.scheduledPublishType !== 'none' && (
+                {currentUser.permissions.canSchedule && formData.scheduledPublishType !== "none" && (
                   <Button
                     variant="outline"
                     onClick={() => {
-                      if (formData.scheduledPublishType === 'date' && !formData.scheduledPublish) {
+                      if (formData.scheduledPublishType === "date" && !formData.scheduledPublish) {
                         showToast("Please set a scheduled publication date first", "warning");
                         return;
                       }
-                      if (formData.scheduledPublishType === 'recurring' && !formData.recurringSchedule.time) {
+
+                      if (formData.scheduledPublishType === "recurring" && !formData.recurringSchedule.time) {
                         showToast("Please set a time for recurring publication", "warning");
                         return;
                       }
+
                       handleSave(true, false, formData.scheduledPublish);
                     }}
                     disabled={loading}
                     className="relative"
                   >
                     <ApperIcon name="Clock" className="w-4 h-4 mr-2" />
-                    {formData.scheduledPublishType === 'recurring' ? 'Setup Recurring' : 'Schedule Publish'}
-                    {(formData.scheduledPublish || formData.scheduledPublishType === 'recurring') && (
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+                    {formData.scheduledPublishType === "recurring" ? "Setup Recurring" : "Schedule Publish"}
+                    {(formData.scheduledPublish || formData.scheduledPublishType === "recurring") && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
                     )}
                   </Button>
                 )}
-
-                <Button
-                  onClick={() => handleSave(true)}
-                  disabled={loading}
-                >
+                <Button onClick={() => handleSave(true)} disabled={loading}>
                   {loading ? (
                     <>
                       <ApperIcon name="Loader2" className="w-4 h-4 mr-2 animate-spin" />
                       {formData.requiresApproval && !currentUser.permissions.canBypassApproval 
-                        ? 'Submitting...' 
-                        : 'Publishing...'
-                      }
+                        ? "Submitting..." 
+                        : "Publishing..."}
                     </>
                   ) : (
                     <>
                       <ApperIcon name="Upload" className="w-4 h-4 mr-2" />
                       {formData.requiresApproval && !currentUser.permissions.canBypassApproval 
-                        ? 'Submit for Approval' 
-                        : 'Publish Now'
-                      }
+                        ? "Submit for Approval" 
+                        : "Publish Now"}
                     </>
                   )}
                 </Button>
               </div>
             </div>
           </div>
-</Card>
+        </Card>
       </div>
-      
       {renderPreviewModal()}
     </div>
   );
