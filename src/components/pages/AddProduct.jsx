@@ -38,6 +38,15 @@ const navigate = useNavigate();
   }, []);
 
 const [formData, setFormData] = useState({
+    // Multilingual Product Information
+    productName: {
+      english: "",
+      urdu: ""
+    },
+    description: {
+      english: "",
+      urdu: ""
+    },
     brand: "",
     category: "",
     subcategory: "",
@@ -160,7 +169,7 @@ useEffect(() => {
         setSubcategories([]);
       }
       // Reset subcategory when category changes - use functional update to prevent infinite loop
-      setFormData(prev => {
+setFormData(prev => {
         // Only update if subcategory is not already empty to prevent unnecessary re-renders
         if (prev.subcategory !== "") {
           return { ...prev, subcategory: "" };
@@ -228,6 +237,72 @@ const tabs = [
     { id: "approval", label: "Approval Settings", icon: "Shield" }
   ];
 const handleInputChange = (field, value, validationInfo = {}) => {
+    // Handle multilingual fields
+    if (field.includes('.')) {
+      const [mainField, language] = field.split('.');
+      let sanitizedValue = value;
+      let fieldError = null;
+
+      if (typeof value === 'string') {
+        // Enhanced multilingual text sanitization with proper typography
+        sanitizedValue = sanitizeInput(value, {
+          maxLength: mainField === 'productName' ? 150 : 500,
+          allowNumbers: true,
+          allowSpecialChars: true,
+          preserveSpaces: true,
+          allowUrdu: language === 'urdu',
+          enhancedSpacing: true
+        });
+
+        // Multilingual validation
+        if (mainField === 'productName') {
+          if (language === 'english' && sanitizedValue && sanitizedValue.length < 2) {
+            fieldError = "Product name (English) must be at least 2 characters long";
+          }
+          if (language === 'urdu' && sanitizedValue && sanitizedValue.length < 2) {
+            fieldError = "Product name (Urdu) must be at least 2 characters long";
+          }
+          if (language === 'english' && (!sanitizedValue || sanitizedValue.trim() === '')) {
+            fieldError = "Product name (English) is required and cannot be empty";
+          }
+        }
+
+        if (mainField === 'description') {
+          if (language === 'english' && sanitizedValue && sanitizedValue.length < 10) {
+            fieldError = "Description (English) should be at least 10 characters long";
+          }
+          if (language === 'urdu' && sanitizedValue && sanitizedValue.length < 5) {
+            fieldError = "Description (Urdu) should be at least 5 characters long";
+          }
+          if (language === 'english' && (!sanitizedValue || sanitizedValue.trim() === '')) {
+            fieldError = "Description (English) is required and cannot be empty";
+          }
+        }
+      }
+
+      // Update nested object structure
+      setFormData(prev => ({
+        ...prev,
+        [mainField]: {
+          ...prev[mainField],
+          [language]: sanitizedValue
+        }
+      }));
+
+      // Handle errors for multilingual fields
+      if (fieldError) {
+        setErrors(prev => ({ ...prev, [field]: fieldError }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+
+      return;
+    }
+
     // COMPREHENSIVE input sanitization with ENHANCED NATURAL WORD SPACING
     let sanitizedValue = value;
     let fieldError = null;
@@ -522,7 +597,7 @@ if (field === 'sku' && sanitizedValue && sanitizedValue.length < 3) {
   };
 
 const getCompletionPercentage = () => {
-const requiredFields = ['category', 'sellingPrice', 'stockQuantity', 'sku'];
+const requiredFields = ['productName.english', 'description.english', 'category', 'sellingPrice', 'stockQuantity', 'sku'];
     const optionalFields = ['brand', 'buyingPrice', 'mainImage', 'tags', 'metaTitle'];
     const advancedFields = ['variants', 'bundleComponents', 'seoKeywords', 'relatedProducts'];
     const requiredCompleted = requiredFields.filter(field => formData[field]).length;
@@ -999,7 +1074,7 @@ mainImageAltText: sanitizeInput(formData.mainImageAltText, {
       }
 
 const productData = {
-        ...sanitizedData,
+...sanitizedData,
         // Ensure proper field mapping for backend validation
 category: sanitizedData.category,
         sellingPrice: sanitizedData.sellingPrice,
@@ -1060,7 +1135,7 @@ category: sanitizedData.category,
           relatedProducts: Array.isArray(sanitizedData.relatedProducts) ? sanitizedData.relatedProducts : []
         },
         // Security and audit fields
-        createdBy: currentUser.role,
+createdBy: currentUser.role,
         createdAt: new Date().toISOString(),
         lastModified: new Date().toISOString(),
         csrfToken: csrfToken,
@@ -1104,6 +1179,8 @@ category: sanitizedData.category,
       } else if (!silent) {
         // Reset form for another product with sanitized defaults
 const cleanFormData = {
+          productName: { english: "", urdu: "" },
+          description: { english: "", urdu: "" },
           brand: "",
           category: "",
           subcategory: "",
@@ -1212,10 +1289,10 @@ const cleanFormData = {
           <p className="text-xs text-gray-500">
             {formData.metaTitle.length}/60 characters
           </p>
-{!formData.metaTitle && formData.productName && (
+{!formData.metaTitle && formData.productName.english && (
             <button
               type="button"
-              onClick={() => handleInputChange('metaTitle', formData.productName)}
+              onClick={() => handleInputChange('metaTitle', formData.productName.english)}
               className="text-xs text-primary-600 hover:text-primary-700"
             >
               Use product title
@@ -1245,9 +1322,9 @@ const cleanFormData = {
             {formData.metaDescription.length}/160 characters
           </p>
           {!formData.metaDescription && formData.shortDescription && (
-            <button
+<button
               type="button"
-              onClick={() => handleInputChange('metaDescription', formData.shortDescription)}
+              onClick={() => handleInputChange('metaDescription', formData.description.english)}
               className="text-xs text-primary-600 hover:text-primary-700"
             >
               Use short description
@@ -1282,11 +1359,11 @@ const cleanFormData = {
                 </p>
               )}
             </div>
-{!formData.urlSlug && formData.productName && (
+{!formData.urlSlug && formData.productName.english && (
               <button
                 type="button"
                 onClick={() => {
-                  const autoSlug = formData.productName.toLowerCase()
+                  const autoSlug = formData.productName.english.toLowerCase()
                     .replace(/[^a-z0-9\s-]/g, '')
                     .replace(/\s+/g, '-')
                     .replace(/-+/g, '-')
@@ -1529,6 +1606,161 @@ const renderBasicInfo = () => (
       </div>
 
       <div className="space-y-6">
+
+        {/* Multilingual Product Name Section */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-blue-900 mb-3 flex items-center">
+            <ApperIcon name="Type" className="w-4 h-4 mr-2" />
+            Product Name (Multilingual) *
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <Input
+                label="Product Name (English)"
+                type="text"
+                placeholder="Enter product name in English..."
+                value={formData.productName.english}
+                onChange={(e) => handleInputChange("productName.english", e.target.value)}
+                error={errors["productName.english"]}
+                required
+                className="product-text-field word-spacing-relaxed"
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  wordSpacing: '0.08em',
+                  letterSpacing: '0.02em',
+                  lineHeight: '1.6',
+                  fontKerning: 'normal',
+                  textRendering: 'optimizeLegibility'
+                }}
+                description="Primary product name visible to customers"
+                sanitize={true}
+                sanitizeOptions={{ 
+                  maxLength: 150, 
+                  allowNumbers: true, 
+                  allowSpecialChars: true, 
+                  preserveSpaces: true,
+                  enhancedSpacing: true
+                }}
+                ariaLabel="Product name in English"
+              />
+            </div>
+            <div className="relative">
+              <Input
+                label="Product Name (Urdu)"
+                type="text"
+                placeholder="اردو میں پروڈکٹ کا نام درج کریں..."
+                value={formData.productName.urdu}
+                onChange={(e) => handleInputChange("productName.urdu", e.target.value)}
+                error={errors["productName.urdu"]}
+                className="product-text-field word-spacing-relaxed"
+                style={{
+                  fontFamily: 'Noto Sans Urdu, Arial, sans-serif',
+                  wordSpacing: '0.1em',
+                  letterSpacing: '0.025em',
+                  lineHeight: '1.7',
+                  direction: 'rtl',
+                  textAlign: 'right',
+                  fontKerning: 'normal',
+                  textRendering: 'optimizeLegibility'
+                }}
+                description="Urdu translation for local customers"
+                sanitize={true}
+                sanitizeOptions={{ 
+                  maxLength: 150, 
+                  allowNumbers: true, 
+                  allowSpecialChars: true, 
+                  preserveSpaces: true,
+                  allowUrdu: true,
+                  enhancedSpacing: true
+                }}
+                ariaLabel="Product name in Urdu"
+                dir="rtl"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Multilingual Description Section */}
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-purple-900 mb-3 flex items-center">
+            <ApperIcon name="FileText" className="w-4 h-4 mr-2" />
+            Product Description (Multilingual) *
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description (English) *
+              </label>
+              <textarea
+                placeholder="Enter detailed product description in English..."
+                value={formData.description.english}
+                onChange={(e) => handleInputChange("description.english", e.target.value)}
+                className={cn(
+                  "w-full min-h-[120px] px-3 py-2 border border-gray-300 rounded-md shadow-sm",
+                  "product-text-field word-spacing-relaxed",
+                  "focus:ring-2 focus:ring-primary-500 focus:border-primary-500",
+                  "transition-all duration-200",
+                  errors["description.english"] && "border-red-500 focus:ring-red-500"
+                )}
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  wordSpacing: '0.08em',
+                  letterSpacing: '0.02em',
+                  lineHeight: '1.6',
+                  fontKerning: 'normal',
+                  textRendering: 'optimizeLegibility',
+                  resize: 'vertical'
+                }}
+                rows={5}
+                required
+                aria-label="Product description in English"
+              />
+              {errors["description.english"] && (
+                <p className="text-red-600 text-xs mt-1">{errors["description.english"]}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Detailed product information for customers
+              </p>
+            </div>
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description (Urdu)
+              </label>
+              <textarea
+                placeholder="اردو میں تفصیلی پروڈکٹ کی وضاحت درج کریں..."
+                value={formData.description.urdu}
+                onChange={(e) => handleInputChange("description.urdu", e.target.value)}
+                className={cn(
+                  "w-full min-h-[120px] px-3 py-2 border border-gray-300 rounded-md shadow-sm",
+                  "product-text-field word-spacing-relaxed",
+                  "focus:ring-2 focus:ring-primary-500 focus:border-primary-500",
+                  "transition-all duration-200",
+                  errors["description.urdu"] && "border-red-500 focus:ring-red-500"
+                )}
+                style={{
+                  fontFamily: 'Noto Sans Urdu, Arial, sans-serif',
+                  wordSpacing: '0.1em',
+                  letterSpacing: '0.025em',
+                  lineHeight: '1.7',
+                  direction: 'rtl',
+                  textAlign: 'right',
+                  fontKerning: 'normal',
+                  textRendering: 'optimizeLegibility',
+                  resize: 'vertical'
+                }}
+                rows={5}
+                aria-label="Product description in Urdu"
+                dir="rtl"
+              />
+              {errors["description.urdu"] && (
+                <p className="text-red-600 text-xs mt-1">{errors["description.urdu"]}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Urdu translation for local customers
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Brand Section */}
         <div className="relative">
@@ -2094,7 +2326,7 @@ const renderInventory = () => (
         </h3>
         <p className="text-xs text-blue-700">
           Comprehensive inventory tracking with automated alerts, SKU management, and stock optimization tools
-        </p>
+</p>
       </div>
 
       {/* Stock Management Grid */}
@@ -3402,7 +3634,26 @@ const renderPreviewModal = () => {
               <div>
                 <h3 className="text-lg font-semibold">
                   {formData.brand ? `${formData.brand} Product` : "Product Preview"}
-                </h3>
+</h3>
+                {formData.productName.english && (
+                  <div className="mb-3">
+                    <h4 className="text-lg font-medium text-gray-900 word-spacing-relaxed product-title">
+                      {formData.productName.english}
+                    </h4>
+                    {formData.productName.urdu && (
+                      <h4 
+                        className="text-lg font-medium text-gray-700 word-spacing-relaxed product-title mt-1" 
+                        style={{
+                          direction: 'rtl',
+                          textAlign: 'right',
+                          fontFamily: 'Noto Sans Urdu, Arial, sans-serif'
+                        }}
+                      >
+                        {formData.productName.urdu}
+                      </h4>
+                    )}
+                  </div>
+                )}
                 {formData.category && (
                   <p className="text-gray-600 word-spacing-relaxed">
                     Category: {formData.category}
@@ -3433,7 +3684,7 @@ const renderPreviewModal = () => {
                   ))}
                 </div>
               )}
-              <div>
+<div>
                 <h4
                   className="font-medium mb-2"
                   style={{
@@ -3443,6 +3694,26 @@ const renderPreviewModal = () => {
                 >
                   Product Information
                 </h4>
+                {formData.description.english && (
+                  <div className="mb-4">
+                    <h5 className="text-sm font-medium text-gray-800 mb-1">Description:</h5>
+                    <p className="text-gray-700 text-sm product-description word-spacing-relaxed leading-relaxed">
+                      {formData.description.english}
+                    </p>
+                    {formData.description.urdu && (
+                      <p 
+                        className="text-gray-600 text-sm product-description word-spacing-relaxed leading-relaxed mt-2"
+                        style={{
+                          direction: 'rtl',
+                          textAlign: 'right',
+                          fontFamily: 'Noto Sans Urdu, Arial, sans-serif'
+                        }}
+                      >
+                        {formData.description.urdu}
+                      </p>
+                    )}
+                  </div>
+                )}
                 {formData.sku && (
                   <p className="text-gray-700 text-sm mb-3">
                     SKU: {formData.sku}

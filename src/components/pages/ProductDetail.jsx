@@ -217,7 +217,19 @@ const handleStatusToggle = () => {
           <div>
             <div className="flex items-start justify-between mb-4">
               <h1 className="text-3xl font-display font-bold text-gray-900 leading-tight">
-                {product.title}
+{product.productName?.english || product.title}
+                {product.productName?.urdu && (
+                  <div 
+                    className="text-xl font-medium text-gray-700 mt-1 word-spacing-relaxed product-title"
+                    style={{
+                      direction: 'rtl',
+                      textAlign: 'right',
+                      fontFamily: 'Noto Sans Urdu, Arial, sans-serif'
+                    }}
+                  >
+                    {product.productName.urdu}
+                  </div>
+                )}
               </h1>
               <Button variant="ghost" size="sm" className="p-2">
                 <ApperIcon name="Heart" className="w-6 h-6" />
@@ -266,12 +278,32 @@ const handleStatusToggle = () => {
           {/* Stock Status */}
           <StockIndicator stock={product.stock} size="md" />
 
-          {/* Description */}
+{/* Description */}
           <div>
             <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
-            <p className="text-gray-700 leading-relaxed">
-              {product.description}
-            </p>
+            {product.description?.english ? (
+              <div className="space-y-3">
+                <p className="text-gray-700 leading-relaxed product-description word-spacing-relaxed">
+                  {product.description.english}
+                </p>
+                {product.description?.urdu && (
+                  <p 
+                    className="text-gray-600 leading-relaxed product-description word-spacing-relaxed border-t pt-3"
+                    style={{
+                      direction: 'rtl',
+                      textAlign: 'right',
+                      fontFamily: 'Noto Sans Urdu, Arial, sans-serif'
+                    }}
+                  >
+                    {product.description.urdu}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-gray-700 leading-relaxed">
+                {product.description}
+              </p>
+            )}
           </div>
 
           {/* Variants */}
@@ -579,7 +611,7 @@ const handleStatusToggle = () => {
               </button>
               <ApperIcon name="ChevronRight" className="w-4 h-4" />
               <span className="text-gray-900 font-medium truncate">
-                {product.title}
+{product.productName?.english || product.title}
               </span>
             </nav>
           </div>

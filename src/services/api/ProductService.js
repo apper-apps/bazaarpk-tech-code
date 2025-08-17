@@ -154,7 +154,7 @@ const validateBulkUpdateEdgeCases = async (updates) => {
   return { criticalErrors, warnings };
 };
 
-// Mock products data for service operations
+// Mock products data for service operations with multilingual support
 const mockProducts = productsData || [];
 
 // Main service export
@@ -165,10 +165,25 @@ const productService = {
       if (!id) throw new Error('Product ID is required');
       
       const products = await this.getAll();
-      const product = products.find(p => p.Id === parseInt(id));
+const product = products.find(p => p.Id === parseInt(id));
       
       if (!product) {
         throw new Error(`Product with ID ${id} not found`);
+      }
+      
+      // Ensure multilingual structure exists
+      if (product.productName && typeof product.productName === 'string') {
+        product.productName = {
+          english: product.productName,
+          urdu: product.productName_urdu || ''
+        };
+      }
+      
+      if (product.description && typeof product.description === 'string') {
+        product.description = {
+          english: product.description,
+          urdu: product.description_urdu || ''
+        };
       }
       
       return product;
@@ -184,17 +199,38 @@ const productService = {
       const cached = cacheManager.get('products:all');
       if (cached) return cached;
       
-      // Load from mock data
-      const products = productsData.map(product => ({
-        ...product,
-        Id: parseInt(product.Id),
-        price: parseFloat(product.price),
-        oldPrice: product.oldPrice ? parseFloat(product.oldPrice) : null,
-        stock: parseInt(product.stock || 0)
-      }));
+      // Load from mock data with multilingual support
+      const products = productsData.map(product => {
+        const processedProduct = {
+          ...product,
+          Id: parseInt(product.Id),
+          price: parseFloat(product.price),
+          oldPrice: product.oldPrice ? parseFloat(product.oldPrice) : null,
+          stock: parseInt(product.stock || 0)
+        };
+
+        // Convert legacy string fields to multilingual objects
+        if (processedProduct.productName && typeof processedProduct.productName === 'string') {
+          processedProduct.productName = {
+            english: processedProduct.productName,
+            urdu: processedProduct.productName_urdu || ''
+          };
+          delete processedProduct.productName_urdu;
+        }
+
+        if (processedProduct.description && typeof processedProduct.description === 'string') {
+          processedProduct.description = {
+            english: processedProduct.description,
+            urdu: processedProduct.description_urdu || ''
+          };
+          delete processedProduct.description_urdu;
+        }
+
+        return processedProduct;
+      });
       
       // Cache results
-      cacheManager.set('products:all', products, 300000); // 5 minutes
+cacheManager.set('products:all', products, 300000); // 5 minutes
       return products;
     } catch (error) {
       console.error('Error fetching all products:', error);
@@ -1060,7 +1096,7 @@ return null;
     // Cache invalidation for featured changes (affects homepage)
     try {
       if (typeof window !== 'undefined' && window.CustomEvent) {
-        window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
+window.dispatchEvent(new window.CustomEvent('product-cache-invalidate', {
           detail: {
             type: 'featured_toggle',
             productId: parseInt(id),
@@ -1567,13 +1603,16 @@ return null;
 // Enhanced validation with comprehensive field checking and null safety
       const validationErrors = [];
       
-      // Product Name validation - check for title or productName field
-      const titleValue = mappedData.title || mappedData.productName || productData.title || productData.productName;
-      if (!titleValue || 
-          (typeof titleValue === 'string' && titleValue.trim() === '') ||
-          titleValue === null || 
-          titleValue === undefined) {
-        validationErrors.push('Short Description is required and cannot be empty');
+// Multilingual Product Name validation
+      const productNameData = mappedData.productName || productData.productName;
+      if (!productNameData || !productNameData.english || productNameData.english.trim() === '') {
+        validationErrors.push('Product Name (English) is required and cannot be empty');
+      }
+      
+      // Multilingual Description validation
+      const descriptionData = mappedData.description || productData.description;
+      if (!descriptionData || !descriptionData.english || descriptionData.english.trim() === '') {
+        validationErrors.push('Description (English) is required and cannot be empty');
       }
       
       // Category validation - comprehensive empty check with multiple field variations
@@ -1587,7 +1626,6 @@ return null;
       
       // Price validation - check all possible price field variations with comprehensive validation
       const priceValue = mappedData.price || productData.sellingPrice || productData.price || mappedData.sellingPrice;
-      
       if (!priceValue || 
           (typeof priceValue === 'string' && priceValue.trim() === '') || 
           priceValue === null || 
@@ -1619,6 +1657,10 @@ return null;
 const newProduct = {
         ...mappedData,
         Id: newId,
+        // Ensure multilingual fields are properly structured
+        productName: mappedData.productName || { english: '', urdu: '' },
+        description: mappedData.description || { english: '', urdu: '' },
+        title: mappedData.productName?.english || mappedData.title || '', // Legacy compatibility
         price: parseFloat(mappedData.price || productData.sellingPrice || productData.price || 0),
         sellingPrice: parseFloat(mappedData.sellingPrice || mappedData.price || productData.sellingPrice || 0),
         stock: parseInt(mappedData.stock || mappedData.stockQuantity || 0),

@@ -773,12 +773,17 @@ export const validateFormData = (formData, validationRules = {}) => {
 
 // Helper function to format field names for user display
 const formatFieldName = (fieldName) => {
-  // Handle specific field name mappings
+  // Handle specific field name mappings including multilingual fields
   const fieldMappings = {
     'sellingPrice': 'Selling Price',
     'buyingPrice': 'Buying Price',
     'stockQuantity': 'Stock Quantity',
     'productName': 'Product Name',
+    'productName.english': 'Product Name (English)',
+    'productName.urdu': 'Product Name (Urdu)',
+    'description': 'Description',
+    'description.english': 'Description (English)',
+    'description.urdu': 'Description (Urdu)',
     'shortDescription': 'Short Description',
     'detailedDescription': 'Detailed Description',
     'metaTitle': 'Meta Title',
@@ -983,17 +988,27 @@ export const initializeSecurity = () => {
       element.setAttribute('data-typography-enhanced', 'true');
       
 // ENHANCED INPUT PROPERTIES for optimal typography
-      // Enhanced text styling for optimal readability
+// Enhanced text styling for optimal readability with multilingual support
       element.style.whiteSpace = 'normal'; // Allow natural text flow
       element.style.wordSpacing = '0.1em';
       element.style.letterSpacing = '0.025em';
       element.style.lineHeight = '1.65';
       element.style.textTransform = 'none';
       
-      // Enhanced font rendering
+      // Enhanced font rendering for multilingual text
       element.style.fontKerning = 'normal';
       element.style.textRendering = 'optimizeLegibility';
       element.style.fontFeatureSettings = '"kern" 1';
+      
+      // Urdu text support
+      if (element.dir === 'rtl' || element.getAttribute('data-lang') === 'urdu') {
+        element.style.fontFamily = 'Noto Sans Urdu, Arial, sans-serif';
+        element.style.wordSpacing = '0.12em';
+        element.style.letterSpacing = '0.03em';
+        element.style.lineHeight = '1.7';
+        element.style.direction = 'rtl';
+        element.style.textAlign = 'right';
+      }
       
       // User interaction properties - enable natural text input
       element.style.userSelect = 'text';
@@ -1006,7 +1021,6 @@ export const initializeSecurity = () => {
       element.style.wordBreak = 'normal';
       element.style.overflowWrap = 'break-word';
       element.style.hyphens = 'auto';
-      
       // Focus enhancement
       element.style.cursor = 'text';
       
