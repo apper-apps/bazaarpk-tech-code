@@ -465,13 +465,6 @@ function clearAllFilters() {
             </div>
             
             <div className="flex items-center space-x-3">
-              <Button
-                onClick={() => navigate('/admin/products/add')}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <ApperIcon name="Plus" className="w-4 h-4 mr-2" />
-                Add Product
-              </Button>
               
               <Button
                 variant="outline"
@@ -733,6 +726,7 @@ className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none
         </div>
         
         {/* Products Grid/List */}
+{/* Products Grid/List */}
         {paginatedProducts.length === 0 ? (
           <Empty
             title="No products found"
@@ -740,16 +734,6 @@ className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none
               "No products match your current filters. Try adjusting your search criteria." :
               "No products have been added yet. Create your first product to get started."
             }
-            action={
-              <Button
-                onClick={() => navigate('/admin/products/add')}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <ApperIcon name="Plus" className="w-4 h-4 mr-2" />
-                Add First Product
-              </Button>
-            }
-          />
         ) : (
           <div className={cn(
             "grid gap-6",
